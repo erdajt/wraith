@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -9,6 +10,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		a.width = m.Width
 		a.height = m.Height
+		a.resizePanes()
 	case tick:
 		a.frame++
 		return a, a.ticker()
@@ -22,6 +24,21 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.KeyMsg:
 		return a, a.key(m)
+	case terminalMsg:
+
+		p := a.panes[m.Index]
+		if p == nil || p.PTY != m.PTY {
+			break
+		}
+		if !m.Open || m.Event.Err != nil {
+			p.Err = "shell exited · /terminal-restart " + fmt.Sprint(m.Index+1)
+			break
+		}
+		if reply := p.Screen.Feed(m.Event.Data); len(reply) > 0 {
+			_ = p.PTY.Write(reply)
+		}
+		return a, a.readTerminal(m.Index)
+
 	}
 	return a, nil
 }
