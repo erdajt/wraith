@@ -25,7 +25,7 @@ func (a *App) runCommand(line string) tea.Cmd {
 	switch name {
 	case "model", "models", "think", "settings", "set", "theme", "context", "compact", "cancel", "thinking":
 		return a.modelCommand(name, arg)
-	case "new", "chats", "sessions", "resume", "archives", "restore", "export", "retry", "terminal-restart", "quit", "q":
+	case "new", "clear", "chats", "sessions", "resume", "archives", "restore", "export", "retry", "terminal-restart", "quit", "q":
 		return a.sessionCommand(name, arg)
 	case "help", "h", "?", "instructions", "memory", "remember", "pin", "unpin", "pins", "blocks", "edit", "edit-response":
 		return a.memoryCommand(name, arg)

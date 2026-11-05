@@ -84,7 +84,7 @@ func (a *App) settingMenu(key string) tea.Cmd {
 	if key == "thinking" {
 		return a.runCommand("think")
 	}
-	values := map[string][]string{"context": {"4096", "8192", "16384", "32768", "65536"}, "predict": {"512", "1024", "2048", "4096"}, "compact.mode": {"ask", "auto", "manual"}, "compact.threshold": {"0.7", "0.8", "0.9", "0.95"}, "terminal.background": {"inherit", "theme"}}
+	values := map[string][]string{"context": {"4096", "8192", "16384", "32768", "65536"}, "predict": {"512", "1024", "2048", "4096"}, "compact.mode": {"ask", "auto", "manual"}, "compact.threshold": {"0.7", "0.8", "0.9", "0.95"}, "terminal.background": {"inherit", "theme"}, "terminal.overlay_width": {"0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "0.95"}, "terminal.overlay_height": {"0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9"}, "terminal.split_width": {"0.25", "0.3", "0.4", "0.5", "0.6", "0.7"}}
 	items := []item{}
 	for _, v := range values[key] {
 		items = append(items, item{v, key + "=" + v, ""})

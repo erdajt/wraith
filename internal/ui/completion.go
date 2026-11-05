@@ -8,6 +8,7 @@ type commandSpec struct {
 }
 
 var commandSpecs = []commandSpec{
+	{"clear", "start a clean chat and retain saved history", false},
 	{"help", "show commands and key bindings", false},
 	{"models", "choose an installed ollama model", false},
 	{"model", "choose an installed ollama model", false},
