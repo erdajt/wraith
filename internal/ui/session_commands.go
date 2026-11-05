@@ -26,6 +26,9 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 			return nil
 		}
 		a.Session = s
+		a.proposal = nil
+		a.agentSteps = 0
+		a.thinkingExpanded = map[string]bool{}
 		a.selected = 0
 		a.offset = 0
 		a.follow = true

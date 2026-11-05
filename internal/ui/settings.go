@@ -43,6 +43,9 @@ func (a *App) set(key, value string) tea.Cmd {
 		a.notice = err.Error()
 		return nil
 	}
+	if key == "model" {
+		c.Thinking = "auto"
+	}
 	if err := c.Validate(); err != nil {
 		a.notice = err.Error()
 		return nil
@@ -76,6 +79,9 @@ func (a *App) set(key, value string) tea.Cmd {
 		return a.probe()
 	}
 	if key == "model" || key == "context" || key == "threads" {
+		if key == "model" {
+			a.Info = ollama.Info{}
+		}
 		a.Session.Model = c.Model
 		a.persist("model changed")
 		return a.probe()

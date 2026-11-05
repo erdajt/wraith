@@ -6,7 +6,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/editor"
-	"github.com/erdajt/wraith/internal/ollama"
 )
 
 func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
@@ -27,12 +26,14 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 	}
 	switch key {
 	case "esc", "q":
+		if m.Kind == "block-preview" {
+			return a.blockActions(a.selectedBlock)
+		}
 		if m.Kind == "command-preview" && a.proposal != nil {
 			return a.approve(*a.proposal)
 		}
 		if m.Kind == "approval" {
-			a.proposal = nil
-			a.notice = "command declined"
+			a.declineCommand()
 		}
 		if m.Kind == "overflow" {
 			a.pendingPrompt = ""
@@ -97,13 +98,7 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 		case "approval":
 			return a.approvalAction(choice.Value)
 		case "models":
-			a.Session.Model = choice.Value
-			a.Config.Model = choice.Value
-			a.Info = ollama.Info{}
-			a.Config.Thinking = "auto"
-			a.connected = false
-			a.persist("model selected · thinking reset to auto")
-			return a.probe()
+			return a.set("model", choice.Value)
 		case "theme":
 			return a.set("theme", choice.Value)
 		case "thinking":

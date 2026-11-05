@@ -83,7 +83,8 @@ func (a *App) View() string {
 	rows[inputY+5] = base(p, ink(p.Border, "╰"+strings.Repeat("─", mainW-2)+"╯"), mainW) + base(p, "", w-mainW)
 	status := clean(a.notice)
 	if a.loading {
-		status = "loading model · " + a.Session.Model
+		frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+		status = frames[a.frame%len(frames)] + " loading model · " + a.Session.Model
 	}
 	if a.busy {
 		frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
