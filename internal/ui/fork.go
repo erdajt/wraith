@@ -31,6 +31,7 @@ func (a *App) forkPrompt() tea.Cmd {
 	branch.Title = "fork · " + original.Title
 	branch.Created = time.Now().UTC()
 	branch.Messages = branch.Messages[:index]
+	branch.SharedRuns = nil
 	branch.Usage = session.Usage{}
 	branch.Declines = 0
 	if err := a.Store.Save(branch); err != nil {

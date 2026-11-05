@@ -12,13 +12,18 @@ import (
 )
 
 func (a *App) resume(id string) tea.Cmd {
-	s, err := a.Store.Load(id)
+	s, err := a.Store.LoadDirectory(id, a.Directory)
 	if err != nil {
 		cmd := a.sessionCommand("new", "")
-		a.InvalidSession(id)
+		if err.Error() == "invalid session id" {
+			a.InvalidSession(id)
+		} else {
+			a.SessionError(err)
+		}
 		return cmd
 	}
 	a.Session = s
+	a.resetChatNavigation()
 	a.agentSteps = 0
 	a.pendingAgent = false
 	a.proposal = nil
@@ -83,4 +88,16 @@ func (a *App) OpenSessions() { a.sessionCommand("sessions", "") }
 func (a *App) InvalidSession(id string) {
 	a.notice = "invalid session id · started a new chat"
 	a.showText("help", "invalid session id", id+"\n\nNo saved session could be loaded for this id. A new chat is open. Use /resume to choose from saved sessions.")
+}
+
+func (a *App) SessionError(err error) {
+	a.notice = err.Error() + " · started a new chat"
+	a.showText("help", "cannot resume session", err.Error()+"\n\nA new chat is open in the current directory.")
+}
+
+func (a *App) resetChatNavigation() {
+	a.chatCursor, a.chatColumn = -1, 0
+	a.visualMode, a.chatMotionPending, a.chatMotionCount, a.search = "", "", "", ""
+	a.thinkingExpanded = map[string]bool{}
+	a.follow = true
 }

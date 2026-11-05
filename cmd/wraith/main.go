@@ -107,7 +107,11 @@ func run(args []string, out io.Writer) error {
 			}
 			return nil
 		case "sessions":
-			list, e := s.List()
+			directory, e := os.Getwd()
+			if e != nil {
+				return e
+			}
+			list, e := s.ListDirectory(directory)
 			if e != nil {
 				return e
 			}
@@ -128,7 +132,7 @@ func run(args []string, out io.Writer) error {
 		default:
 		}
 	}
-	invalidSession := ""
+	var resumeProblem error
 	chat := session.New(c.Model)
 	if !*demo && !*snapshot {
 		unlock, e := s.Lock()
@@ -137,9 +141,9 @@ func run(args []string, out io.Writer) error {
 		}
 		defer unlock()
 		if *id != "" {
-			loaded, loadErr := s.Load(*id)
+			loaded, loadErr := s.LoadDirectory(*id, chat.Directory)
 			if loadErr != nil {
-				invalidSession = *id
+				resumeProblem = loadErr
 			} else {
 				chat = loaded
 			}
@@ -168,8 +172,12 @@ func run(args []string, out io.Writer) error {
 	if *resume && *id == "" {
 		a.OpenSessions()
 	}
-	if invalidSession != "" {
-		a.InvalidSession(invalidSession)
+	if resumeProblem != nil {
+		if resumeProblem.Error() == "invalid session id" {
+			a.InvalidSession(*id)
+		} else {
+			a.SessionError(resumeProblem)
+		}
 	}
 	if *snapshot {
 		_, _ = a.Update(tea.WindowSizeMsg{Width: max(50, *width), Height: max(18, *height)})

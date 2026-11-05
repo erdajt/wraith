@@ -3,6 +3,8 @@ package session
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -22,6 +24,7 @@ type Usage struct {
 }
 
 type Session struct {
+	Directory  string    `json:"directory,omitempty"`
 	SharedRuns []string  `json:"shared_runs,omitempty"`
 	Version    int       `json:"version"`
 	ID         string    `json:"id"`
@@ -42,7 +45,11 @@ func ID() string { var b [12]byte; _, _ = rand.Read(b[:]); return hex.EncodeToSt
 
 func New(model string) Session {
 	now := time.Now().UTC()
-	return Session{Version: 1, ID: ID(), Title: "untitled", Model: model, Created: now, Updated: now}
+	dir, _ := os.Getwd()
+	if real, err := filepath.EvalSymlinks(dir); err == nil {
+		dir = real
+	}
+	return Session{Directory: dir, Version: 1, ID: ID(), Title: "untitled", Model: model, Created: now, Updated: now}
 }
 
 func (s Session) Clone() Session {

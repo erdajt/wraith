@@ -21,6 +21,7 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 			return nil
 		}
 		s := session.New(a.Config.Model)
+		s.Directory = a.Directory
 		if err := a.Store.Save(s); err != nil {
 			a.notice = err.Error()
 			return nil
@@ -29,6 +30,7 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 		a.proposal = nil
 		a.agentSteps = 0
 		a.thinkingExpanded = map[string]bool{}
+		a.resetChatNavigation()
 		a.selected = 0
 		a.offset = 0
 		a.follow = true
@@ -37,7 +39,7 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 		a.notice = "new chat · persistent instructions retained"
 		return a.probe()
 	case "chats", "sessions":
-		list, err := a.Store.List()
+		list, err := a.Store.ListDirectory(a.Directory)
 		if err != nil {
 			a.notice = err.Error()
 			return nil

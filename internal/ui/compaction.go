@@ -75,6 +75,7 @@ func (a *App) finishCompact(m compactMsg) tea.Cmd {
 		return nil
 	}
 	a.Session = m.Session
+	a.resetChatNavigation()
 	a.thinkingExpanded = map[string]bool{}
 	a.follow = true
 	a.selected = max(0, len(a.Session.Messages)-1)
