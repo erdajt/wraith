@@ -62,3 +62,50 @@ func TestEditingUserMessageArchivesOriginal(t *testing.T) {
 		t.Fatal("original user message lost")
 	}
 }
+
+func TestVisualCommandSelectionYanksEntireRawBlock(t *testing.T) {
+	a := fixture(t)
+	a.Config.Clipboard = nil
+	a.focus = "chat"
+	a.follow = false
+	command := "printf '%s\\n' first\nprintf second"
+	a.Session.Messages = []session.Message{{Role: "assistant", Content: "before\n```sh\n" + command + "\n```\nafter"}}
+	lines := a.transcript(a.mainWidth() - 5)
+	row := -1
+	for i, line := range lines {
+		if line.Block == 0 {
+			row = i + 1
+			break
+		}
+	}
+	if row < 0 {
+		t.Fatal("command metadata missing")
+	}
+	a.chatCursor = row
+	a.chatColumn = 5
+	a.key(key("vl"))
+	a.key(key("y"))
+	if string(a.Prompt.Register) != command {
+		t.Fatalf("partial command copied: %q", a.Prompt.Register)
+	}
+	a.visualMode = "visual"
+	a.visualRow = row
+	a.visualColumn = 5
+	if !visualBlockRow(lines, row-1, row, row) || !visualBlockRow(lines, row+1, row, row) {
+		t.Fatal("command frame not selected as a unit")
+	}
+}
+
+func TestVisualProseKeepsPartialSelection(t *testing.T) {
+	a := fixture(t)
+	a.Config.Clipboard = nil
+	a.focus = "chat"
+	a.follow = false
+	a.Session.Messages = []session.Message{{Role: "assistant", Content: "alpha beta"}}
+	a.chatCursor = 1
+	a.chatColumn = 0
+	a.key(key("v4ly"))
+	if string(a.Prompt.Register) != "alpha" {
+		t.Fatalf("prose selection: %q", a.Prompt.Register)
+	}
+}

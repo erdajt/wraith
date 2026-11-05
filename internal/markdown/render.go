@@ -13,10 +13,20 @@ var heading = regexp.MustCompile(`^ {0,3}#{1,6}\s+(.+?)\s*#*\s*$`)
 var list = regexp.MustCompile(`^(\s*)(?:[-+*]|([0-9]+)[.)])\s+(.*)$`)
 var rule = regexp.MustCompile(`^ {0,3}(?:\*\s*){3,}$|^ {0,3}(?:-\s*){3,}$|^ {0,3}(?:_\s*){3,}$`)
 
-func Render(source string, width int, p config.Palette, block int) ([]string, int) {
+type Row struct {
+	Text  string
+	Block int
+}
+
+func Render(source string, width int, p config.Palette, block int) ([]Row, int) {
 	width = max(4, width)
-	var out []string
-	add := func(s string) { out = append(out, strings.Split(ansi.Hardwrap(s, width, true), "\n")...) }
+	var out []Row
+	active, localBlock := -1, 0
+	add := func(s string) {
+		for _, line := range strings.Split(ansi.Hardwrap(s, width, true), "\n") {
+			out = append(out, Row{Text: line, Block: active})
+		}
+	}
 	lines := strings.Split(source, "\n")
 	fence := ""
 	for i := 0; i < len(lines); i++ {
@@ -27,6 +37,7 @@ func Render(source string, width int, p config.Palette, block int) ([]string, in
 			if indent <= 3 && strings.HasPrefix(trim, fence) && strings.Trim(trim, string(fence[0])+" \t") == "" {
 				add(paint(p.Border, "╰"+strings.Repeat("─", min(width-1, 40))))
 				fence = ""
+				active = -1
 			} else {
 				add(paint(p.Border, "│ ") + paint(p.Accent, line))
 			}
@@ -39,6 +50,8 @@ func Render(source string, width int, p config.Palette, block int) ([]string, in
 			}
 			fence = trim[:n]
 			block++
+			active = localBlock
+			localBlock++
 			add(paint(p.Border, "╭─ ") + paint(p.Second, fmt.Sprintf("%s · block %d", strings.TrimSpace(trim[n:]), block)) + paint(p.Muted, " · /blocks"))
 			continue
 		}

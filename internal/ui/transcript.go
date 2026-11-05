@@ -12,6 +12,7 @@ import (
 )
 
 type rendered struct {
+	Block    int
 	Thinking bool
 	Text     string
 	Message  int
@@ -22,7 +23,7 @@ func (a *App) transcript(w int) []rendered {
 	var out []rendered
 	add := func(text string, index int) {
 		for _, line := range strings.Split(ansi.Hardwrap(text, w, true), "\n") {
-			out = append(out, rendered{Text: line, Message: index})
+			out = append(out, rendered{Text: line, Message: index, Block: -1})
 		}
 	}
 	if a.Session.Summary != "" {
@@ -73,7 +74,11 @@ func (a *App) transcript(w int) []rendered {
 		lines, nextBlock := markdown.Render(clean(m.Content), w, p, block)
 		block = nextBlock
 		for _, line := range lines {
-			add(line, i)
+			start := len(out)
+			add(line.Text, i)
+			for j := start; j < len(out); j++ {
+				out[j].Block = line.Block
+			}
 		}
 		add("", i)
 	}

@@ -120,6 +120,9 @@ func (a *App) chatKey(k tea.KeyMsg) tea.Cmd {
 	case "b":
 		return a.runCommand("blocks")
 	case "enter":
+		if len(lines) > 0 && lines[a.chatCursor].Block >= 0 {
+			return a.editCursorBlock(lines[a.chatCursor])
+		}
 		return a.selectedBlocks()
 	case "i":
 		a.focus = "prompt"

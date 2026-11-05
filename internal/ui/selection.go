@@ -6,8 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/erdajt/wraith/internal/editor"
 )
 
 type copiedMsg struct{ Err error }
@@ -25,8 +27,21 @@ func (a *App) selectedText() string {
 	lines := a.transcript(max(10, a.mainWidth()-5))
 	first, left, last, right := a.selectionBounds()
 	var out []string
+	seen := map[string]bool{}
 	for row := max(0, first); row <= last && row < len(lines); row++ {
-		text := ansi.Strip(lines[row].Text)
+		entry := lines[row]
+		if entry.Block >= 0 {
+			id := fmt.Sprintf("%d:%d", entry.Message, entry.Block)
+			if !seen[id] {
+				blocks := editor.Blocks(a.messageAt(entry.Message))
+				if entry.Block < len(blocks) {
+					out = append(out, strings.TrimRight(blocks[entry.Block].Text, "\n"))
+				}
+				seen[id] = true
+			}
+			continue
+		}
+		text := ansi.Strip(entry.Text)
 		start, end := 0, ansi.StringWidth(text)
 		if a.visualMode == "visual" {
 			if row == first {
@@ -69,17 +84,18 @@ func (a *App) yank() tea.Cmd {
 	}
 }
 
-func (a *App) selectionLine(text string, row int, p palette) string {
+func (a *App) selectionLine(text string, row int, p palette, lines []rendered) string {
 	if a.visualMode == "" {
 		return text
 	}
 	first, left, last, right := a.selectionBounds()
-	if row < first || row > last {
+	blockSelected := visualBlockRow(lines, row, first, last)
+	if (row < first || row > last) && !blockSelected {
 		return text
 	}
 	width := ansi.StringWidth(text)
 	start, end := 0, width
-	if a.visualMode == "visual" {
+	if a.visualMode == "visual" && !visualBlockRow(lines, row, first, last) {
 		if row == first {
 			start = left
 		}
@@ -93,4 +109,17 @@ func (a *App) selectionLine(text string, row int, p palette) string {
 	}
 	style := "\x1b[" + color(foreground, false) + ";" + color(p.Second, true) + "m"
 	return ansi.Cut(text, 0, start) + style + ansi.Strip(ansi.Cut(text, start, end)) + reset + ansi.Cut(text, end, width)
+}
+
+func visualBlockRow(lines []rendered, row, first, last int) bool {
+	if row < 0 || row >= len(lines) || lines[row].Block < 0 {
+		return false
+	}
+	block := lines[row]
+	for i := max(0, first); i <= last && i < len(lines); i++ {
+		if lines[i].Message == block.Message && lines[i].Block == block.Block {
+			return true
+		}
+	}
+	return false
 }

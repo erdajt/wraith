@@ -57,7 +57,7 @@ func (a *App) View() string {
 	for y := 0; y < bodyH; y++ {
 		content := ""
 		if start+y < len(transcript) {
-			content = a.selectionLine(transcript[start+y].Text, start+y, p)
+			content = a.selectionLine(transcript[start+y].Text, start+y, p, transcript)
 			if a.focus == "chat" && start+y == a.chatCursor {
 				content = cursorText(content, a.chatColumn, p)
 			}
