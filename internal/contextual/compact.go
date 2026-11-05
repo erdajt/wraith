@@ -24,7 +24,7 @@ type Memory struct {
 
 var literal = regexp.MustCompile("`[^`\\n]{1,1000}`|https?://[^\\s<>]+|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}(?::[0-9]+)?|(?:~?/|[A-Za-z]:\\\\)[A-Za-z0-9_./\\\\:@%+-]+|CVE-[0-9]{4}-[0-9]+")
 
-func Compact(ctx context.Context, client Chatter, s session.Session, c config.Config, instructions string, progress func(string)) (session.Session, error) {
+func Compact(ctx context.Context, client Chatter, s session.Session, c config.Config, instructions string, think any, progress func(string)) (session.Session, error) {
 	cut := len(s.Messages) - c.Compact.KeepTurns*2
 	for cut > 0 && cut < len(s.Messages) && s.Messages[cut].Role != "user" {
 		cut--
@@ -53,7 +53,7 @@ func Compact(ctx context.Context, client Chatter, s session.Session, c config.Co
 			progress(fmt.Sprintf("extracting fragment %d/%d", i+1, len(chunks)))
 		}
 		var memory Memory
-		if err := extract(ctx, client, c, CompactPrompt, chunk, &memory); err != nil {
+		if err := extract(ctx, client, c, think, CompactPrompt, chunk, &memory); err != nil {
 			return s, fmt.Errorf("fragment %d: %w", i+1, err)
 		}
 		if strings.TrimSpace(memory.Summary) == "" || len(memory.Facts) == 0 {
@@ -75,7 +75,7 @@ func Compact(ctx context.Context, client Chatter, s session.Session, c config.Co
 		var audit struct {
 			Missing []string `json:"missing"`
 		}
-		if err := extract(ctx, client, c, AuditPrompt, auditInput, &audit); err != nil {
+		if err := extract(ctx, client, c, think, AuditPrompt, auditInput, &audit); err != nil {
 			return s, fmt.Errorf("audit %d: %w", i+1, err)
 		}
 		if audit.Missing == nil {
@@ -102,8 +102,8 @@ func Compact(ctx context.Context, client Chatter, s session.Session, c config.Co
 	return candidate, nil
 }
 
-func extract(ctx context.Context, client Chatter, c config.Config, system, input string, out any) error {
-	r, err := client.Chat(ctx, ollama.Request{Model: c.Model, Messages: []session.Message{{Role: "system", Content: system}, {Role: "user", Content: input}}, Format: "json", KeepAlive: c.KeepAlive, Options: ollama.Options{Context: c.Context, Predict: c.Compact.Budget, Temperature: 0.1}}, nil)
+func extract(ctx context.Context, client Chatter, c config.Config, think any, system, input string, out any) error {
+	r, err := client.Chat(ctx, ollama.Request{Model: c.Model, Messages: []session.Message{{Role: "system", Content: system}, {Role: "user", Content: input}}, Format: "json", Think: think, KeepAlive: c.KeepAlive, Options: ollama.Options{Context: c.Context, Predict: c.Compact.Budget, Temperature: 0.1}}, nil)
 	if err != nil {
 		return err
 	}

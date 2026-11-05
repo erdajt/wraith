@@ -26,6 +26,10 @@ func (a *App) startCompact() tea.Cmd {
 	c.Model = s.Model
 	instructions := a.Instructions
 	client := a.Client
+	think, thinkingErr := a.Info.Think("off")
+	if thinkingErr != nil {
+		think, _ = a.Info.Think("low")
+	}
 	if err := (store.Store{Root: filepath.Join(a.Paths.Cache, "compaction")}).Save(s); err != nil {
 		a.notice = "could not save recovery cache: " + err.Error()
 		return nil
@@ -43,7 +47,7 @@ func (a *App) startCompact() tea.Cmd {
 	a.phase = "archiving context"
 	go func() {
 		defer cancel()
-		result, e := contextual.Compact(ctx, client, s, c, instructions, func(phase string) { a.post(progressMsg(phase)) })
+		result, e := contextual.Compact(ctx, client, s, c, instructions, think, func(phase string) { a.post(progressMsg(phase)) })
 		a.post(compactMsg{result, archive, e})
 	}()
 	return a.next()

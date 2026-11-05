@@ -94,8 +94,8 @@ func (a *App) overlay(rows, box []string, x, y int) {
 			continue
 		}
 		w := ansi.StringWidth(line)
-		left := ansi.Cut(rows[y+i], 0, max(0, x))
-		right := ansi.Cut(rows[y+i], x+w, a.width)
+		left := fit(ansi.Cut(rows[y+i], 0, max(0, x)), max(0, x))
+		right := fit(ansi.Cut(rows[y+i], x+w, a.width), max(0, a.width-x-w))
 		rows[y+i] = left + reset + line + reset + right
 	}
 }
