@@ -46,6 +46,8 @@ func (a *App) submit() tea.Cmd {
 		return nil
 	}
 	a.Prompt = vim.New()
+	a.agentSteps = 0
+	a.proposal = nil
 	a.Session = probe
 	if a.Session.Title == "untitled" {
 		r := []rune(text)
@@ -85,7 +87,7 @@ func (a *App) startChat() tea.Cmd {
 	a.follow = true
 	a.partial = session.Message{Role: "assistant"}
 	a.phase = "connecting"
-	req := ollama.Request{Model: a.Session.Model, Messages: contextual.Messages(a.Session, a.Instructions), Think: think, KeepAlive: a.Config.KeepAlive, Options: ollama.Options{Context: a.Config.Context, Predict: a.Config.Predict, Temperature: a.Config.Temperature, Threads: a.Config.Threads}}
+	req := ollama.Request{Model: a.Session.Model, Messages: contextual.ForChat(a.Session, a.Config, a.Instructions), Think: think, KeepAlive: a.Config.KeepAlive, Options: ollama.Options{Context: a.Config.Context, Predict: a.Config.Predict, Temperature: a.Config.Temperature, Threads: a.Config.Threads}}
 	client := a.Client
 	go func() {
 		defer cancel()
@@ -127,7 +129,7 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 		a.Session.Messages = append(a.Session.Messages, a.partial)
 		a.selected = len(a.Session.Messages) - 1
 	}
-	a.Session.Usage = m.Chunk.Usage(contextual.Estimate(contextual.Messages(a.SessionWithoutLastAssistant(), a.Instructions)))
+	a.Session.Usage = m.Chunk.Usage(contextual.Estimate(contextual.ForChat(a.SessionWithoutLastAssistant(), a.Config, a.Instructions)))
 	a.partial = session.Message{}
 	if err := a.Store.Save(a.Session); err != nil {
 		a.notice = "save failed: " + err.Error()
@@ -136,11 +138,28 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 	if m.Err != nil {
 		return nil
 	}
+	if a.Config.Execution.Mode == "agent" {
+		request, err := contextual.RequestedCommand(m.Chunk.Message.Content)
+		if err != nil {
+			a.notice = "command request rejected: " + err.Error()
+			return nil
+		}
+		if request != nil {
+			if a.agentSteps >= a.Config.Execution.MaxSteps {
+				a.notice = "command step limit reached · send a prompt to continue"
+				return nil
+			}
+			a.proposal = &proposal{Command: request.Command, Text: request.Command, Language: "sh", Source: "model", Continue: true}
+		}
+	}
 	switch contextual.Decision(a.Config.Compact.Mode, a.Session.Declines, contextual.NeedsCompact(a.Session, a.Config, a.Instructions)) {
 	case "compact":
 		return a.startCompact()
 	case "ask":
 		a.popup = &menu{Kind: "compact", Title: fmt.Sprintf("context threshold reached · %d/3 declines", a.Session.Declines), Items: []item{{"yes · archive and compact", "yes", ""}, {"no · ask after the next response", "no", ""}}}
+	}
+	if a.popup == nil && a.proposal != nil {
+		return a.approve(*a.proposal)
 	}
 	return nil
 }

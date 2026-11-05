@@ -31,6 +31,7 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 		}
 		if m.Kind == "overflow" {
 			a.pendingPrompt = ""
+			a.pendingAgent = false
 		}
 		if m.Kind == "compact" {
 			return a.declineCompact()
@@ -65,6 +66,7 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 		}
 		if m.Kind == "overflow" {
 			a.pendingPrompt = ""
+			a.pendingAgent = false
 			a.popup = nil
 			return nil
 		}
@@ -116,6 +118,7 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 				return a.startCompact()
 			}
 			a.pendingPrompt = ""
+			a.pendingAgent = false
 		case "sessions":
 			return a.resume(choice.Value)
 		case "archives":

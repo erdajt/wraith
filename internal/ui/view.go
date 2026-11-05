@@ -30,7 +30,7 @@ func (a *App) View() string {
 	logo := bold(p.Accent, "  ◈ W R A I T H") + ink(p.Muted, "  /  "+state)
 	right := ink(p.Second, a.Prompt.Status()) + ink(p.Muted, "  "+a.focus+"  ")
 	rows[0] = base(p, logo+strings.Repeat(" ", max(1, w-ansi.StringWidth(logo)-ansi.StringWidth(right)))+right, w)
-	used := contextual.Used(a.Session, a.Instructions)
+	used := contextual.ChatUsed(a.Session, a.Config, a.Instructions)
 	ratio := float64(used) / float64(a.Config.Context)
 	bar := int(ratio * 12)
 	bar = max(0, min(12, bar))
