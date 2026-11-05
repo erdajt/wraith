@@ -32,7 +32,7 @@ var commandSpecs = []commandSpec{
 	{"new", "start a new chat", false},
 	{"chats", "choose a saved chat", false},
 	{"sessions", "choose a saved chat", false},
-	{"resume", "resume a session id", true},
+	{"resume", "choose a session or resume an id", false},
 	{"archives", "browse original context snapshots", false},
 	{"restore", "restore an archive filename", true},
 	{"export", "export the active context", false},

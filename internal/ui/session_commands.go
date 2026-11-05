@@ -48,6 +48,9 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 		}
 		a.popup = &menu{Kind: "sessions", Title: "saved chats", Items: items}
 	case "resume":
+		if arg == "" {
+			return a.sessionCommand("sessions", "")
+		}
 		return a.resume(arg)
 	case "archives":
 		paths, err := filepath.Glob(filepath.Join(a.Paths.Data, "archives", a.Session.ID+"-*.json.gz"))

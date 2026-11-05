@@ -13,8 +13,9 @@ import (
 func (a *App) resume(id string) tea.Cmd {
 	s, err := a.Store.Load(id)
 	if err != nil {
-		a.notice = err.Error()
-		return nil
+		cmd := a.sessionCommand("new", "")
+		a.InvalidSession(id)
+		return cmd
 	}
 	a.Session = s
 	a.agentSteps = 0
@@ -77,3 +78,8 @@ func Export(s session.Session) string {
 }
 
 func (a *App) OpenSessions() { a.sessionCommand("sessions", "") }
+
+func (a *App) InvalidSession(id string) {
+	a.notice = "invalid session id · started a new chat"
+	a.showText("help", "invalid session id", id+"\n\nNo saved session could be loaded for this id. A new chat is open. Use /resume to choose from saved sessions.")
+}

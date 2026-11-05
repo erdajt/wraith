@@ -45,14 +45,11 @@ func run(args []string, out io.Writer) error {
 	cacheDir := flags.String("cache-dir", "", "override the cache directory")
 	width := flags.Int("width", 110, "snapshot width")
 	height := flags.Int("height", 34, "snapshot height")
-	if err := flags.Parse(args); err != nil {
+	if err := flags.Parse(resumeArgs(args)); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
 		}
 		return err
-	}
-	if *resume && *id != "" {
-		return errors.New("--resume cannot be combined with --session")
 	}
 	if *showVersion {
 		fmt.Fprintln(out, "wraith", version)
@@ -131,6 +128,7 @@ func run(args []string, out io.Writer) error {
 		default:
 		}
 	}
+	invalidSession := ""
 	chat := session.New(c.Model)
 	if !*demo && !*snapshot {
 		unlock, e := s.Lock()
@@ -139,15 +137,17 @@ func run(args []string, out io.Writer) error {
 		}
 		defer unlock()
 		if *id != "" {
-			chat, e = s.Load(*id)
-			if e != nil {
-				return e
+			loaded, loadErr := s.Load(*id)
+			if loadErr != nil {
+				invalidSession = *id
+			} else {
+				chat = loaded
 			}
 		}
 		if *model != "" {
 			chat.Model = *model
 		}
-		if !*resume {
+		if !*resume || *id != "" {
 			if err = s.Save(chat); err != nil {
 				return err
 			}
@@ -165,8 +165,11 @@ func run(args []string, out io.Writer) error {
 	}
 	defer a.Close()
 	a.Prompt.Set(strings.Join(flags.Args(), " "))
-	if *resume {
+	if *resume && *id == "" {
 		a.OpenSessions()
+	}
+	if invalidSession != "" {
+		a.InvalidSession(invalidSession)
 	}
 	if *snapshot {
 		_, _ = a.Update(tea.WindowSizeMsg{Width: max(50, *width), Height: max(18, *height)})

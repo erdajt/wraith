@@ -48,3 +48,22 @@ func TestApprovalEscapeRecordsDeclineWithoutExecution(t *testing.T) {
 		t.Fatal("decline executed a command")
 	}
 }
+
+func TestResumeWithoutIDOpensPickerAndInvalidIDStartsFresh(t *testing.T) {
+	a := fixture(t)
+	old := a.Session.ID
+	if err := a.Store.Save(a.Session); err != nil {
+		t.Fatal(err)
+	}
+	a.runCommand("resume")
+	if a.popup == nil || a.popup.Kind != "sessions" {
+		t.Fatal("resume did not open picker")
+	}
+	a.runCommand("resume invalid-id")
+	if a.Session.ID == old || a.popup == nil || a.popup.Title != "invalid session id" {
+		t.Fatal("invalid resume did not explain fresh chat")
+	}
+	if _, err := a.Store.Load(old); err != nil {
+		t.Fatal("invalid resume removed old session")
+	}
+}

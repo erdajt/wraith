@@ -66,14 +66,6 @@ func TestPositionalWordsPopulateDraft(t *testing.T) {
 	}
 }
 
-func TestResumeRejectsConflictingSessionFlags(t *testing.T) {
-	for _, args := range [][]string{{"--resume", "--new"}, {"--resume", "--session", "123"}} {
-		if err := run(args, &bytes.Buffer{}); err == nil {
-			t.Fatalf("accepted %v", args)
-		}
-	}
-}
-
 func TestRemovedNewFlagReportsUnknownOption(t *testing.T) {
 	err := run([]string{"--new"}, &bytes.Buffer{})
 	if err == nil || !strings.Contains(err.Error(), "flag provided but not defined") {
