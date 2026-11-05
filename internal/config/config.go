@@ -20,26 +20,27 @@ import (
 const DefaultModel = "hf.co/filvyb/Qwen3.5-9B-heretic-v2-GGUF:Q5_K_M"
 
 type Config struct {
-	Leader      string            `json:"leader" yaml:"leader"`
-	Bindings    map[string]string `json:"bindings" yaml:"bindings"`
-	AutoStart   bool              `json:"auto_start" yaml:"auto_start"`
-	Version     int               `json:"version" yaml:"version"`
-	Host        string            `json:"host" yaml:"host"`
-	Model       string            `json:"model" yaml:"model"`
-	Context     int               `json:"context" yaml:"context"`
-	Predict     int               `json:"predict" yaml:"predict"`
-	Threads     int               `json:"threads" yaml:"threads"`
-	Temperature float64           `json:"temperature" yaml:"temperature"`
-	Thinking    string            `json:"thinking" yaml:"thinking"`
-	Theme       string            `json:"theme" yaml:"theme"`
-	Editor      []string          `json:"editor" yaml:"editor"`
-	Terminal    Terminal          `json:"terminal" yaml:"terminal"`
-	Shell       []string          `json:"shell" yaml:"shell"`
-	KeepAlive   string            `json:"keep_alive" yaml:"keep_alive"`
-	Timeout     string            `json:"timeout" yaml:"timeout"`
-	Compact     Compact           `json:"compact" yaml:"compact"`
-	Keys        map[string]string `json:"keys" yaml:"keys"`
-	Animations  bool              `json:"animations" yaml:"animations"`
+	Themes      map[string]Palette `json:"themes" yaml:"themes"`
+	Leader      string             `json:"leader" yaml:"leader"`
+	Bindings    map[string]string  `json:"bindings" yaml:"bindings"`
+	AutoStart   bool               `json:"auto_start" yaml:"auto_start"`
+	Version     int                `json:"version" yaml:"version"`
+	Host        string             `json:"host" yaml:"host"`
+	Model       string             `json:"model" yaml:"model"`
+	Context     int                `json:"context" yaml:"context"`
+	Predict     int                `json:"predict" yaml:"predict"`
+	Threads     int                `json:"threads" yaml:"threads"`
+	Temperature float64            `json:"temperature" yaml:"temperature"`
+	Thinking    string             `json:"thinking" yaml:"thinking"`
+	Theme       string             `json:"theme" yaml:"theme"`
+	Editor      []string           `json:"editor" yaml:"editor"`
+	Terminal    Terminal           `json:"terminal" yaml:"terminal"`
+	Shell       []string           `json:"shell" yaml:"shell"`
+	KeepAlive   string             `json:"keep_alive" yaml:"keep_alive"`
+	Timeout     string             `json:"timeout" yaml:"timeout"`
+	Compact     Compact            `json:"compact" yaml:"compact"`
+	Keys        map[string]string  `json:"keys" yaml:"keys"`
+	Animations  bool               `json:"animations" yaml:"animations"`
 }
 
 type Compact struct {
@@ -153,8 +154,8 @@ func (c Config) Validate() error {
 	if !slices.Contains([]string{"auto", "off", "on", "low", "medium", "high"}, c.Thinking) {
 		return errors.New("thinking must be auto, off, on, low, medium or high")
 	}
-	if !slices.Contains([]string{"phosphor", "tokyo", "ember", "ice", "mono"}, c.Theme) {
-		return errors.New("unknown theme")
+	if err := c.validateThemes(); err != nil {
+		return err
 	}
 	for _, argv := range [][]string{c.Editor, c.Shell} {
 		if len(argv) == 0 || strings.TrimSpace(argv[0]) == "" {

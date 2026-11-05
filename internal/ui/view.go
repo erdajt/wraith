@@ -9,7 +9,7 @@ import (
 )
 
 func (a *App) View() string {
-	p := palettes[a.Config.Theme]
+	p := a.Config.Palette()
 	if a.width < 50 || a.height < 18 {
 		return "wraith needs a terminal at least 50 columns × 18 rows.\nresize the terminal, or press ctrl+q to exit."
 	}

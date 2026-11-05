@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"github.com/erdajt/wraith/internal/config"
 	"strconv"
 	"strings"
 	"unicode"
@@ -9,15 +10,9 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-type palette struct{ BG, FG, Muted, Accent, Second, Border, Warn string }
+type palette = config.Palette
 
-var palettes = map[string]palette{
-	"phosphor": {"#101419", "#d8e4df", "#788b87", "#73f5bd", "#bb9aff", "#354743", "#ffb86b"},
-	"tokyo":    {"#161822", "#c0caf5", "#737ca6", "#7aa2f7", "#bb9af7", "#353b5a", "#e0af68"},
-	"ember":    {"#1b1515", "#f0ded3", "#aa8b82", "#ffb454", "#f47c91", "#55403a", "#ff6969"},
-	"ice":      {"#10191f", "#d8eff5", "#7195a3", "#76e4f7", "#adbaff", "#304b58", "#ffb8a3"},
-	"mono":     {"#151515", "#e0e0e0", "#888888", "#ffffff", "#bcbcbc", "#444444", "#eeeeee"},
-}
+var palettes = config.BuiltinThemes()
 
 const reset = "\x1b[0m"
 
