@@ -17,6 +17,9 @@ func cliEvent(kind string, data []byte, result *ollama.Response, emit func(ollam
 			Text string `json:"text"`
 		} `json:"item"`
 		Event struct {
+			Block struct {
+				Type string `json:"type"`
+			} `json:"content_block"`
 			Delta struct {
 				Text     string `json:"text"`
 				Thinking string `json:"thinking"`
@@ -32,6 +35,10 @@ func cliEvent(kind string, data []byte, result *ollama.Response, emit func(ollam
 	}
 	chunk := ollama.Response{}
 	if kind == "codex-cli" {
+		switch event.Item.Type {
+		case "command_execution", "file_change", "mcp_tool_call", "web_search":
+			return errors.New("cli attempted native tools; use wraith command requests instead")
+		}
 		switch event.Type {
 		case "error", "turn.failed":
 			return errors.New("codex reported a failed turn; check cli authentication and configuration")
@@ -41,8 +48,6 @@ func cliEvent(kind string, data []byte, result *ollama.Response, emit func(ollam
 				chunk.Message.Content = event.Item.Text
 			case "reasoning":
 				chunk.Message.Thinking = event.Item.Text
-			case "command_execution", "file_change", "mcp_tool_call":
-				return errors.New("cli attempted native tools; use wraith command requests instead")
 			}
 		case "turn.completed":
 			result.Done = true
@@ -53,6 +58,9 @@ func cliEvent(kind string, data []byte, result *ollama.Response, emit func(ollam
 	} else {
 		switch event.Type {
 		case "stream_event":
+			if event.Event.Block.Type == "tool_use" || event.Event.Block.Type == "server_tool_use" {
+				return errors.New("cli attempted native tools; use wraith command requests instead")
+			}
 			chunk.Message.Content = event.Event.Delta.Text
 			chunk.Message.Thinking = event.Event.Delta.Thinking
 		case "result":
