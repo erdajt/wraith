@@ -45,6 +45,7 @@ func (a *App) submit() tea.Cmd {
 		a.popup = &menu{Kind: "overflow", Title: "compact before sending?", Items: []item{{"yes · compact and keep this draft", "yes", ""}, {"no · keep draft without sending", "no", ""}}}
 		return nil
 	}
+	a.rememberInput(text)
 	a.Prompt = vim.New()
 	a.agentSteps = 0
 	a.proposal = nil

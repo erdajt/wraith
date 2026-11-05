@@ -75,6 +75,9 @@ type terminalMsg struct {
 }
 
 type App struct {
+	inputHistory                       []string
+	inputIndex, inputDraftPosition     int
+	inputDraft                         string
 	Directory                          string
 	forkIndex                          int
 	chatMotionPending, chatMotionCount string
@@ -146,7 +149,15 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 	if real, e := filepath.EvalSymlinks(dir); e == nil {
 		dir = real
 	}
-	a := &App{Directory: dir, Config: c, Paths: p, Store: store.Store{Root: p.Data}, Session: s, Client: ollama.New(c.Host), Instructions: string(instructions), Prompt: vim.New(), width: 100, height: 30, chatCursor: -1, focus: "prompt", follow: true, events: make(chan tea.Msg, 128), done: make(chan struct{}), demo: demo, notice: "/help commands · ctrl+s send · ctrl+e editor"}
+	a := &App{inputIndex: -1, Directory: dir, Config: c, Paths: p, Store: store.Store{Root: p.Data}, Session: s, Client: ollama.New(c.Host), Instructions: string(instructions), Prompt: vim.New(), width: 100, height: 30, chatCursor: -1, focus: "prompt", follow: true, events: make(chan tea.Msg, 128), done: make(chan struct{}), demo: demo, notice: "/help commands · ctrl+s send · ctrl+e editor"}
+	if !demo {
+		entries, e := a.Store.Inputs(a.Directory)
+		if e != nil {
+			a.notice = "input history: " + e.Error()
+		} else {
+			a.inputHistory = entries
+		}
+	}
 	a.showThinking = c.Appearance.Thinking
 	a.thinkingExpanded = map[string]bool{}
 	if demo {

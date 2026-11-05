@@ -92,8 +92,14 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		}
 		return nil
 	}
+	if a.inputIndex >= 0 && a.historyKey(k) {
+		return nil
+	}
 	if cmd, handled := a.slashKey(k); handled {
 		return cmd
+	}
+	if a.historyKey(k) {
+		return nil
 	}
 	if key == a.Config.Keys["focus"] {
 		a.chatCount = ""
@@ -127,6 +133,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 	if k.Type == tea.KeyRunes || k.Type == tea.KeySpace {
 		text = string(k.Runes)
 	}
+	a.inputIndex = -1
 	pending, mode := a.Prompt.Pending, a.Prompt.Mode
 	a.Prompt.Key(key, text)
 	if a.Prompt.Pending == "" && len(a.Prompt.Register) > 0 && (key == "Y" && mode == "normal" || strings.HasPrefix(pending, "y") || key == "y" && strings.HasPrefix(mode, "visual")) {

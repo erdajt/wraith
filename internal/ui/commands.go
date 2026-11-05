@@ -7,6 +7,7 @@ import (
 )
 
 func (a *App) runCommand(line string) tea.Cmd {
+	a.rememberInput("/" + line)
 	line = strings.TrimSpace(strings.TrimLeft(line, "/:"))
 	name, arg, _ := strings.Cut(line, " ")
 	arg = strings.TrimSpace(arg)
