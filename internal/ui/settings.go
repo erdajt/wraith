@@ -66,7 +66,7 @@ func (a *App) set(key, value string) tea.Cmd {
 		a.connected = false
 		return a.probe()
 	}
-	if key == "model" {
+	if key == "model" || key == "context" || key == "threads" {
 		a.Session.Model = c.Model
 		a.persist("model changed")
 		return a.probe()

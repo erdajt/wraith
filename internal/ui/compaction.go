@@ -13,6 +13,10 @@ import (
 )
 
 func (a *App) startCompact() tea.Cmd {
+	if a.loading {
+		a.notice = "wait for model loading before compacting"
+		return nil
+	}
 	if a.busy {
 		a.notice = "an operation is already running"
 		return nil

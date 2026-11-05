@@ -35,6 +35,7 @@ func TestInteractiveEditorAndPersistentShells(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := config.Default()
+	c.AutoStart = false
 	c.Host = "http://127.0.0.1:1"
 	c.Shell = []string{"/bin/sh", "-i"}
 	c.Editor = []string{"/bin/sh", edit}

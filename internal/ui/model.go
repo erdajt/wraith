@@ -33,9 +33,10 @@ type pane struct {
 }
 type tick time.Time
 type infoMsg struct {
-	Model string
-	Info  ollama.Info
-	Err   error
+	Serial uint64
+	Model  string
+	Info   ollama.Info
+	Err    error
 }
 type modelsMsg struct {
 	Models []ollama.Model
@@ -89,6 +90,9 @@ type App struct {
 	notice                  string
 	frame                   int
 	phase                   string
+	loadCancel              context.CancelFunc
+	loadSerial              uint64
+	loading                 bool
 	connected               bool
 	demo                    bool
 	showThinking            bool
@@ -123,17 +127,11 @@ func (a *App) Init() tea.Cmd {
 func (a *App) ticker() tea.Cmd {
 	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg { return tick(t) })
 }
-func (a *App) probe() tea.Cmd {
-	model, client := a.Session.Model, a.Client
-	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		info, err := client.Show(ctx, model)
-		return infoMsg{model, info, err}
-	}
-}
 func (a *App) Close() {
 	a.once.Do(func() {
+		if a.loadCancel != nil {
+			a.loadCancel()
+		}
 		if a.cancel != nil {
 			a.cancel()
 		}
