@@ -28,7 +28,14 @@ func (a *App) View() string {
 		state = "demo"
 	}
 	logo := bold(p.Accent, "  ◈ W R A I T H") + ink(p.Muted, "  /  "+state)
-	right := ink(p.Second, a.Prompt.Status()) + ink(p.Muted, "  "+a.focus+"  ")
+	mode := a.Prompt.Status()
+	if a.focus == "chat" {
+		mode = "NORMAL " + a.chatCount
+		if a.visualMode != "" {
+			mode = strings.ToUpper(a.visualMode)
+		}
+	}
+	right := ink(p.Second, mode) + ink(p.Muted, "  "+a.focus+"  ")
 	rows[0] = base(p, logo+strings.Repeat(" ", max(1, w-ansi.StringWidth(logo)-ansi.StringWidth(right)))+right, w)
 	used := contextual.ChatUsed(a.Session, a.Config, a.Instructions)
 	ratio := float64(used) / float64(a.Config.Context)
@@ -50,7 +57,7 @@ func (a *App) View() string {
 	for y := 0; y < bodyH; y++ {
 		content := ""
 		if start+y < len(transcript) {
-			content = transcript[start+y].Text
+			content = a.selectionLine(transcript[start+y].Text, start+y, p)
 			if a.focus == "chat" && start+y == a.chatCursor {
 				content = cursorText(content, a.chatColumn, p)
 			}

@@ -54,6 +54,22 @@ func (a *App) chatKey(k tea.KeyMsg) tea.Cmd {
 	a.ensureChatCursor()
 	lines := a.transcript(max(10, a.mainWidth()-5))
 	switch key {
+	case "v", "V":
+		mode := "visual"
+		if key == "V" {
+			mode = "visual-line"
+		}
+		if a.visualMode == mode {
+			a.visualMode = ""
+		} else {
+			a.visualMode = mode
+			a.visualRow = a.chatCursor
+			a.visualColumn = a.chatColumn
+		}
+	case "esc":
+		a.visualMode = ""
+	case "y":
+		return a.yank()
 	case "j", "down":
 		a.chatCursor += count
 	case "k", "up":

@@ -1,0 +1,96 @@
+package ui
+
+import (
+	"context"
+	"os/exec"
+	"strings"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
+)
+
+type copiedMsg struct{ Err error }
+
+func (a *App) selectionBounds() (int, int, int, int) {
+	first, left, last, right := a.visualRow, a.visualColumn, a.chatCursor, a.chatColumn
+	if first > last || first == last && left > right {
+		first, last = last, first
+		left, right = right, left
+	}
+	return first, left, last, right
+}
+
+func (a *App) selectedText() string {
+	lines := a.transcript(max(10, a.mainWidth()-5))
+	first, left, last, right := a.selectionBounds()
+	var out []string
+	for row := max(0, first); row <= last && row < len(lines); row++ {
+		text := ansi.Strip(lines[row].Text)
+		start, end := 0, ansi.StringWidth(text)
+		if a.visualMode == "visual" {
+			if row == first {
+				start = left
+			}
+			if row == last {
+				end = min(end, right+1)
+			}
+		}
+		out = append(out, ansi.Cut(text, start, end))
+	}
+	return strings.Join(out, "\n")
+}
+
+func (a *App) yank() tea.Cmd {
+	text := ""
+	if a.visualMode != "" {
+		text = a.selectedText()
+	} else if a.selected >= 0 && a.selected < len(a.Session.Messages) {
+		text = a.Session.Messages[a.selected].Content
+	}
+	if text == "" {
+		a.notice = "nothing selected"
+		return nil
+	}
+	a.Prompt.Register = []rune(text)
+	a.Prompt.Linewise = a.visualMode == "visual-line"
+	a.visualMode = ""
+	a.notice = "copied to wraith register"
+	argv := append([]string(nil), a.Config.Clipboard...)
+	if len(argv) == 0 {
+		return nil
+	}
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+		cmd.Stdin = strings.NewReader(text)
+		return copiedMsg{Err: cmd.Run()}
+	}
+}
+
+func (a *App) selectionLine(text string, row int, p palette) string {
+	if a.visualMode == "" {
+		return text
+	}
+	first, left, last, right := a.selectionBounds()
+	if row < first || row > last {
+		return text
+	}
+	width := ansi.StringWidth(text)
+	start, end := 0, width
+	if a.visualMode == "visual" {
+		if row == first {
+			start = left
+		}
+		if row == last {
+			end = min(end, right+1)
+		}
+	}
+	foreground := p.BG
+	if foreground == "" {
+		foreground = "#101419"
+	}
+	style := "\x1b[" + color(foreground, false) + ";" + color(p.Second, true) + "m"
+	return ansi.Cut(text, 0, start) + style + ansi.Strip(ansi.Cut(text, start, end)) + reset + ansi.Cut(text, end, width)
+}

@@ -68,7 +68,7 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 
 func (a *App) editResponse() tea.Cmd {
 	i := a.selected
-	if i < 0 || i >= len(a.Session.Messages) || a.Session.Messages[i].Role != "assistant" {
+	if i < 0 || i >= len(a.Session.Messages) {
 		i = len(a.Session.Messages) - 1
 		for i >= 0 && a.Session.Messages[i].Role != "assistant" {
 			i--

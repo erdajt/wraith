@@ -31,6 +31,12 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.notice = "model loaded · ready"
 			}
 		}
+	case copiedMsg:
+		if m.Err != nil {
+			a.notice = "copied to wraith register; system clipboard: " + m.Err.Error()
+		} else {
+			a.notice = "copied to system clipboard and wraith register"
+		}
 	case tea.MouseMsg:
 		return a, a.mouse(m)
 	case tea.KeyMsg:

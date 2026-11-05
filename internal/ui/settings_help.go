@@ -7,6 +7,7 @@ import (
 )
 
 var settingDescriptions = map[string]string{
+	"clipboard":                "Executable and arguments used to copy selected text to the system clipboard. Default [wl-copy] targets Wayland; X11 users can use [xclip, -selection, clipboard]. An empty array disables system copying. Text is also stored in the Wraith prompt register, so normal-mode p still works when the external helper fails.",
 	"model":                    "The Ollama model used for new chats. The picker lists installed models. Selecting one saves the default, keeps the current conversation, resets thinking to auto, and loads the model immediately. Wraith does not download missing weights.",
 	"thinking":                 "Native model reasoning control. Auto leaves the model default intact. On/off are available for boolean thinking models; low/medium/high appear only when advertised by the model. Thinking consumes output tokens. This controls generation, not whether reasoning is visible.",
 	"context":                  "Requested context capacity in tokens, from 2048 to 262144. It includes instructions, pinned facts, conversation and the reserved output budget. Larger values use more memory and may cause CPU offload. Changing this setting reloads the model. Check ollama ps for actual GPU placement.",

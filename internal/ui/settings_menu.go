@@ -27,7 +27,7 @@ func (a *App) settingsCategory(category string) {
 		"context":    {"compact.mode", "compact.threshold", "compact.keep_turns", "compact.budget"},
 		"appearance": {"theme", "appearance.background", "appearance.thinking", "appearance.mouse", "animations", "themes"},
 		"terminals":  {"terminal.overlay_width", "terminal.overlay_height", "terminal.split_width", "terminal.background", "terminal.foreground", "terminal.scrollback", "terminal.directory", "shell"},
-		"keys":       {"leader", "bindings", "keys", "editor"},
+		"keys":       {"leader", "bindings", "keys", "editor", "clipboard"},
 	}
 	encoded, _ := json.Marshal(a.Config)
 	var data map[string]any
