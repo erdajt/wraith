@@ -107,7 +107,7 @@ func (a *App) promptLines(w int) []string {
 		}
 		if r == '\n' {
 			if cursor {
-				line.WriteString("\x1b[7m " + reset)
+				line.WriteString(cursorText(" ", 0, p))
 			}
 			lines = append(lines, line.String())
 			line.Reset()
@@ -131,7 +131,7 @@ func (a *App) promptLines(w int) []string {
 			}
 		}
 		if cursor || (i >= left && i < right) {
-			line.WriteString("\x1b[7m" + s + reset)
+			line.WriteString(cursorText(s, 0, p))
 		} else {
 			line.WriteString(ink(p.FG, s))
 		}

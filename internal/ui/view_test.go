@@ -66,8 +66,8 @@ func TestScrollUpStartsAtVisibleBottom(t *testing.T) {
 		a.key(key("j"))
 	}
 	a.key(key("k"))
-	if a.offset != bottom-1 {
-		t.Fatal("scroll overshoot accumulated past the end")
+	if a.chatCursor != len(a.transcript(a.mainWidth()-5))-2 || a.offset != bottom {
+		t.Fatal("cursor overshoot accumulated past the end")
 	}
 }
 
@@ -81,7 +81,11 @@ func TestThemedRowsRetainBackgroundAcrossNestedStyles(t *testing.T) {
 		screen.Feed([]byte("\x1b[3m" + strings.ReplaceAll(a.View(), "\n", "\r\n")))
 		for y, row := range screen.Cells {
 			for x, cell := range row {
-				if cell.Style.BG != color(p.BG, true) || cell.Style.Italic {
+				expected := color(p.BG, true)
+				if x == 7 && y == 4+a.bodyHeight() {
+					expected = color(p.Accent, true)
+				}
+				if cell.Style.BG != expected || cell.Style.Italic {
 					t.Fatalf("%s cell %d,%d leaked host style: %+v", theme, x, y, cell.Style)
 				}
 			}
@@ -113,8 +117,17 @@ func TestInheritedAppBackgroundUsesTerminalDefault(t *testing.T) {
 	a := fixture(t)
 	a.Config.Appearance.Background = "inherit"
 	view := a.View()
-	if strings.Contains(view, "48;2;") {
-		t.Fatal("transparent app painted an rgb background")
+	screen := terminal.NewScreen(a.width, a.height, 0)
+	screen.Feed([]byte(strings.ReplaceAll(view, "\n", "\r\n")))
+	for y, row := range screen.Cells {
+		for x, cell := range row {
+			if x == 2 && y == 4+a.bodyHeight() {
+				continue
+			}
+			if cell.Style.BG != "" {
+				t.Fatalf("transparent cell %d,%d painted a background", x, y)
+			}
+		}
 	}
 	if !strings.Contains(view, "49m") {
 		t.Fatal("terminal default background missing")

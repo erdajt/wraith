@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -103,6 +102,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 			a.focus = "prompt"
 		} else {
 			a.focus = "chat"
+			a.ensureChatCursor()
 		}
 		return nil
 	}
@@ -118,77 +118,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 	if a.focus == "chat" {
-		if key == a.Config.Keys["thinking_toggle"] {
-			a.toggleThinking(a.selected)
-			return nil
-		}
-		if len(key) == 1 && key[0] >= '0' && key[0] <= '9' {
-			if len(a.chatCount) < 6 {
-				a.chatCount += key
-			}
-			return nil
-		}
-		count, _ := strconv.Atoi(a.chatCount)
-		count = max(1, count)
-		a.chatCount = ""
-		if key != "g" {
-			a.chatG = false
-		}
-		limit := max(0, len(a.transcript(max(10, a.mainWidth()-5)))-a.bodyHeight())
-		if a.follow {
-			a.offset = limit
-		}
-		a.offset = min(a.offset, limit)
-		defer func() { a.offset = min(a.offset, limit) }()
-		switch key {
-		case "j", "down":
-			a.offset += count
-			a.follow = false
-		case "k", "up":
-			a.offset = max(0, a.offset-count)
-			a.follow = false
-		case "ctrl+d", "pgdown":
-			a.offset += count * max(1, a.bodyHeight()/2)
-			a.follow = false
-		case "ctrl+u", "pgup":
-			a.offset = max(0, a.offset-count*max(1, a.bodyHeight()/2))
-			a.follow = false
-		case "g":
-			if a.chatG {
-				a.offset = 0
-				a.follow = false
-				a.chatG = false
-			} else {
-				a.chatG = true
-			}
-		case "G":
-			a.follow = true
-		case "]":
-			a.selected = min(len(a.Session.Messages)-1, a.selected+1)
-			a.jumpSelected()
-		case "[":
-			a.selected = max(0, a.selected-1)
-			a.jumpSelected()
-		case "/":
-			a.searchMode = true
-			a.command = ""
-		case "n":
-			a.findNext(false)
-		case "N":
-			a.findNext(true)
-		case "e":
-			return a.editResponse()
-		case "b":
-			return a.runCommand("blocks")
-		case "enter":
-			return a.selectedBlocks()
-		case "i":
-			a.focus = "prompt"
-			a.Prompt.Mode = "insert"
-		case "?":
-			return a.runCommand("help")
-		}
-		return nil
+		return a.chatKey(k)
 	}
 	text := ""
 	if k.Type == tea.KeyRunes || k.Type == tea.KeySpace {

@@ -10,6 +10,8 @@ func (a *App) jumpSelected() {
 	for i, line := range a.transcript(max(10, a.mainWidth()-5)) {
 		if line.Message == a.selected {
 			a.offset = i
+			a.chatCursor = i
+			a.chatColumn = 0
 			a.follow = false
 			return
 		}
@@ -35,6 +37,8 @@ func (a *App) findNext(reverse bool) {
 		i := (start + step*n + len(lines)*2) % len(lines)
 		if strings.Contains(strings.ToLower(ansi.Strip(lines[i].Text)), strings.ToLower(a.search)) {
 			a.offset = i
+			a.chatCursor = i
+			a.chatColumn = 0
 			a.follow = false
 			a.notice = "match: " + a.search
 			return

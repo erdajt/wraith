@@ -19,10 +19,10 @@ func TestCountedTranscriptMotions(t *testing.T) {
 		a.key(key(step.keys))
 		want := step.offset
 		if step.keys == "999999j" {
-			want = len(a.transcript(max(10, a.mainWidth()-5))) - a.bodyHeight()
+			want = len(a.transcript(max(10, a.mainWidth()-5))) - 1
 		}
-		if a.offset != want {
-			t.Fatalf("%s: got %d, want %d", step.keys, a.offset, want)
+		if a.chatCursor != want {
+			t.Fatalf("%s: got %d, want %d", step.keys, a.chatCursor, want)
 		}
 	}
 	a.key(key("gg"))

@@ -51,6 +51,9 @@ func (a *App) View() string {
 		content := ""
 		if start+y < len(transcript) {
 			content = transcript[start+y].Text
+			if a.focus == "chat" && start+y == a.chatCursor {
+				content = cursorText(content, a.chatColumn, p)
+			}
 		}
 		rows[3+y] = base(p, "  "+content, mainW) + base(p, "", w-mainW)
 	}
