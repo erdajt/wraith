@@ -24,15 +24,12 @@ func (a *App) menuFrame() []string {
 	if m.Searching || m.Query != "" {
 		content[1] = ink(p.Second, "/"+clean(m.Query)+"▏ · enter keeps filter · esc resets")
 	}
-	if m.Input != nil {
-		content = append(content, ink(p.Second, m.Input.Status()), cursorText(clean(m.Input.String()), m.Input.Pos, p))
-		return frame(content, w, p, false, "", "")
-	}
+
 	preview := ""
-	if m.Kind == "approval" && a.proposal != nil {
+	if (m.Kind == "approval" || m.Kind == "modify-command") && a.proposal != nil {
 		preview = a.proposal.Command
 		if a.proposal.Reason != "" {
-			preview += "\n\nreason: " + a.proposal.Reason
+			preview = "reason: " + a.proposal.Reason + "\n\n" + preview
 		}
 	}
 	if m.Kind == "block-actions" {
@@ -46,6 +43,10 @@ func (a *App) menuFrame() []string {
 		if len(lines) > max(1, height-10) {
 			content = append(content, ink(p.Muted, "… use view full command"))
 		}
+	}
+	if m.Input != nil {
+		content = append(content, ink(p.Second, m.Input.Status()), cursorText(clean(m.Input.String()), m.Input.Pos, p))
+		return frame(content, w, p, false, "", "")
 	}
 	start := max(0, m.Index-(height-5)/2)
 	start = min(start, max(0, len(m.Items)-(height-5)))

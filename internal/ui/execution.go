@@ -36,7 +36,7 @@ func (a *App) approve(p proposal) tea.Cmd {
 		return nil
 	}
 	a.proposal = &p
-	a.popup = &menu{Kind: "approval", Title: "approve command · " + a.runDirectory(), Items: []item{{"run", "run", "execute and save output"}, {"edit", "edit", "open in your editor"}, {"view full command", "view", "scroll before deciding"}, {"cancel", "cancel", "do not execute"}}}
+	a.popup = &menu{Kind: "approval", Title: "approve command · " + a.runDirectory(), Items: []item{{"run", "run", "execute and save output"}, {"edit", "edit", "open in your editor"}, {"view full command", "view", "scroll before deciding"}, {"ask assistant to modify", "modify", "describe the change"}, {"reject", "cancel", "do not execute"}}}
 	return nil
 }
 

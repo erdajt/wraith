@@ -15,6 +15,9 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 	if m.Reader != nil {
 		return a.readerKey(k)
 	}
+	if m.Kind == "modify-command" {
+		return a.modificationKey(k)
+	}
 	if m.Kind == "context-input" {
 		return a.contextInput(k)
 	}
