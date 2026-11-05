@@ -13,6 +13,9 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 	m := a.popup
 	switch key {
 	case "esc", "q":
+		if m.Kind == "overflow" {
+			a.pendingPrompt = ""
+		}
 		if m.Kind == "compact" {
 			return a.declineCompact()
 		}

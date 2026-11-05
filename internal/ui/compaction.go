@@ -7,6 +7,7 @@ import (
 	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/store"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -52,11 +53,13 @@ func (a *App) finishCompact(m compactMsg) tea.Cmd {
 	a.compacting = false
 	a.cancel = nil
 	if m.Err != nil {
+		a.pendingPrompt = ""
 		a.notice = "compaction stopped: " + m.Err.Error()
 		return nil
 	}
 	m.Session.Archives = append(m.Session.Archives, m.Archive)
 	if err := a.Store.Save(m.Session); err != nil {
+		a.pendingPrompt = ""
 		a.notice = "could not commit compacted context: " + err.Error()
 		return nil
 	}
@@ -65,9 +68,12 @@ func (a *App) finishCompact(m compactMsg) tea.Cmd {
 	a.selected = max(0, len(a.Session.Messages)-1)
 	a.notice = "compacted · original context archived · pins and prior facts retained"
 	if a.pendingPrompt != "" {
-		a.Prompt.Set(a.pendingPrompt)
+		pending := a.pendingPrompt
 		a.pendingPrompt = ""
-		return a.submit()
+		if strings.TrimSpace(a.Prompt.String()) == pending {
+			return a.submit()
+		}
+		a.notice += " · draft changed during compaction; review before sending"
 	}
 	return nil
 }

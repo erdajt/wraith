@@ -55,6 +55,7 @@ func fit(s string, w int) string {
 	if w <= 0 {
 		return ""
 	}
+	s = strings.ReplaceAll(s, "\n", " ")
 	s = ansi.Truncate(s, w, "")
 	return s + strings.Repeat(" ", max(0, w-ansi.StringWidth(s)))
 }

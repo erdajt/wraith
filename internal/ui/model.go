@@ -95,6 +95,9 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
+	if demo {
+		instructions = nil
+	}
 	c.Model = s.Model
 	a := &App{Config: c, Paths: p, Store: store.Store{Root: p.Data}, Session: s, Client: ollama.New(c.Host), Instructions: string(instructions), Prompt: vim.New(), width: 100, height: 30, focus: "prompt", follow: true, events: make(chan tea.Msg, 128), done: make(chan struct{}), demo: demo, notice: "/help commands · ctrl+s send · ctrl+e editor"}
 	if demo {

@@ -87,6 +87,12 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 	if a.focus == "chat" {
+		limit := max(0, len(a.transcript(max(10, a.mainWidth()-5)))-a.bodyHeight())
+		if a.follow {
+			a.offset = limit
+		}
+		a.offset = min(a.offset, limit)
+		defer func() { a.offset = min(a.offset, limit) }()
 		switch key {
 		case "j", "down":
 			a.offset++
