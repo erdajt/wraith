@@ -13,7 +13,7 @@ func (a *App) runCommand(line string) tea.Cmd {
 		a.notice = "wait for the current operation or use /cancel"
 		return nil
 	}
-	handlers := map[string]func(string, string) tea.Cmd{"model": a.modelCommand, "models": a.modelCommand, "think": a.modelCommand, "settings": a.modelCommand, "set": a.modelCommand, "theme": a.modelCommand, "context": a.modelCommand, "compact": a.modelCommand, "cancel": a.modelCommand, "thinking": a.modelCommand, "new": a.sessionCommand, "chats": a.sessionCommand, "sessions": a.sessionCommand, "resume": a.sessionCommand, "archives": a.sessionCommand, "restore": a.sessionCommand, "export": a.sessionCommand, "retry": a.sessionCommand, "terminal-restart": a.sessionCommand, "quit": a.sessionCommand, "q": a.sessionCommand}
+	handlers := map[string]func(string, string) tea.Cmd{"model": a.modelCommand, "models": a.modelCommand, "think": a.modelCommand, "settings": a.modelCommand, "set": a.modelCommand, "theme": a.modelCommand, "context": a.modelCommand, "compact": a.modelCommand, "cancel": a.modelCommand, "thinking": a.modelCommand, "new": a.sessionCommand, "chats": a.sessionCommand, "sessions": a.sessionCommand, "resume": a.sessionCommand, "archives": a.sessionCommand, "restore": a.sessionCommand, "export": a.sessionCommand, "retry": a.sessionCommand, "terminal-restart": a.sessionCommand, "quit": a.sessionCommand, "q": a.sessionCommand, "help": a.memoryCommand, "h": a.memoryCommand, "?": a.memoryCommand, "instructions": a.memoryCommand, "memory": a.memoryCommand, "remember": a.memoryCommand, "pin": a.memoryCommand, "unpin": a.memoryCommand, "pins": a.memoryCommand, "blocks": a.memoryCommand, "edit": a.memoryCommand, "edit-response": a.memoryCommand}
 	if handler, ok := handlers[name]; ok {
 		return handler(name, arg)
 	}
