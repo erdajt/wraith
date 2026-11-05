@@ -74,9 +74,9 @@ pickers support arrows, `j/k` and `/` filtering. settings are grouped into categ
 
 the model distinguishes suggested code from a request to execute a concrete command. execution requests show the command and its **reason**, without exposing the internal protocol. placeholder targets remain suggestions. select run once to authorize execution, edit the command first, reject it, or request a revision. an empty revision prompt prepares a `modify:` draft for your next message.
 
-normal code blocks remain available through `/blocks` or enter on their command rows. saving a shell block stages its actual command in a terminal; pressing enter there executes it. other languages use a saved file and interpreter. choose the configurable blocks-only mode to disable model execution proposals.
+normal code blocks remain available through `/blocks` or enter on their command rows. saving a shell block stages its actual command in a terminal; enter inserts it into the shell input, and the next enter executes it. other languages use a saved file and interpreter. choose the configurable blocks-only mode to disable model execution proposals.
 
-`/history` opens tracked command records and output. sharing is off by default. use the output binding to send selected evidence, or enable `execution.auto_share`. raw scratch-shell output can be shared from copy mode; automatic terminal sharing captures changed snapshots before the next request. it does not infer command boundaries in an interactive shell. [approval and output details →](docs/execution.md)
+`/history` opens tracked command records and output. sharing is off by default. use the output binding to share the bounded tracked record, or enable `execution.auto_share`. raw scratch-shell output can be shared from copy mode; automatic terminal sharing captures changed snapshots before the next request. it does not infer command boundaries in an interactive shell. [approval and output details →](docs/execution.md)
 
 shells preserve their cwd, jobs and scrollback while hidden. exiting restarts the shell, with a restart limit for repeatedly failing configurations. the side pane ends above the footer. inherited backgrounds expose the host terminal's background; font, actual alpha and blur are host-terminal settings. [terminal configuration →](docs/terminals.md)
 
