@@ -1,10 +1,11 @@
 package ui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
 	"net/http"
 	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestCommandMatchesPreferExactNamesAndKeepAliases(t *testing.T) {

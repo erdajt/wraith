@@ -1,10 +1,11 @@
 package markdown
 
 import (
-	"github.com/charmbracelet/x/ansi"
-	"github.com/erdajt/wraith/internal/config"
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/x/ansi"
+	"github.com/erdajt/wraith/internal/config"
 )
 
 func TestBlocksRenderWithoutMarkdownDelimiters(t *testing.T) {

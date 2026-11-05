@@ -1,10 +1,10 @@
 package ui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
 	"strconv"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/erdajt/wraith/internal/vim"
 	"github.com/mattn/go-runewidth"

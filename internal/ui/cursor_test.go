@@ -1,9 +1,10 @@
 package ui
 
 import (
+	"testing"
+
 	"github.com/charmbracelet/x/ansi"
 	"github.com/erdajt/wraith/internal/session"
-	"testing"
 )
 
 func TestThemedCursorPreservesWideCharacters(t *testing.T) {

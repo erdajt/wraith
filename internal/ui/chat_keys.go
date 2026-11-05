@@ -1,9 +1,10 @@
 package ui
 
 import (
+	"strconv"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
-	"strconv"
 )
 
 func (a *App) ensureChatCursor() {

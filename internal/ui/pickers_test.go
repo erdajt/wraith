@@ -1,9 +1,10 @@
 package ui
 
 import (
+	"testing"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/session"
-	"testing"
 )
 
 func TestResumePickerSupportsArrowsVimAndSearch(t *testing.T) {

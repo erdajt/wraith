@@ -1,9 +1,10 @@
 package ui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
 	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestDottedCommandsRequireCompleteParent(t *testing.T) {

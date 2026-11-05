@@ -2,12 +2,12 @@ package ui
 
 import (
 	"fmt"
-	"github.com/erdajt/wraith/internal/config"
 	"strconv"
 	"strings"
 	"unicode"
 
 	"github.com/charmbracelet/x/ansi"
+	"github.com/erdajt/wraith/internal/config"
 )
 
 type palette = config.Palette

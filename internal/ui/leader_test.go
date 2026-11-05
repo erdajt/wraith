@@ -1,8 +1,9 @@
 package ui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestLeaderSequencesAndSearch(t *testing.T) {

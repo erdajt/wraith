@@ -1,10 +1,11 @@
 package ui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/erdajt/wraith/internal/session"
 	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/erdajt/wraith/internal/session"
 )
 
 func TestThinkingExpandsWithVimKeyAndMouse(t *testing.T) {

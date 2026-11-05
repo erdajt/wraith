@@ -1,8 +1,9 @@
 package ui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
 	"strconv"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func (a *App) pinKey(k tea.KeyMsg) (tea.Cmd, bool) {

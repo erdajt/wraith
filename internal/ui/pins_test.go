@@ -1,10 +1,11 @@
 package ui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/erdajt/wraith/internal/editor"
 	"os"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/erdajt/wraith/internal/editor"
 )
 
 func TestFilteredPinRemovalUsesOriginalIndex(t *testing.T) {

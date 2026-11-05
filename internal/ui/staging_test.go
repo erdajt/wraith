@@ -1,10 +1,11 @@
 package ui
 
 import (
-	"github.com/charmbracelet/x/ansi"
-	"github.com/erdajt/wraith/internal/terminal"
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/x/ansi"
+	"github.com/erdajt/wraith/internal/terminal"
 )
 
 func TestMultilineStagingCannotExecuteOnInsertion(t *testing.T) {

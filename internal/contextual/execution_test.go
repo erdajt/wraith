@@ -1,10 +1,11 @@
 package contextual
 
 import (
-	"github.com/erdajt/wraith/internal/config"
-	"github.com/erdajt/wraith/internal/session"
 	"strings"
 	"testing"
+
+	"github.com/erdajt/wraith/internal/config"
+	"github.com/erdajt/wraith/internal/session"
 )
 
 func TestOnlyExplicitWellFormedRequestsAreActionable(t *testing.T) {

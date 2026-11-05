@@ -1,11 +1,12 @@
 package ui
 
 import (
-	"github.com/erdajt/wraith/internal/editor"
-	"github.com/erdajt/wraith/internal/session"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/erdajt/wraith/internal/editor"
+	"github.com/erdajt/wraith/internal/session"
 )
 
 func TestVisualCopyAndNormalLineYank(t *testing.T) {

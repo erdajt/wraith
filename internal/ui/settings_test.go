@@ -1,9 +1,9 @@
 package ui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/session"
 )

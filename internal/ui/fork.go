@@ -1,9 +1,10 @@
 package ui
 
 import (
+	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/session"
-	"time"
 )
 
 func (a *App) confirmFork(index int) tea.Cmd {

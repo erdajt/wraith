@@ -1,9 +1,10 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/x/ansi"
 	"github.com/mattn/go-runewidth"
-	"strings"
 )
 
 func cursorText(text string, column int, p palette) string {

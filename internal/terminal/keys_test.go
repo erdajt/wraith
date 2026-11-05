@@ -1,8 +1,9 @@
 package terminal
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestTerminalKeysPreserveSpacesAndBracketedPaste(t *testing.T) {

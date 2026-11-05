@@ -1,10 +1,11 @@
 package ui
 
 import (
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/editor"
-	"strings"
 )
 
 func (a *App) messageAt(index int) string {

@@ -1,10 +1,11 @@
 package ui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/x/ansi"
 	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 )
 
 func TestReaderSupportsSearchVisualYankAndReadOnlyMotions(t *testing.T) {

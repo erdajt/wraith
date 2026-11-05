@@ -2,11 +2,11 @@ package ui
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"strings"
 	"time"
 
-	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/erdajt/wraith/internal/editor"

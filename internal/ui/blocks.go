@@ -2,10 +2,11 @@ package ui
 
 import (
 	"fmt"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/erdajt/wraith/internal/editor"
 	"path/filepath"
 	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/erdajt/wraith/internal/editor"
 )
 
 func (a *App) blockActions(block editor.Block) tea.Cmd {
