@@ -12,6 +12,9 @@ import (
 func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 	key := k.String()
 	m := a.popup
+	if m.Reader != nil {
+		return a.readerKey(k)
+	}
 	if m.Kind == "context-input" {
 		return a.contextInput(k)
 	}

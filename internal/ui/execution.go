@@ -140,7 +140,16 @@ func (a *App) showRun(r runner.Record, output string) {
 	if r.Truncated {
 		text += "\n[output truncated at 8 mib]"
 	}
-	a.showText("run-output", "command output · / search · esc closes", text)
+	previous := a.popup
+	a.showText("run-output", "command output", text)
+	a.popup.Record = r
+	a.popup.Reader = newReader(clean(text))
+	if previous != nil && previous.Reader != nil && previous.Record.ID == r.ID {
+		a.popup.Reader = previous.Reader
+		if !previous.Reader.Frozen {
+			a.popup.Reader.Buffer.Text = []rune(clean(text))
+		}
+	}
 }
 
 func (a *App) showText(kind, title, text string) {

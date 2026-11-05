@@ -22,6 +22,8 @@ import (
 
 type item struct{ Label, Value, Detail string }
 type menu struct {
+	Reader               *reader
+	Record               runner.Record
 	Input                *vim.Buffer
 	All                  []item
 	Query, Prefix, Count string

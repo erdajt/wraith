@@ -12,6 +12,11 @@ func (a *App) menuFrame() []string {
 	m := a.popup
 	w := min(a.width-6, 90)
 	height := min(a.height-8, 18)
+	if m.Reader != nil {
+		content := []string{bold(p.Accent, clean(m.Title)), ink(p.Muted, m.Reader.Buffer.Status()+" · / search · v select · y yank · r refresh · q close")}
+		content = append(content, m.Reader.lines(w-2, height-3, p)...)
+		return frame(content, w, p, false, "", "")
+	}
 	content := []string{bold(p.Accent, clean(m.Title)), ink(p.Muted, "j/k move · / search · enter select · esc close"), ""}
 	if m.Kind == "settings" || m.Kind == "value" {
 		content[1] = ink(p.Muted, "j/k move · / search · "+a.Config.Keys["setting_help"]+" explain · enter select")
