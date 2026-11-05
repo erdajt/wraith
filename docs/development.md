@@ -13,6 +13,8 @@ make install
 
 fixtures use an in-memory http transport, real linux ptys and temporary data directories. no installed model, gpu or running ollama service is required. the interactive subprocess test drives the actual bubble tea app through a pty, returns from a configured editor, hides and reopens a shell, and verifies that the side shell has independent state.
 
+when neovim is installed, a second integration test runs wraith inside its terminal, opens a nested editor, restarts a shell and searches/yanks terminal output. CI installs neovim to exercise this path.
+
 focused checks cover stream completion and cancellation, provider request formats, native cli event decoding, model discovery, saved selection, bounded extraction, omission audits, exact pins and literals, third-decline compaction, original archives, corrective retries, failed replacement, output sharing, directory-scoped resume, input history, editor save detection, command quoting, terminal control handling, unicode, layout dimensions, modal edits and read-only snapshots.
 
 ```sh

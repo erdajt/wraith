@@ -24,6 +24,8 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - name: install terminal integration dependency
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends neovim
       - name: verify dependencies and formatting
         run: |
           go mod download
