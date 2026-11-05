@@ -1,6 +1,8 @@
 provider: ollama
 providers:
     anthropic:
+        context: 0
+        model_contexts: {}
         kind: anthropic
         base_url: https://api.anthropic.com/v1
         api_key: ""
@@ -15,6 +17,8 @@ providers:
         token_field: ""
         extra: {}
     claude:
+        context: 0
+        model_contexts: {}
         kind: claude-cli
         base_url: ""
         api_key: ""
@@ -31,14 +35,15 @@ providers:
         token_field: ""
         extra: {}
     codex:
+        context: 0
+        model_contexts: {}
         kind: codex-cli
         base_url: ""
         api_key: ""
         key_env: ""
         headers: {}
         model: default
-        models:
-            - default
+        models: []
         command:
             - codex
         system_prompt: ""
@@ -47,6 +52,8 @@ providers:
         token_field: ""
         extra: {}
     deepseek:
+        context: 0
+        model_contexts: {}
         kind: openai
         base_url: https://api.deepseek.com
         api_key: ""
@@ -61,6 +68,8 @@ providers:
         token_field: max_tokens
         extra: {}
     ollama:
+        context: 0
+        model_contexts: {}
         kind: ollama
         base_url: ""
         api_key: ""
@@ -75,6 +84,8 @@ providers:
         token_field: ""
         extra: {}
     openai:
+        context: 0
+        model_contexts: {}
         kind: openai
         base_url: https://api.openai.com/v1
         api_key: ""

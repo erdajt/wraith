@@ -13,7 +13,9 @@ settings live in `~/.config/wraith/config.yaml`, or `$XDG_CONFIG_HOME/wraith/con
 /set appearance.background inherit
 ```
 
-context accepts any positive integer representable by the binary. the custom-capacity field is beside the presets. 8192 is a default, not a maximum. model architecture, provider limits and available memory determine what can actually be used. output reservations and source fragments still have to fit before a request is sent.
+`/settings.context` → context opens a number editor immediately. `ctrl+u` clears it; enter saves. escape enters Vim normal mode, where `cc` replaces the number; a second escape cancels. `/set context 1000000` saves an override for the active provider and model. `/set context auto` removes that override. settings show the effective capacity and its model.
+
+context accepts any positive integer representable by the binary. model architecture, provider limits and available memory determine what can actually be used. output reservations and source fragments still have to fit before a request is sent. [default resolution and overrides](context.md#capacity) explain how budgets follow model switches.
 
 | setting | default | effect |
 | --- | --- | --- |
@@ -22,7 +24,9 @@ context accepts any positive integer representable by the binary. the custom-cap
 | `host` | `http://127.0.0.1:11434` | fallback Ollama endpoint |
 | `auto_start` | `true` | start a refused local Ollama endpoint |
 | `model` | qwen3.5 heretic 9b q5 | initial model |
-| `context` / `predict` | `8192` / `2048` | positive context and generated-token budgets |
+| `context` / `predict` | `8192` / `2048` | automatic local-inference context budget and generated-token budget |
+| `providers.<name>.context` | `0` | provider capacity override; zero uses automatic defaults |
+| `providers.<name>.model_contexts` | empty | capacity overrides keyed by exact model id |
 | `thinking` | `auto` | native model default or supported effort value |
 | `threads` / `temperature` | `6` / `0.3` | Ollama inference options; API-specific options belong in provider `extra` |
 | `keep_alive` / `timeout` | `2m` / `10m` | Ollama idle retention and request/compaction deadline |

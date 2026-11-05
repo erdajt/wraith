@@ -4,6 +4,31 @@ wraith builds each chat request from its cybersecurity system prompt, global use
 
 `/remember` and `/instructions` apply across chats. `/pin` is for exact details that must remain in this chat's active context: targets, constraints, identifiers, paths or decisions. `/context` reports estimates and the last token count measured by ollama. the header's `~` marks an estimate, not an exact tokenizer count.
 
+## capacity
+
+`/settings.context` → context edits the active model's capacity. `/set context 32768` does the same directly. changes persist by provider and exact model id, so switching back restores the override. `/set context auto` removes it.
+
+the resolution order is:
+
+1. `providers.<name>.model_contexts.<model-id>` when set.
+2. the provider's positive `context` value.
+3. discovered model capacity. Ollama's automatic capacity is capped by the global `context` budget, 8192 by default; Codex uses its cached model metadata.
+4. when metadata is absent, the global budget for Ollama, 272000 for Codex CLI, 200000 for Anthropic or Claude CLI, and 128000 for compatible APIs.
+
+these fallback values are application budgets, not assertions that every backend model supports them. explicit overrides accept any positive integer and are never clamped to the discovered value. set a provider default or a model override when its service documents a different capacity.
+
+```yaml
+providers:
+  codex:
+    kind: codex-cli
+    command: [codex]
+    context: 0
+    model_contexts:
+      your-model-id: 1000000
+```
+
+local preloading, requests, the usage meter, shared-output sizing and compaction all use the resolved budget. Codex also receives it through `model_context_window`. compatible HTTP APIs and Claude CLI enforce their own native limits; this setting controls Wraith's budgeting there. [Codex configuration reference](https://developers.openai.com/codex/config-reference/)
+
 ## budgeting
 
 before sending, the app estimates input tokens and reserves the configured output budget plus a small margin. it scales estimates upward when ollama's last measured prompt exceeds the corresponding estimate. an oversized request is stopped before transmission and the draft is retained. the app does not discard old messages to make it fit. tokenization is model-specific, so estimates cannot guarantee that the server will never truncate; use a margin and inspect measured counts.

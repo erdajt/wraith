@@ -110,7 +110,7 @@ by default, wraith asks at 90% estimated context usage. declining postpones the 
 /set compact.mode auto
 ```
 
-API profiles support base URLs, environment or inline keys, headers, model lists, thinking modes and custom chat instructions. CLI profiles launch codex or claude as isolated child processes and stream their replies; they do not attach to an existing interactive CLI session. configured model catalogs support backends without discovery. [setup and provider limits →](docs/providers.md)
+API profiles support base URLs, environment or inline keys, headers, model lists, thinking modes and custom chat instructions. CLI profiles launch codex or claude as isolated child processes and stream their replies; they do not attach to an existing interactive CLI session. Codex discovers its native model catalog for `/models`, including supported thinking levels. context capacity follows the selected provider and model; edit it through `/settings.context` or `/set context`, and use `/set context auto` to restore its default. configured model catalogs support backends without discovery. [setup and provider limits →](docs/providers.md)
 
 choose **phosphor**, **tokyo**, **ember**, **ice**, **mono**, **rose-pine**, **dracula**, **everforest**, **nord** or **catppuccin-mocha**, or define a palette in YAML. background inheritance, animations, pane dimensions, leader sequences and global bindings are configurable. [themes](docs/themes.md) · [complete configuration](docs/config.example.yaml)
 

@@ -7,7 +7,7 @@
 | `ollama` | native streaming chat | installed models from `/api/tags` |
 | `openai` | openai-compatible chat completions and sse | `/models`, or configured ids |
 | `anthropic` | messages api and sse | `/models`, or configured ids |
-| `codex-cli` | installed `codex exec` with json events | configured ids, plus `default` when no catalog is set |
+| `codex-cli` | installed `codex exec` with json events | native cached catalog, then app-server `model/list`; configurable ids |
 | `claude-cli` | installed `claude -p` with streaming json | configured ids, plus `default` when no catalog is set |
 
 built-in profiles are `ollama`, `openai`, `anthropic`, `deepseek`, `codex` and `claude`. add any number of named compatible endpoints. model availability and thinking capabilities vary by account and model; configured catalogs are explicit ids, not a claim that the service grants access.
@@ -38,7 +38,7 @@ set the named environment variable before launching wraith. `api_key` can hold a
 
 `extra` adds endpoint-specific request fields, such as temperature or supported reasoning settings. it cannot replace model, messages, system, streaming or tool-control fields. `token_field` chooses `max_tokens` or `max_completion_tokens` for compatible endpoints. the app's context capacity governs local budgeting; cloud APIs enforce their own model limits and do not receive Ollama's `num_ctx` option.
 
-`thinking` lists supported picker values for a profile. `thinking_mode` can be `reasoning_effort`, `thinking`, or `adaptive` where the backend supports it. do not list values unsupported by the selected model. an empty list leaves `auto` available. Ollama discovers these values from the model instead.
+`thinking` lists supported picker values for a profile. `thinking_mode` can be `reasoning_effort`, `thinking`, or `adaptive` where the backend supports it. do not list values unsupported by the selected model. an empty list leaves `auto` available. Ollama discovers these values from the model instead. Codex discovers its reasoning values from native catalog metadata when no explicit thinking list is configured.
 
 `system_prompt` adds provider-specific instructions to ordinary chat requests. compaction uses its dedicated extraction and audit instructions without this chat prompt. global user preferences remain in `instructions.md`.
 
@@ -49,7 +49,11 @@ wraith --provider codex
 
 ## cli profiles
 
-install and authenticate the CLI separately. the default profiles reuse its saved login. `command` is an executable-and-arguments array, allowing an absolute path or your own wrapper. configure `models` with ids supported by that installation; `default` omits the model flag and uses the CLI default.
+install and authenticate the CLI separately. the default profiles reuse its saved login. `command` is an executable-and-arguments array, allowing an absolute path or your own wrapper. `/models` opens the Codex catalog and supports `j`/`k`, arrows, filtering and enter. choosing a model saves it as that provider's default and refreshes its context and thinking settings. `/model exact-model-id` also selects directly.
+
+Codex discovery reads `$CODEX_HOME/models_cache.json`, or `~/.codex/models_cache.json`. hidden models are excluded. when the cache is absent or unusable, Wraith starts the native app server for a bounded `model/list` request; it does not start a conversation or generation. cached entries reflect the last Codex catalog refresh and do not guarantee current account access. run Codex itself to refresh stale metadata.
+
+an explicit nonempty `models` list replaces discovery. an old Codex list containing only `default` now enables discovery; `default` remains available through `/model default`, where it omits the model flag. Claude continues to use configured ids, or `default` when none are configured. custom Codex wrappers need the app-server protocol for discovery without a cache; otherwise configure their model list.
 
 wraith launches an isolated, noninteractive child for each request, sends the active conversation through stdin and reads structured response events. it does not attach to another interactive terminal or import an unrelated CLI conversation. Wraith owns session persistence and compaction, so archived turns do not silently return through an independent CLI history.
 
