@@ -99,3 +99,26 @@ func FuzzEditing(f *testing.F) {
 		}
 	})
 }
+
+func TestLiteralReplaceAndBigWordMotions(t *testing.T) {
+	b := normal("abc")
+	keys(b, "r", "界")
+	if b.String() != "界bc" {
+		t.Fatalf("unicode replacement: %q", b.String())
+	}
+	keys(b, "r", "1")
+	if b.String() != "1bc" {
+		t.Fatal("numeric replacement became a count")
+	}
+	b = normal("host.name next")
+	keys(b, "W")
+	if b.Pos != 10 {
+		t.Fatalf("big word split at punctuation: %d", b.Pos)
+	}
+	b = normal("first next")
+	keys(b, "c", "w")
+	keys(b, "x", "esc")
+	if b.String() != "x next" {
+		t.Fatalf("cw consumed trailing space: %q", b.String())
+	}
+}

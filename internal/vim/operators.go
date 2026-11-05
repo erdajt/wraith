@@ -72,12 +72,19 @@ func (b *Buffer) pendingKey(key, text string, n int) bool {
 			return true
 		}
 		start := b.Pos
+		if op == "c" && (key == "w" || key == "W") && start < len(b.Text) && !unicode.IsSpace(b.Text[start]) {
+			if key == "w" {
+				key = "e"
+			} else {
+				key = "E"
+			}
+		}
 		b.motion(key, n)
 		end := b.Pos
 		b.Pos = start
 		if end < start {
 			start, end = end, start
-		} else if key == "e" || key == "$" {
+		} else if key == "e" || key == "E" || key == "$" {
 			end = min(len(b.Text), end+1)
 		}
 		b.apply(op, start, end, false)
