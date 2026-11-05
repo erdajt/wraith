@@ -1,6 +1,6 @@
 <div align="center">
 
-# ◈ W R A I T H
+![wraith](docs/assets/wraith.svg)
 
 **vim keys. your models. real shells.**
 
@@ -45,7 +45,7 @@ configure the editor, shell and providers in `~/.config/wraith/config.yaml`. `wr
 | model backends | ollama, openai-compatible APIs, anthropic, deepseek, codex cli and claude cli |
 | reasoning | supported thinking controls, streamed reasoning and expandable thinking sections |
 | saved sessions | directory-scoped resume picker, compressed storage, recovery and markdown export |
-| appearance | ten built-in themes, custom palettes, themed cursors and an animated ASCII welcome |
+| appearance | ten built-in themes, custom palettes, themed cursors and an animated hooded Wraith emblem and ASCII wordmark |
 
 ## stay on the keyboard
 

@@ -1,42 +1,75 @@
 package ui
 
 import (
-	"math"
+	"strings"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
-func wraithOrbit(width, height, frame int) []string {
-	width, height = max(1, width), max(1, height)
-	cells := make([]byte, width*height)
-	depth := make([]float64, len(cells))
-	for i := range cells {
-		cells[i] = ' '
+var wraithWordmark = []string{
+	` _       ______  ___    __________________`,
+	`| |     / / __ \/   |  /  _/_  __/ / / /`,
+	`| | /| / / /_/ / /| |  / /  / / / /_/ /`,
+	`| |/ |/ / _, _/ ___ |_/ /  / / / __  /`,
+	`|__/|__/_/ |_/_/  |_/___/ /_/ /_/ /_/`,
+}
+
+func wraithEmblem(height, frame int, p palette) []string {
+	art := []string{
+		`          /\`,
+		`        _/  \_`,
+		`       / .--. \`,
+		`      / /    \ \`,
+		`     | | \  / | |`,
+		`     |  \    /  |`,
+		`      \_/'--'\_/`,
+		`        / /\ \`,
 	}
-	angle := float64(frame) * 0.07
-	shades := ".,:;irsXA253hMHGS#9B&@"
-	for v := 0.0; v < 2*math.Pi; v += 0.09 {
-		for u := 0.0; u < 2*math.Pi; u += 0.04 {
-			ring := 1.5 + 0.55*math.Cos(v)
-			x, y, z := ring*math.Cos(u), ring*math.Sin(u), 0.55*math.Sin(v)
-			y, z = y*math.Cos(angle)-z*math.Sin(angle), y*math.Sin(angle)+z*math.Cos(angle)
-			x, z = x*math.Cos(angle*0.7)-z*math.Sin(angle*0.7), x*math.Sin(angle*0.7)+z*math.Cos(angle*0.7)
-			distance := 1 / (z + 5)
-			column := width/2 + int(x*distance*float64(width)*0.85)
-			row := height/2 + int(y*distance*float64(height)*0.85)
-			if column < 0 || column >= width || row < 0 || row >= height {
-				continue
-			}
-			index := row*width + column
-			if distance <= depth[index] {
-				continue
-			}
-			depth[index] = distance
-			light := (math.Cos(v)*math.Cos(u-angle) + math.Sin(v-angle) + 2) / 4
-			cells[index] = shades[min(len(shades)-1, max(0, int(light*float64(len(shades)))))]
+	if height >= 20 {
+		art = []string{
+			`           /\`,
+			`          /  \`,
+			`        _/    \_`,
+			`       /  .--.  \`,
+			`      /  /    \  \`,
+			`     |  | \  / |  |`,
+			`     |  |      |  |`,
+			`     |   \    /   |`,
+			`      \   '--'   /`,
+			`       \_/|  |\_/`,
+			`         / /\ \`,
+			`        /_/  \_\`,
+		}
+	} else if height < 14 {
+		art = []string{
+			`         /\`,
+			`       /    \`,
+			`      | \  / |`,
+			`      |      |`,
+			`       \_/\_/`,
 		}
 	}
-	rows := make([]string, height)
-	for y := range height {
-		rows[y] = string(cells[y*width : (y+1)*width])
+	phase := frame / 3 % 8
+	rows := make([]string, len(art))
+	for i, line := range art {
+		line = fit(line, 25)
+		if i >= len(art)-3 {
+			left, right := byte(' '), byte(' ')
+			if i == len(art)-1-phase%3 {
+				left = []byte{'.', ':', '\'', ' '}[phase%4]
+				right = []byte{' ', '.', ':', '\''}[phase%4]
+			}
+			line = string(left) + line[1:24] + string(right)
+		}
+		if before, after, ok := strings.Cut(line, `\  /`); ok {
+			eyes := p.Accent
+			if phase == 3 || phase == 4 {
+				eyes = p.FG
+			}
+			rows[i] = ink(p.Second, before) + bold(eyes, `\  /`) + ink(p.Second, after)
+		} else {
+			rows[i] = ink(p.Second, line)
+		}
 	}
 	return rows
 }
@@ -44,31 +77,20 @@ func wraithOrbit(width, height, frame int) []string {
 func (a *App) welcome(width, height int, p palette) []string {
 	frame := a.frame
 	if !a.Config.Animations {
-		frame = 9
-	}
-	logo := []string{"W R A I T H"}
-	if width >= 48 && height >= 18 {
-		logo = []string{
-			"#   #  ####    ###   #####  #####  #   #",
-			"#   #  #   #  #   #    #      #    #   #",
-			"# # #  ####   #####    #      #    #####",
-			"## ##  #  #   #   #    #      #    #   #",
-			"#   #  #   #  #   #  #####    #    #   #",
-		}
+		frame = 0
 	}
 	var rows []string
-	if height >= 13 {
-		for i, line := range wraithOrbit(min(width-4, 36), min(8, height-len(logo)-6), frame) {
-			shade := p.Accent
-			if i%3 == 0 {
-				shade = p.Second
-			}
-			rows = append(rows, ink(shade, line))
+	if height >= 9 {
+		rows = append(rows, wraithEmblem(height, frame, p)...)
+		rows = append(rows, "")
+	}
+	if width >= 48 && height >= 18 {
+		for _, line := range wraithWordmark {
+			rows = append(rows, bold(p.Accent, fit(line, 41)))
 		}
+	} else {
+		rows = append(rows, bold(p.Accent, "W R A I T H"))
 	}
-	for _, line := range logo {
-		rows = append(rows, bold(p.Accent, line))
-	}
-	rows = append(rows, ink(p.Muted, "local intelligence · deliberate control"), "", ink(p.FG, "write a prompt, or bring your own evidence."), ink(p.Muted, a.Config.Keys["send"]+" send     "+a.Config.Keys["editor"]+" editor     /models switch"), ink(p.Muted, a.Config.Keys["terminal_overlay"]+" scratch shell     "+a.Config.Keys["terminal_split"]+" side shell"), ink(p.Second, "/remember preferences     /pin exact facts"))
+	rows = append(rows, "", ink(p.Muted, ansi.Truncate("write a prompt · /models to choose a model", max(1, width-4), "")))
 	return rows
 }

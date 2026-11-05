@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-labelledby="title">
+<title id="title">wraith — hooded specter and ascii wordmark</title>
+<rect width="640" height="360" rx="12" fill="#101419"/>
+<g font-family="DejaVu Sans Mono, monospace" font-size="16">
+<text xml:space="preserve" x="200.0" y="28" fill="#bb9aff" font-weight="400">           /\            </text>
+<text xml:space="preserve" x="200.0" y="46" fill="#bb9aff" font-weight="400">          /  \           </text>
+<text xml:space="preserve" x="200.0" y="64" fill="#bb9aff" font-weight="400">        _/    \_         </text>
+<text xml:space="preserve" x="200.0" y="82" fill="#bb9aff" font-weight="400">       /  .--.  \        </text>
+<text xml:space="preserve" x="200.0" y="100" fill="#bb9aff" font-weight="400">      /  /    \  \       </text>
+<text xml:space="preserve" x="200.0" y="118" fill="#bb9aff" font-weight="400">     |  | </text>
+<text xml:space="preserve" x="296.0" y="118" fill="#73f5bd" font-weight="700">\  /</text>
+<text xml:space="preserve" x="334.4" y="118" fill="#bb9aff" font-weight="400"> |  |      </text>
+<text xml:space="preserve" x="200.0" y="136" fill="#bb9aff" font-weight="400">     |  |      |  |      </text>
+<text xml:space="preserve" x="200.0" y="154" fill="#bb9aff" font-weight="400">     |   \    /   |      </text>
+<text xml:space="preserve" x="200.0" y="172" fill="#bb9aff" font-weight="400">      \   &#x27;--&#x27;   /       </text>
+<text xml:space="preserve" x="200.0" y="190" fill="#bb9aff" font-weight="400">       \_/|  |\_/        </text>
+<text xml:space="preserve" x="200.0" y="208" fill="#bb9aff" font-weight="400">         / /\ \          </text>
+<text xml:space="preserve" x="200.0" y="226" fill="#bb9aff" font-weight="400">.       /_/  \_\         </text>
+<text xml:space="preserve" x="123.2" y="262" fill="#73f5bd" font-weight="700"> _       ______  ___    _________________</text>
+<text xml:space="preserve" x="123.2" y="280" fill="#73f5bd" font-weight="700">| |     / / __ \/   |  /  _/_  __/ / / / </text>
+<text xml:space="preserve" x="123.2" y="298" fill="#73f5bd" font-weight="700">| | /| / / /_/ / /| |  / /  / / / /_/ /  </text>
+<text xml:space="preserve" x="123.2" y="316" fill="#73f5bd" font-weight="700">| |/ |/ / _, _/ ___ |_/ /  / / / __  /   </text>
+<text xml:space="preserve" x="123.2" y="334" fill="#73f5bd" font-weight="700">|__/|__/_/ |_/_/  |_/___/ /_/ /_/ /_/    </text>
+</g>
+</svg>

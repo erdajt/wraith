@@ -37,7 +37,7 @@ context accepts any positive integer representable by the binary. the custom-cap
 | `theme` / `themes` | `phosphor` / empty | built-in or custom palette; [details](themes.md) |
 | `appearance.background` | `theme` | theme background or host-terminal inheritance |
 | `appearance.mouse` / `appearance.thinking` | `true` / `false` | mouse events and initial reasoning visibility |
-| `animations` | `true` | activity indicators and rotating welcome art |
+| `animations` | `true` | activity indicators, welcome eye glow and drifting wisps |
 | `clipboard` | `[wl-copy]` | clipboard executable and arguments; empty disables external copying |
 | `leader` | `space` | prefix for command hints |
 | `bindings` / `keys` | see example | leader sequences and direct action bindings |
