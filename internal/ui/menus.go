@@ -22,6 +22,13 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 	}
 	switch key {
 	case "esc", "q":
+		if m.Kind == "command-preview" && a.proposal != nil {
+			return a.approve(*a.proposal)
+		}
+		if m.Kind == "approval" {
+			a.proposal = nil
+			a.notice = "command declined"
+		}
 		if m.Kind == "overflow" {
 			a.pendingPrompt = ""
 		}
@@ -78,6 +85,8 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 				return nil
 			}
 			a.showRun(record, record.Output)
+		case "block-actions":
+			return a.blockAction(choice.Value)
 		case "approval":
 			return a.approvalAction(choice.Value)
 		case "models":
@@ -115,7 +124,7 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 			var mi, bi int
 			_, _ = fmt.Sscanf(choice.Value, "%d:%d", &mi, &bi)
 			blocks := editor.Blocks(a.Session.Messages[mi].Content)
-			return a.edit("block", blocks[bi].Language, blocks[bi].Text, -1)
+			return a.blockActions(blocks[bi])
 		}
 	}
 	return nil

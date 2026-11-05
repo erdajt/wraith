@@ -42,7 +42,7 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 			return nil
 		}
 		text = a.Session.Messages[index].Content
-	case "block":
+	case "block", "run":
 		ext = editor.Extension(language)
 	}
 	f, err := editor.Prepare(filepath.Join(a.Paths.Cache, "edits"), ext, text)
@@ -141,6 +141,27 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 		applied = true
 		a.Session = candidate
 		a.notice = "response edited · original archived"
+	case "run":
+		if a.proposal == nil {
+			a.notice = "command approval expired"
+			return nil
+		}
+		path, command, e := editor.Stage(filepath.Join(a.Paths.Data, "snippets"), m.Language, text)
+		if e != nil {
+			a.notice = e.Error()
+			return nil
+		}
+		if command == "" {
+			a.notice = "saved " + path + "; no interpreter mapped"
+			applied = true
+			return nil
+		}
+		p := *a.proposal
+		p.Command = command
+		p.Text = text
+		p.Source += "-edited"
+		applied = true
+		return a.approve(p)
 	case "block":
 		path, command, e := editor.Stage(filepath.Join(a.Paths.Data, "snippets"), m.Language, text)
 		if e != nil {

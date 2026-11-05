@@ -10,6 +10,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/config"
+	"github.com/erdajt/wraith/internal/editor"
 	"github.com/erdajt/wraith/internal/fsutil"
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/runner"
@@ -65,6 +66,7 @@ type terminalMsg struct {
 }
 
 type App struct {
+	selectedBlock           editor.Block
 	proposal                *proposal
 	executing, runContinue  bool
 	activeRun               runner.Record

@@ -16,6 +16,15 @@ func (a *App) menuFrame() []string {
 	if m.Searching || m.Query != "" {
 		content[1] = ink(p.Second, "/"+clean(m.Query)+"▏ · enter keeps filter · esc resets")
 	}
+	if m.Kind == "approval" && a.proposal != nil {
+		lines := strings.Split(ansi.Hardwrap(clean(a.proposal.Command), w-6, true), "\n")
+		for _, line := range lines[:min(len(lines), max(1, height-10))] {
+			content = append(content, ink(p.Accent, "$ "+line))
+		}
+		if len(lines) > max(1, height-10) {
+			content = append(content, ink(p.Muted, "… use view full command"))
+		}
+	}
 	start := max(0, m.Index-(height-5)/2)
 	start = min(start, max(0, len(m.Items)-(height-5)))
 	if len(m.Items) == 0 {
@@ -68,7 +77,7 @@ func (a *App) terminalFrame(index, w, h int) []string {
 	}
 	lines := pane.Screen.Lines(a.focus == fmt.Sprintf("terminal%d", index) && pane.Pending == "", fg, bg)
 	if pane.Pending != "" {
-		lines[len(lines)-2] = ink(p.Warn, " enter inserts · e edits · esc dismisses")
+		lines[len(lines)-2] = ink(p.Warn, " enter inserts · r tracked run · e edits · esc dismisses")
 		lines[len(lines)-1] = ink(p.Accent, ansi.Truncate(pane.Pending, w-2, "…"))
 	}
 	if pane.Err != "" {
