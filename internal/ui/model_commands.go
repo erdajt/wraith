@@ -73,7 +73,7 @@ func (a *App) modelCommand(name, arg string) tea.Cmd {
 		sort.Slice(items, func(i, j int) bool { return items[i].Label < items[j].Label })
 		a.popup = &menu{Kind: "theme", Title: "choose a theme", Items: items}
 	case "context":
-		a.notice = fmt.Sprintf("~%d / %d context tokens · output reserve %d · %d ledger facts · %d pins · %d archives · measured last prompt %d", contextual.Used(a.Session, a.Instructions), a.Config.Context, a.Config.Predict, len(a.Session.Facts), len(a.Session.Pins), len(a.Session.Archives), a.Session.Usage.Prompt)
+		a.notice = fmt.Sprintf("~%d / %d context tokens · output reserve %d · %d ledger facts · %d pins · %d archives · measured last prompt %d", contextual.ChatUsed(a.Session, a.Config, a.Instructions), a.Config.Context, a.Config.Predict, len(a.Session.Facts), len(a.Session.Pins), len(a.Session.Archives), a.Session.Usage.Prompt)
 	case "compact":
 		return a.startCompact()
 	case "cancel":

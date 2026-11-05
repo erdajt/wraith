@@ -66,6 +66,8 @@ type terminalMsg struct {
 }
 
 type App struct {
+	agentSteps              int
+	pendingAgent            bool
 	selectedBlock           editor.Block
 	proposal                *proposal
 	executing, runContinue  bool
