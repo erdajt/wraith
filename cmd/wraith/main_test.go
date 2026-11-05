@@ -73,3 +73,10 @@ func TestResumeRejectsConflictingSessionFlags(t *testing.T) {
 		}
 	}
 }
+
+func TestRemovedNewFlagReportsUnknownOption(t *testing.T) {
+	err := run([]string{"--new"}, &bytes.Buffer{})
+	if err == nil || !strings.Contains(err.Error(), "flag provided but not defined") {
+		t.Fatalf("removed flag accepted: %v", err)
+	}
+}

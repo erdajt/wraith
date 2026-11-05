@@ -37,7 +37,6 @@ func run(args []string, out io.Writer) error {
 	demo := flags.Bool("demo", false, "open a demo without model requests or saved changes")
 	snapshot := flags.Bool("snapshot", false, "render one demo frame to stdout")
 	resume := flags.Bool("resume", false, "choose a saved session")
-	fresh := flags.Bool("new", false, "start a new chat")
 	id := flags.String("session", "", "resume a session id")
 	model := flags.String("model", "", "model for this chat")
 	theme := flags.String("theme", "", "theme override")
@@ -52,8 +51,8 @@ func run(args []string, out io.Writer) error {
 		}
 		return err
 	}
-	if *resume && (*fresh || *id != "") {
-		return errors.New("--resume cannot be combined with --new or --session")
+	if *resume && *id != "" {
+		return errors.New("--resume cannot be combined with --session")
 	}
 	if *showVersion {
 		fmt.Fprintln(out, "wraith", version)
@@ -143,14 +142,6 @@ func run(args []string, out io.Writer) error {
 			chat, e = s.Load(*id)
 			if e != nil {
 				return e
-			}
-		} else if !*fresh {
-			list, e := s.List()
-			if e != nil {
-				return e
-			}
-			if len(list) > 0 {
-				chat = list[0]
 			}
 		}
 		if *model != "" {

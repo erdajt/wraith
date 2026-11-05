@@ -17,6 +17,9 @@ func (a *App) resume(id string) tea.Cmd {
 		return nil
 	}
 	a.Session = s
+	a.agentSteps = 0
+	a.pendingAgent = false
+	a.proposal = nil
 	a.Config.Model = s.Model
 	a.Info = ollama.Info{}
 	a.Config.Thinking = "auto"
