@@ -6,6 +6,7 @@ import (
 	"unicode"
 
 	"github.com/charmbracelet/x/ansi"
+	"github.com/erdajt/wraith/internal/markdown"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/mattn/go-runewidth"
 )
@@ -68,30 +69,11 @@ func (a *App) transcript(w int) []rendered {
 				add(ink(p.Muted, clean(m.Thinking)), i)
 			}
 		}
-		inCode := false
-		fence := ""
-		for _, line := range strings.Split(clean(m.Content), "\n") {
-			trim := strings.TrimSpace(line)
-			if !inCode && (strings.HasPrefix(trim, "```") || strings.HasPrefix(trim, "~~~")) {
-				inCode = true
-				fence = trim[:3]
-				block++
-				lang := strings.TrimSpace(trim[3:])
-				add(ink(p.Border, "╭─ ")+ink(p.Second, fmt.Sprintf("%s · block %d", lang, block))+ink(p.Muted, " · /blocks to edit"), i)
-				continue
-			}
-			if inCode && strings.HasPrefix(trim, fence) {
-				inCode = false
-				add(ink(p.Border, "╰"+strings.Repeat("─", min(w-1, 40))), i)
-				continue
-			}
-			if inCode {
-				add(ink(p.Border, "│ ")+ink(p.Accent, line), i)
-			} else if strings.HasPrefix(trim, "#") {
-				add(bold(p.FG, strings.TrimLeft(trim, "# ")), i)
-			} else {
-				add(ink(p.FG, line), i)
-			}
+
+		lines, nextBlock := markdown.Render(clean(m.Content), w, p, block)
+		block = nextBlock
+		for _, line := range lines {
+			add(line, i)
 		}
 		add("", i)
 	}
