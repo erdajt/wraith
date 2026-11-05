@@ -176,6 +176,8 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 			return a.editResponse()
 		case "b":
 			return a.runCommand("blocks")
+		case "enter":
+			return a.selectedBlocks()
 		case "i":
 			a.focus = "prompt"
 			a.Prompt.Mode = "insert"

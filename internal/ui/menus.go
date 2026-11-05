@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -24,6 +25,15 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 			return cmd
 		}
 	}
+	if len(key) == 1 && key[0] >= '0' && key[0] <= '9' {
+		if len(m.Count) < 6 {
+			m.Count += key
+		}
+		return nil
+	}
+	count, _ := strconv.Atoi(m.Count)
+	count = max(1, count)
+	m.Count = ""
 	switch key {
 	case "esc", "q":
 		if m.Kind == "block-preview" {
@@ -45,17 +55,17 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 		a.popup = nil
 		return nil
 	case "j", "down":
-		m.Index = min(len(m.Items)-1, m.Index+1)
+		m.Index = min(len(m.Items)-1, m.Index+count)
 	case "k", "up":
-		m.Index = max(0, m.Index-1)
+		m.Index = max(0, m.Index-count)
 	case "g", "home":
 		m.Index = 0
 	case "G", "end":
 		m.Index = max(0, len(m.Items)-1)
 	case "ctrl+d", "pgdown":
-		m.Index = min(len(m.Items)-1, m.Index+8)
+		m.Index = min(len(m.Items)-1, m.Index+8*count)
 	case "ctrl+u", "pgup":
-		m.Index = max(0, m.Index-8)
+		m.Index = max(0, m.Index-8*count)
 	case "e":
 		if m.Kind == "settings" {
 			a.popup = nil

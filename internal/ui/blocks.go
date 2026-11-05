@@ -1,9 +1,11 @@
 package ui
 
 import (
+	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/editor"
 	"path/filepath"
+	"strings"
 )
 
 func (a *App) blockActions(block editor.Block) tea.Cmd {
@@ -35,5 +37,28 @@ func (a *App) blockAction(action string) tea.Cmd {
 		}
 		return a.approve(proposal{Command: command, Text: b.Text, Language: b.Language, Source: "block"})
 	}
+	return nil
+}
+
+func (a *App) selectedBlocks() tea.Cmd {
+	index := a.selected
+	if index < 0 || index >= len(a.Session.Messages) || a.Session.Messages[index].Role != "assistant" {
+		a.notice = "select an assistant response containing code"
+		return nil
+	}
+	blocks := editor.Blocks(a.Session.Messages[index].Content)
+	if len(blocks) == 1 {
+		return a.blockActions(blocks[0])
+	}
+	if len(blocks) == 0 {
+		a.notice = "selected response has no complete code blocks"
+		return nil
+	}
+	items := []item{}
+	for i, b := range blocks {
+		first, _, _ := strings.Cut(b.Text, "\n")
+		items = append(items, item{Label: b.Language + " · " + first, Value: fmt.Sprintf("%d:%d", index, i)})
+	}
+	a.popup = &menu{Kind: "blocks", Title: "response blocks · choose edit or run", Items: items}
 	return nil
 }

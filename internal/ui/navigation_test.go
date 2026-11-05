@@ -76,3 +76,25 @@ func TestSlashSearchFollowsFocusedSurface(t *testing.T) {
 		t.Fatal("transcript search changed prompt search")
 	}
 }
+
+func TestCountedMenuNavigationAndSelectedBlocks(t *testing.T) {
+	a := fixture(t)
+	a.focus = "chat"
+	a.Session.Messages = []session.Message{{Role: "assistant", Content: "```sh\nprintf one\n```\n```sh\nprintf two\n```"}}
+	a.key(tea.KeyMsg{Type: tea.KeyEnter})
+	if a.popup == nil || a.popup.Kind != "blocks" || len(a.popup.Items) != 2 {
+		t.Fatal("enter did not offer response blocks")
+	}
+	a.key(key("10j"))
+	if a.popup.Index != 1 {
+		t.Fatal("count did not clamp to last block")
+	}
+	a.key(key("100k"))
+	if a.popup.Index != 0 {
+		t.Fatal("count did not clamp to first block")
+	}
+	a.key(tea.KeyMsg{Type: tea.KeyEnter})
+	if a.popup.Kind != "block-actions" {
+		t.Fatal("block did not offer edit or run")
+	}
+}
