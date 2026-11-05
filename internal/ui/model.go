@@ -33,6 +33,11 @@ type menu struct {
 	Index                int
 }
 type pane struct {
+	Reader                  *reader
+	Escapes                 int
+	EscapedAt               time.Time
+	Started                 time.Time
+	Restarts                int
 	PTY                     *terminal.PTY
 	Screen                  *terminal.Screen
 	Visible                 bool

@@ -23,6 +23,9 @@ func (a *App) terminalKey(k tea.KeyMsg) tea.Cmd {
 		if p == nil || p.PTY == nil {
 			return nil
 		}
+		if handled, cmd := a.terminalReaderKey(index, k); handled {
+			return cmd
+		}
 		if p.Pending != "" {
 			if key == "enter" {
 				data, err := stagedInput(p.Pending, p.Screen.Bracketed)
