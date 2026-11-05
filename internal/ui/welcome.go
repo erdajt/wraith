@@ -2,7 +2,6 @@ package ui
 
 import (
 	"math"
-	"strings"
 )
 
 func wraithOrbit(width, height, frame int) []string {
@@ -47,16 +46,29 @@ func (a *App) welcome(width, height int, p palette) []string {
 	if !a.Config.Animations {
 		frame = 9
 	}
+	logo := []string{"W R A I T H"}
+	if width >= 48 && height >= 18 {
+		logo = []string{
+			"#   #  ####    ###   #####  #####  #   #",
+			"#   #  #   #  #   #    #      #    #   #",
+			"# # #  ####   #####    #      #    #####",
+			"## ##  #  #   #   #    #      #    #   #",
+			"#   #  #   #  #   #  #####    #    #   #",
+		}
+	}
 	var rows []string
 	if height >= 13 {
-		for i, line := range wraithOrbit(min(width-4, 36), min(8, height-7), frame) {
+		for i, line := range wraithOrbit(min(width-4, 36), min(8, height-len(logo)-6), frame) {
 			shade := p.Accent
 			if i%3 == 0 {
 				shade = p.Second
 			}
-			rows = append(rows, ink(shade, strings.TrimRight(line, " ")))
+			rows = append(rows, ink(shade, line))
 		}
 	}
-	rows = append(rows, bold(p.Accent, "W R A I T H"), ink(p.Muted, "local intelligence · deliberate control"), "", ink(p.FG, "write a prompt, or bring your own evidence."), ink(p.Muted, a.Config.Keys["send"]+" send     "+a.Config.Keys["editor"]+" editor     /models switch"), ink(p.Muted, a.Config.Keys["terminal_overlay"]+" scratch shell     "+a.Config.Keys["terminal_split"]+" side shell"), ink(p.Second, "/remember preferences     /pin exact facts"))
+	for _, line := range logo {
+		rows = append(rows, bold(p.Accent, line))
+	}
+	rows = append(rows, ink(p.Muted, "local intelligence · deliberate control"), "", ink(p.FG, "write a prompt, or bring your own evidence."), ink(p.Muted, a.Config.Keys["send"]+" send     "+a.Config.Keys["editor"]+" editor     /models switch"), ink(p.Muted, a.Config.Keys["terminal_overlay"]+" scratch shell     "+a.Config.Keys["terminal_split"]+" side shell"), ink(p.Second, "/remember preferences     /pin exact facts"))
 	return rows
 }
