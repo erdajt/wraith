@@ -27,8 +27,9 @@ func TestLeaderSequencesAndSearch(t *testing.T) {
 	if a.popup == nil || a.popup.Kind != "settings" {
 		t.Fatal("custom batched sequence failed")
 	}
+	a.settingsCategory("terminals")
 	a.key(key("/"))
-	a.key(key("scratch"))
+	a.key(key("overlay"))
 	a.key(tea.KeyMsg{Type: tea.KeyEnter})
 	if len(a.popup.Items) != 2 {
 		t.Fatalf("search did not filter settings: %v", a.popup.Items)

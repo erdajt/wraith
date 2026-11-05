@@ -25,7 +25,14 @@ type Execution struct {
 	OutputContext int    `json:"output_context" yaml:"output_context"`
 }
 
+type Appearance struct {
+	Background string `json:"background" yaml:"background"`
+	Mouse      bool   `json:"mouse" yaml:"mouse"`
+	Thinking   bool   `json:"thinking" yaml:"thinking"`
+}
+
 type Config struct {
+	Appearance  Appearance         `json:"appearance" yaml:"appearance"`
 	Execution   Execution          `json:"execution" yaml:"execution"`
 	Themes      map[string]Palette `json:"themes" yaml:"themes"`
 	Leader      string             `json:"leader" yaml:"leader"`
@@ -70,12 +77,12 @@ type Terminal struct {
 type Paths struct{ Config, Data, Cache string }
 
 func Default() Config {
-	return Config{Execution: Execution{Mode: "agent", MaxSteps: 8, OutputContext: 8192}, Leader: "space", Bindings: DefaultBindings(), AutoStart: true, Version: 1, Host: "http://127.0.0.1:11434", Model: DefaultModel,
+	return Config{Appearance: Appearance{Background: "theme", Mouse: true}, Execution: Execution{Mode: "agent", MaxSteps: 8, OutputContext: 8192}, Leader: "space", Bindings: DefaultBindings(), AutoStart: true, Version: 1, Host: "http://127.0.0.1:11434", Model: DefaultModel,
 		Context: 8192, Predict: 2048, Threads: 6, Temperature: 0.3, Thinking: "auto", Theme: "phosphor",
 		Editor: []string{"nvim"}, Shell: []string{"zsh", "-i"}, KeepAlive: "2m", Timeout: "10m",
 		Terminal: Terminal{Background: "inherit", Foreground: "inherit", OverlayWidth: 0.7, OverlayHeight: 0.6, SplitWidth: 0.4, Scrollback: 5000},
 		Compact:  Compact{Mode: "ask", Threshold: 0.9, KeepTurns: 2, Budget: 1536},
-		Keys:     map[string]string{"send": "ctrl+s", "editor": "ctrl+e", "focus": "tab", "cancel": "ctrl+c", "quit": "ctrl+q", "terminal_overlay": "alt+e", "terminal_split": "alt+s", "terminal_unfocus": "ctrl+\\"}, Animations: true}
+		Keys:     map[string]string{"pin_edit": "e", "pin_remove": "d", "thinking_toggle": "t", "send": "ctrl+s", "editor": "ctrl+e", "focus": "tab", "cancel": "ctrl+c", "quit": "ctrl+q", "terminal_overlay": "alt+e", "terminal_split": "alt+s", "terminal_unfocus": "ctrl+\\"}, Animations: true}
 }
 
 func Locations() (Paths, error) {
@@ -133,6 +140,12 @@ func Save(path string, c Config) error {
 }
 
 func (c Config) Validate() error {
+	if !slices.Contains([]string{"theme", "inherit"}, c.Appearance.Background) {
+		return errors.New("appearance.background must be theme or inherit")
+	}
+	if c.Keys["pin_edit"] == "" || c.Keys["pin_remove"] == "" || c.Keys["pin_edit"] == c.Keys["pin_remove"] || c.Keys["thinking_toggle"] == "" {
+		return errors.New("pin and thinking bindings must be nonempty and pin bindings distinct")
+	}
 	if !slices.Contains([]string{"agent", "blocks"}, c.Execution.Mode) || c.Execution.MaxSteps < 1 || c.Execution.MaxSteps > 100 || c.Execution.OutputContext < 256 || c.Execution.OutputContext > 65536 {
 		return errors.New("execution requires agent or blocks mode, 1-100 steps and 256-65536 output bytes")
 	}

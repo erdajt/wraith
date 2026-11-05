@@ -12,5 +12,5 @@ func (a *App) paneSize(index int) (int, int) {
 	if index == 0 {
 		return max(20, int(float64(a.width)*a.Config.Terminal.OverlayWidth)), max(6, int(float64(a.height)*a.Config.Terminal.OverlayHeight))
 	}
-	return max(20, min(a.width-31, int(float64(a.width)*a.Config.Terminal.SplitWidth))), max(6, a.height-3)
+	return max(20, min(a.width-31, int(float64(a.width)*a.Config.Terminal.SplitWidth))), max(6, a.height-6)
 }
