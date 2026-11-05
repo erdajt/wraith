@@ -108,3 +108,15 @@ func TestInheritedPaneKeepsDefaultBackground(t *testing.T) {
 		t.Fatal("app background became transparent with the shell")
 	}
 }
+
+func TestInheritedAppBackgroundUsesTerminalDefault(t *testing.T) {
+	a := fixture(t)
+	a.Config.Appearance.Background = "inherit"
+	view := a.View()
+	if strings.Contains(view, "48;2;") {
+		t.Fatal("transparent app painted an rgb background")
+	}
+	if !strings.Contains(view, "49m") {
+		t.Fatal("terminal default background missing")
+	}
+}

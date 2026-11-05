@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/erdajt/wraith/internal/config"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -50,7 +49,7 @@ func (a *App) modelCommand(name, arg string) tea.Cmd {
 		}
 		a.popup = &menu{Kind: "thinking", Title: "native model thinking", Items: items}
 	case "settings":
-		a.popup = &menu{Kind: "settings", Title: "settings · e opens config.yaml", Items: []item{{"theme", "theme", a.Config.Theme}, {"thinking", "thinking", a.Config.Thinking}, {"context window", "context", strconv.Itoa(a.Config.Context)}, {"output budget", "predict", strconv.Itoa(a.Config.Predict)}, {"compaction mode", "compact.mode", a.Config.Compact.Mode}, {"compaction threshold", "compact.threshold", fmt.Sprintf("%.0f%%", a.Config.Compact.Threshold*100)}, {"terminal background", "terminal.background", a.Config.Terminal.Background}, {"scratch width", "terminal.overlay_width", fmt.Sprintf("%.0f%%", a.Config.Terminal.OverlayWidth*100)}, {"scratch height", "terminal.overlay_height", fmt.Sprintf("%.0f%%", a.Config.Terminal.OverlayHeight*100)}, {"side shell width", "terminal.split_width", fmt.Sprintf("%.0f%%", a.Config.Terminal.SplitWidth*100)}, {"editor, shell and key bindings", "edit", "config.yaml"}, {"all settings", "edit", config.File(a.Paths.Config)}}}
+		return a.settingsMenu()
 	case "set":
 		key, value, ok := strings.Cut(arg, " ")
 		if !ok {

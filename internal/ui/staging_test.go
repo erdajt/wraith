@@ -23,15 +23,15 @@ func TestMultilineStagingCannotExecuteOnInsertion(t *testing.T) {
 	}
 }
 
-func TestSideShellUsesHeightBelowHeader(t *testing.T) {
+func TestSideShellUsesHeightAboveFooter(t *testing.T) {
 	a := fixture(t)
 	w, h := a.paneSize(1)
-	if h != a.height-3 {
-		t.Fatalf("height %d, expected %d", h, a.height-3)
+	if h != a.height-6 {
+		t.Fatalf("height %d, expected %d", h, a.height-6)
 	}
 	a.panes[1] = &pane{Visible: true, Screen: terminal.NewScreen(w-2, h-2, 0)}
 	rows := strings.Split(ansi.Strip(a.View()), "\n")
-	if !strings.HasSuffix(rows[len(rows)-1], "╯") {
-		t.Fatal("side shell did not reach bottom row")
+	if !strings.HasSuffix(rows[len(rows)-4], "╯") {
+		t.Fatal("side shell did not reach the row above the footer")
 	}
 }

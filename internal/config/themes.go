@@ -28,10 +28,14 @@ func BuiltinThemes() map[string]Palette {
 }
 
 func (c Config) Palette() Palette {
-	if p, ok := c.Themes[c.Theme]; ok {
-		return p
+	p, ok := c.Themes[c.Theme]
+	if !ok {
+		p = BuiltinThemes()[c.Theme]
 	}
-	return BuiltinThemes()[c.Theme]
+	if c.Appearance.Background == "inherit" {
+		p.BG = ""
+	}
+	return p
 }
 
 func (c Config) validateThemes() error {
