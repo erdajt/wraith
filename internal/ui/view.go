@@ -103,6 +103,11 @@ func (a *App) View() string {
 		pw, ph := a.paneSize(0)
 		a.overlay(rows, a.terminalFrame(0, pw, ph), (w-pw)/2, (a.height-ph)/2)
 	}
+	if a.popup == nil {
+		if box := a.completionFrame(); len(box) > 0 {
+			a.overlay(rows, box, 2, inputY-len(box))
+		}
+	}
 	if a.popup != nil {
 		box := a.menuFrame()
 		a.overlay(rows, box, (w-ansi.StringWidth(box[0]))/2, (a.height-len(box))/2)
