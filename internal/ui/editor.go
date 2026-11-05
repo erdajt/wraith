@@ -2,6 +2,7 @@ package ui
 
 import (
 	"path/filepath"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/config"
@@ -36,6 +37,12 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 		b, _ := config.Encode(a.Config, "config.yaml")
 		text = string(b) + "\n"
 		ext = ".yaml"
+	case "pin":
+		if index < 0 || index >= len(a.Session.Pins) {
+			a.notice = "pin no longer exists"
+			return nil
+		}
+		text = a.Session.Pins[index]
 	case "response":
 		if index < 0 || index >= len(a.Session.Messages) {
 			a.notice = "no response selected"
@@ -123,6 +130,24 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 		a.resizePanes()
 		a.persist("settings saved · shell changes apply to new panes")
 		return a.probe()
+	case "pin":
+		if m.Index < 0 || m.Index >= len(a.Session.Pins) || len(text) > 64<<10 {
+			a.notice = "pin is missing or exceeds 64 kib"
+			return nil
+		}
+		candidate := a.Session.Clone()
+		candidate.Pins[m.Index] = strings.TrimSpace(text)
+		if candidate.Pins[m.Index] == "" {
+			a.notice = "empty pin rejected; use unpin to remove it"
+			return nil
+		}
+		if err := a.Store.Save(candidate); err != nil {
+			a.notice = err.Error()
+			return nil
+		}
+		a.Session = candidate
+		applied = true
+		return a.memoryCommand("pins", "")
 	case "response":
 		candidate := a.Session.Clone()
 		archive, e := a.Store.Archive(candidate)
