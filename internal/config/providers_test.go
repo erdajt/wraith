@@ -1,6 +1,10 @@
 package config
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestProviderConfigurationRejectsMalformedEndpointsAndOverrides(t *testing.T) {
 	for _, edit := range []func(*Config){
@@ -19,5 +23,28 @@ func TestProviderConfigurationRejectsMalformedEndpointsAndOverrides(t *testing.T
 	}
 	if err := Default().Validate(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestProviderThinkingValuesAndDefaultModel(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	text := "provider: codex\nthinking: xhigh\nproviders:\n  codex:\n    kind: codex-cli\n    command: [codex]\n    model: configured-model\n    thinking: [low, high, xhigh]\n"
+	if err := os.WriteFile(path, []byte(text), 0600); err != nil {
+		t.Fatal(err)
+	}
+	c, err := Load(path)
+	if err != nil || c.Model != "configured-model" || c.Thinking != "xhigh" {
+		t.Fatalf("profile: %s %s %v", c.Model, c.Thinking, err)
+	}
+	c.Thinking = "unadvertised"
+	if c.Validate() == nil {
+		t.Fatal("unknown effort accepted")
+	}
+	if err := os.WriteFile(path, []byte(text+"model: explicit-model\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	c, err = Load(path)
+	if err != nil || c.Model != "explicit-model" {
+		t.Fatal("explicit model overridden")
 	}
 }

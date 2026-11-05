@@ -136,6 +136,9 @@ func Load(path string) (Config, error) {
 	if d.Decode(&extra) != io.EOF {
 		return c, errors.New("config has trailing data")
 	}
+	if _, explicit := fields["model"]; !explicit && c.Providers[c.Provider].Model != "" {
+		c.Model = c.Providers[c.Provider].Model
+	}
 	return c, c.Validate()
 }
 
@@ -191,8 +194,12 @@ func (c Config) Validate() error {
 	if c.Temperature < 0 || c.Temperature > 2 {
 		return errors.New("temperature must be between 0 and 2")
 	}
-	if !slices.Contains([]string{"auto", "off", "on", "low", "medium", "high"}, c.Thinking) {
-		return errors.New("thinking must be auto, off, on, low, medium or high")
+	thinking := []string{"auto", "off", "on", "low", "medium", "high"}
+	if p := c.Providers[c.Provider]; p.Kind != "ollama" {
+		thinking = append(thinking, p.Thinking...)
+	}
+	if !slices.Contains(thinking, c.Thinking) {
+		return errors.New("thinking must be a supported value from the selected provider")
 	}
 	if err := c.validateThemes(); err != nil {
 		return err
