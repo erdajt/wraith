@@ -31,7 +31,7 @@ func DefaultProviders() map[string]Provider {
 		"openai":    {Kind: "openai", BaseURL: "https://api.openai.com/v1", KeyEnv: "OPENAI_API_KEY", TokenField: "max_completion_tokens"},
 		"anthropic": {Kind: "anthropic", BaseURL: "https://api.anthropic.com/v1", KeyEnv: "ANTHROPIC_API_KEY"},
 		"deepseek":  {Kind: "openai", BaseURL: "https://api.deepseek.com", KeyEnv: "DEEPSEEK_API_KEY", TokenField: "max_tokens"},
-		"codex":     {Kind: "codex-cli", Command: []string{"codex"}, Models: []string{"default"}, Model: "default"},
+		"codex":     {Kind: "codex-cli", Command: []string{"codex"}, Model: "default"},
 		"claude":    {Kind: "claude-cli", Command: []string{"claude"}, Models: []string{"default"}, Model: "default"},
 	}
 }

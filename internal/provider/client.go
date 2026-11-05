@@ -31,6 +31,17 @@ func (c *Client) Models(ctx context.Context) ([]ollama.Model, error) {
 	if c.Profile.Kind == "ollama" {
 		return c.Client.Models(ctx)
 	}
+	if c.Profile.Kind == "codex-cli" && (len(c.Profile.Models) == 0 || len(c.Profile.Models) == 1 && c.Profile.Models[0] == "default") {
+		catalog, err := codexCatalog(ctx, c.Profile)
+		if err != nil {
+			return nil, err
+		}
+		models := make([]ollama.Model, 0, len(catalog))
+		for _, model := range catalog {
+			models = append(models, ollama.Model{Name: model.Name})
+		}
+		return models, nil
+	}
 	if strings.HasSuffix(c.Profile.Kind, "-cli") {
 		names := c.Profile.Models
 		if len(names) == 0 {
@@ -61,7 +72,14 @@ func (c *Client) Show(ctx context.Context, model string) (ollama.Info, error) {
 		}
 	}
 	if strings.HasSuffix(c.Profile.Kind, "-cli") {
+		if len(c.Profile.Command) == 0 {
+			return info, fmt.Errorf("cli command is empty")
+		}
 		_, err := exec.LookPath(c.Profile.Command[0])
+		if err == nil && c.Profile.Kind == "codex-cli" {
+			catalog, _ := codexCatalog(ctx, c.Profile)
+			info = codexInfo(catalog, model, info)
+		}
 		return info, err
 	}
 	_, err := c.Models(ctx)

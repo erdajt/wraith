@@ -65,8 +65,7 @@ func codexCache() ([]codexModel, error) {
 	return models, nil
 }
 
-func codexInfo(model string, info ollama.Info) ollama.Info {
-	models, _ := codexCache()
+func codexInfo(models []codexModel, model string, info ollama.Info) ollama.Info {
 	for _, entry := range models {
 		if entry.Name != model {
 			continue

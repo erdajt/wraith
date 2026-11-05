@@ -197,6 +197,9 @@ func (c Config) Validate() error {
 	thinking := []string{"auto", "off", "on", "low", "medium", "high"}
 	if p := c.Providers[c.Provider]; p.Kind != "ollama" {
 		thinking = append(thinking, p.Thinking...)
+		if p.Kind == "codex-cli" && len(p.Thinking) == 0 && c.Thinking != "" && strings.TrimSpace(c.Thinking) == c.Thinking {
+			thinking = append(thinking, c.Thinking)
+		}
 	}
 	if !slices.Contains(thinking, c.Thinking) {
 		return errors.New("thinking must be a supported value from the selected provider")
