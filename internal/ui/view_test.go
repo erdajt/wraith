@@ -70,3 +70,41 @@ func TestScrollUpStartsAtVisibleBottom(t *testing.T) {
 		t.Fatal("scroll overshoot accumulated past the end")
 	}
 }
+
+func TestThemedRowsRetainBackgroundAcrossNestedStyles(t *testing.T) {
+	a := fixture(t)
+	a.Prompt.Set("draft")
+	a.popup = &menu{Title: "installed models", Items: []item{{Label: "local-model", Detail: "7 gb"}}}
+	for theme, p := range palettes {
+		a.Config.Theme = theme
+		screen := terminal.NewScreen(a.width, a.height, 0)
+		screen.Feed([]byte("\x1b[3m" + strings.ReplaceAll(a.View(), "\n", "\r\n")))
+		for y, row := range screen.Cells {
+			for x, cell := range row {
+				if cell.Style.BG != color(p.BG, true) || cell.Style.Italic {
+					t.Fatalf("%s cell %d,%d leaked host style: %+v", theme, x, y, cell.Style)
+				}
+			}
+		}
+		y := 3 + a.bodyHeight()
+		if screen.Cells[y][a.width-1].Text != "╮" || screen.Cells[y+1][a.width-1].Text != "│" {
+			t.Fatal("prompt borders do not align")
+		}
+	}
+}
+
+func TestInheritedPaneKeepsDefaultBackground(t *testing.T) {
+	a := fixture(t)
+	a.panes[0] = &pane{Visible: true}
+	w, h := a.paneSize(0)
+	a.panes[0].Screen = terminal.NewScreen(w-2, h-2, 10)
+	screen := terminal.NewScreen(a.width, a.height, 0)
+	screen.Feed([]byte(strings.ReplaceAll(a.View(), "\n", "\r\n")))
+	x, y := (a.width-w)/2, (a.height-h)/2
+	if screen.Cells[y+1][x+1].Style.BG != "" {
+		t.Fatal("inherited shell lost its host background")
+	}
+	if screen.Cells[0][0].Style.BG == "" {
+		t.Fatal("app background became transparent with the shell")
+	}
+}

@@ -71,7 +71,7 @@ func (a *App) View() string {
 	if a.focus == "chat" {
 		label = " prompt · tab to focus "
 	}
-	rows[inputY] = base(p, ink(p.Border, "╭─"+label+strings.Repeat("─", max(0, mainW-ansi.StringWidth(label)-4))+"╮"), mainW) + base(p, "", w-mainW)
+	rows[inputY] = base(p, ink(p.Border, "╭─"+label+strings.Repeat("─", max(0, mainW-ansi.StringWidth(label)-3))+"╮"), mainW) + base(p, "", w-mainW)
 	lines := a.promptLines(mainW - 4)
 	for y := 0; y < 4; y++ {
 		text := ""
