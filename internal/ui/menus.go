@@ -12,6 +12,9 @@ import (
 func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 	key := k.String()
 	m := a.popup
+	if a.settingHelp(k) {
+		return nil
+	}
 	if a.menuSearch(k) {
 		return nil
 	}
@@ -36,6 +39,11 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 	m.Count = ""
 	switch key {
 	case "esc", "q":
+		if m.Kind == "setting-help" {
+			a.popup = a.helpReturn
+			a.helpReturn = nil
+			return nil
+		}
 		if m.Kind == "block-preview" {
 			return a.blockActions(a.selectedBlock)
 		}

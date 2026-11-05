@@ -13,6 +13,9 @@ func (a *App) menuFrame() []string {
 	w := min(a.width-6, 90)
 	height := min(a.height-8, 18)
 	content := []string{bold(p.Accent, clean(m.Title)), ink(p.Muted, "j/k move · / search · enter select · esc close"), ""}
+	if m.Kind == "settings" || m.Kind == "value" {
+		content[1] = ink(p.Muted, "j/k move · / search · "+a.Config.Keys["setting_help"]+" explain · enter select")
+	}
 	if m.Searching || m.Query != "" {
 		content[1] = ink(p.Second, "/"+clean(m.Query)+"▏ · enter keeps filter · esc resets")
 	}

@@ -82,7 +82,7 @@ func Default() Config {
 		Editor: []string{"nvim"}, Shell: []string{"zsh", "-i"}, KeepAlive: "2m", Timeout: "10m",
 		Terminal: Terminal{Background: "inherit", Foreground: "inherit", OverlayWidth: 0.7, OverlayHeight: 0.6, SplitWidth: 0.4, Scrollback: 5000},
 		Compact:  Compact{Mode: "ask", Threshold: 0.9, KeepTurns: 2, Budget: 1536},
-		Keys:     map[string]string{"pin_edit": "e", "pin_remove": "d", "thinking_toggle": "t", "send": "ctrl+s", "editor": "ctrl+e", "focus": "tab", "cancel": "ctrl+c", "quit": "ctrl+q", "terminal_overlay": "alt+e", "terminal_split": "alt+s", "terminal_unfocus": "ctrl+\\"}, Animations: true}
+		Keys:     map[string]string{"setting_help": "?", "pin_edit": "e", "pin_remove": "d", "thinking_toggle": "t", "send": "ctrl+s", "editor": "ctrl+e", "focus": "tab", "cancel": "ctrl+c", "quit": "ctrl+q", "terminal_overlay": "alt+e", "terminal_split": "alt+s", "terminal_unfocus": "ctrl+\\"}, Animations: true}
 }
 
 func Locations() (Paths, error) {
@@ -150,7 +150,7 @@ func (c Config) Validate() error {
 	if !slices.Contains([]string{"theme", "inherit"}, c.Appearance.Background) {
 		return errors.New("appearance.background must be theme or inherit")
 	}
-	if c.Keys["pin_edit"] == "" || c.Keys["pin_remove"] == "" || c.Keys["pin_edit"] == c.Keys["pin_remove"] || c.Keys["thinking_toggle"] == "" {
+	if c.Keys["setting_help"] == "" || c.Keys["pin_edit"] == "" || c.Keys["pin_remove"] == "" || c.Keys["pin_edit"] == c.Keys["pin_remove"] || c.Keys["thinking_toggle"] == "" {
 		return errors.New("pin and thinking bindings must be nonempty and pin bindings distinct")
 	}
 	if !slices.Contains([]string{"agent", "blocks"}, c.Execution.Mode) || c.Execution.MaxSteps < 1 || c.Execution.MaxSteps > 100 || c.Execution.OutputContext < 256 || c.Execution.OutputContext > 65536 {

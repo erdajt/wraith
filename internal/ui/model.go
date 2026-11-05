@@ -66,6 +66,7 @@ type terminalMsg struct {
 }
 
 type App struct {
+	helpReturn              *menu
 	thinkingExpanded        map[string]bool
 	agentSteps              int
 	pendingAgent            bool
