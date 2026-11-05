@@ -33,30 +33,32 @@ type Appearance struct {
 }
 
 type Config struct {
-	Clipboard   []string           `json:"clipboard" yaml:"clipboard"`
-	Appearance  Appearance         `json:"appearance" yaml:"appearance"`
-	Execution   Execution          `json:"execution" yaml:"execution"`
-	Themes      map[string]Palette `json:"themes" yaml:"themes"`
-	Leader      string             `json:"leader" yaml:"leader"`
-	Bindings    map[string]string  `json:"bindings" yaml:"bindings"`
-	AutoStart   bool               `json:"auto_start" yaml:"auto_start"`
-	Version     int                `json:"version" yaml:"version"`
-	Host        string             `json:"host" yaml:"host"`
-	Model       string             `json:"model" yaml:"model"`
-	Context     int                `json:"context" yaml:"context"`
-	Predict     int                `json:"predict" yaml:"predict"`
-	Threads     int                `json:"threads" yaml:"threads"`
-	Temperature float64            `json:"temperature" yaml:"temperature"`
-	Thinking    string             `json:"thinking" yaml:"thinking"`
-	Theme       string             `json:"theme" yaml:"theme"`
-	Editor      []string           `json:"editor" yaml:"editor"`
-	Terminal    Terminal           `json:"terminal" yaml:"terminal"`
-	Shell       []string           `json:"shell" yaml:"shell"`
-	KeepAlive   string             `json:"keep_alive" yaml:"keep_alive"`
-	Timeout     string             `json:"timeout" yaml:"timeout"`
-	Compact     Compact            `json:"compact" yaml:"compact"`
-	Keys        map[string]string  `json:"keys" yaml:"keys"`
-	Animations  bool               `json:"animations" yaml:"animations"`
+	Provider    string              `json:"provider" yaml:"provider"`
+	Providers   map[string]Provider `json:"providers" yaml:"providers"`
+	Clipboard   []string            `json:"clipboard" yaml:"clipboard"`
+	Appearance  Appearance          `json:"appearance" yaml:"appearance"`
+	Execution   Execution           `json:"execution" yaml:"execution"`
+	Themes      map[string]Palette  `json:"themes" yaml:"themes"`
+	Leader      string              `json:"leader" yaml:"leader"`
+	Bindings    map[string]string   `json:"bindings" yaml:"bindings"`
+	AutoStart   bool                `json:"auto_start" yaml:"auto_start"`
+	Version     int                 `json:"version" yaml:"version"`
+	Host        string              `json:"host" yaml:"host"`
+	Model       string              `json:"model" yaml:"model"`
+	Context     int                 `json:"context" yaml:"context"`
+	Predict     int                 `json:"predict" yaml:"predict"`
+	Threads     int                 `json:"threads" yaml:"threads"`
+	Temperature float64             `json:"temperature" yaml:"temperature"`
+	Thinking    string              `json:"thinking" yaml:"thinking"`
+	Theme       string              `json:"theme" yaml:"theme"`
+	Editor      []string            `json:"editor" yaml:"editor"`
+	Terminal    Terminal            `json:"terminal" yaml:"terminal"`
+	Shell       []string            `json:"shell" yaml:"shell"`
+	KeepAlive   string              `json:"keep_alive" yaml:"keep_alive"`
+	Timeout     string              `json:"timeout" yaml:"timeout"`
+	Compact     Compact             `json:"compact" yaml:"compact"`
+	Keys        map[string]string   `json:"keys" yaml:"keys"`
+	Animations  bool                `json:"animations" yaml:"animations"`
 }
 
 type Compact struct {
@@ -79,7 +81,7 @@ type Terminal struct {
 type Paths struct{ Config, Data, Cache string }
 
 func Default() Config {
-	return Config{Clipboard: []string{"wl-copy"}, Appearance: Appearance{Background: "theme", Mouse: true}, Execution: Execution{Mode: "agent", MaxSteps: 8, OutputContext: 8192}, Leader: "space", Bindings: DefaultBindings(), AutoStart: true, Version: 1, Host: "http://127.0.0.1:11434", Model: DefaultModel,
+	return Config{Provider: "ollama", Providers: DefaultProviders(), Clipboard: []string{"wl-copy"}, Appearance: Appearance{Background: "theme", Mouse: true}, Execution: Execution{Mode: "agent", MaxSteps: 8, OutputContext: 8192}, Leader: "space", Bindings: DefaultBindings(), AutoStart: true, Version: 1, Host: "http://127.0.0.1:11434", Model: DefaultModel,
 		Context: 8192, Predict: 2048, Threads: 6, Temperature: 0.3, Thinking: "auto", Theme: "phosphor",
 		Editor: []string{"nvim"}, Shell: []string{"zsh", "-i"}, KeepAlive: "2m", Timeout: "10m",
 		Terminal: Terminal{Background: "inherit", Foreground: "inherit", OverlayWidth: 0.7, OverlayHeight: 0.6, SplitWidth: 0.4, Scrollback: 5000},
@@ -149,6 +151,9 @@ func Save(path string, c Config) error {
 }
 
 func (c Config) Validate() error {
+	if err := c.ValidateProviders(); err != nil {
+		return err
+	}
 	if !slices.Contains([]string{"theme", "inherit"}, c.Appearance.Background) {
 		return errors.New("appearance.background must be theme or inherit")
 	}
