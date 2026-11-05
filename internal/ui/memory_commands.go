@@ -65,7 +65,7 @@ func (a *App) memoryCommand(name, arg string) tea.Cmd {
 				items = append(items, item{fmt.Sprintf("%d · %s · %s", len(items)+1, b.Language, first), fmt.Sprintf("%d:%d", mi, bi), fmt.Sprintf("message %d", mi+1)})
 			}
 		}
-		a.popup = &menu{Kind: "blocks", Title: "code blocks · enter edits in your editor", Items: items}
+		a.popup = &menu{Kind: "blocks", Title: "code blocks · enter chooses edit or run", Items: items}
 		if len(items) > 0 {
 			a.popup.Index = len(items) - 1
 		}
