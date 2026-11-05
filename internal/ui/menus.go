@@ -15,6 +15,11 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 	if a.menuSearch(k) {
 		return nil
 	}
+	if m.Kind == "pins" && !m.Searching {
+		if cmd, ok := a.pinKey(k); ok {
+			return cmd
+		}
+	}
 	if m.Kind == "leader" && !m.Searching && m.Query == "" {
 		if cmd, ok := a.leaderKey(k); ok {
 			return cmd

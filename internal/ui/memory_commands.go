@@ -51,9 +51,9 @@ func (a *App) memoryCommand(name, arg string) tea.Cmd {
 	case "pins":
 		items := []item{}
 		for i, p := range a.Session.Pins {
-			items = append(items, item{fmt.Sprintf("%d · %s", i+1, p), "", ""})
+			items = append(items, item{fmt.Sprintf("%d · %s", i+1, p), strconv.Itoa(i), ""})
 		}
-		a.popup = &menu{Kind: "help", Title: "exact pins · /unpin number to remove", Items: items}
+		a.popup = &menu{Kind: "pins", Title: "exact pins · " + a.Config.Keys["pin_edit"] + " edit · " + a.Config.Keys["pin_remove"] + " unpin", Items: items}
 	case "blocks":
 		items := []item{}
 		for mi, m := range a.Session.Messages {
