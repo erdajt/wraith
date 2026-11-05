@@ -71,8 +71,15 @@ func (a *App) editResponse() tea.Cmd {
 }
 
 func (a *App) finishEdit(m editedMsg) tea.Cmd {
-	defer m.File.Remove()
 	text, saved, err := m.File.Result(m.Err)
+	applied := false
+	defer func() {
+		if applied || (!saved && err == nil) {
+			m.File.Remove()
+		} else {
+			a.notice += " · edit retained at " + m.File.Path
+		}
+	}()
 	if err != nil {
 		a.notice = "editor: " + err.Error()
 		return nil
@@ -85,6 +92,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 	case "prompt":
 		a.Prompt.Set(text)
 		a.focus = "prompt"
+		applied = true
 		a.notice = "prompt updated · ctrl+s sends"
 	case "instructions":
 		if len(text) > 64<<10 {
@@ -96,6 +104,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 			return nil
 		}
 		a.Instructions = text
+		applied = true
 		a.notice = "persistent instructions saved"
 	case "config":
 		c, e := config.Load(m.File.Path)
@@ -107,6 +116,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 			a.notice = err.Error()
 			return nil
 		}
+		applied = true
 		a.Config = c
 		a.Client = ollama.New(c.Host)
 		a.Session.Model = c.Model
@@ -128,6 +138,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 			a.notice = err.Error()
 			return nil
 		}
+		applied = true
 		a.Session = candidate
 		a.notice = "response edited · original archived"
 	case "block":
@@ -136,6 +147,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 			a.notice = e.Error()
 			return nil
 		}
+		applied = true
 		cmd := a.openTerminal(0)
 		if a.panes[0] == nil {
 			a.notice = "saved snippet at " + path + "; shell could not start"

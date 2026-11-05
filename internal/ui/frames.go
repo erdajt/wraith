@@ -82,6 +82,7 @@ func (a *App) terminalFrame(index, w, h int) []string {
 	if index == 1 {
 		label = " side shell · " + a.Config.Keys["terminal_split"] + " "
 	}
+	label = ansi.Truncate(label, w-3, "…")
 	box[0] = reset + ink(p.Border, "╭─") + ink(p.Accent, label) + ink(p.Border, strings.Repeat("─", max(0, w-ansi.StringWidth(label)-3))+"╮") + reset
 	return box[:min(h, len(box))]
 }
