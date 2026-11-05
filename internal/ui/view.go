@@ -70,7 +70,7 @@ func (a *App) View() string {
 		rows[3+y] = base(p, "  "+content, mainW) + base(p, "", w-mainW)
 	}
 	if len(a.Session.Messages) == 0 && !a.busy {
-		welcome := []string{bold(p.Accent, "W R A I T H"), ink(p.Muted, "local intelligence · deliberate control"), "", ink(p.FG, "write a prompt, or bring your own evidence."), ink(p.Muted, a.Config.Keys["send"]+" send     "+a.Config.Keys["editor"]+" editor     /models switch"), ink(p.Muted, a.Config.Keys["terminal_overlay"]+" scratch shell     "+a.Config.Keys["terminal_split"]+" side shell"), "", ink(p.Second, "/remember preferences     /pin exact facts")}
+		welcome := a.welcome(mainW, bodyH, p)
 		y := 3 + max(0, (bodyH-len(welcome))/2)
 		for _, line := range welcome {
 			if y >= 3+bodyH {
