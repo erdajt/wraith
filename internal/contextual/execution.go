@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"regexp"
 	"strings"
 
 	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/session"
-	"regexp"
 )
 
 const AgentPrompt = `Execution mode: agent.
@@ -30,7 +30,7 @@ var placeholder = regexp.MustCompile(`<[/A-Za-z_][^<>\n]*>|\{\{[^{}]+\}\}|\b(?:Y
 func RequestedCommand(content string) (*CommandRequest, error) {
 	var request *CommandRequest
 	for _, section := range commandSections(content) {
-		if !section.complete {
+		if !section.complete || section.suggestion {
 			continue
 		}
 		if request != nil {

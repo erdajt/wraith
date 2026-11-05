@@ -42,3 +42,21 @@ func TestOrdinaryFencesCannotSmuggleRequests(t *testing.T) {
 		t.Fatal("streaming wrapper leaked")
 	}
 }
+
+func TestWrappedSuggestionsDisplayOnlyCommandAndReason(t *testing.T) {
+	for _, fence := range []string{"```sh", "```text", "~~~bash"} {
+		content := "before\n" + fence + "\nwraith-run {\"command\":\"printf x\",\"reason\":\"example\"}\n" + fence[:3] + "\nafter"
+		visible := DisplayContent(content)
+		if strings.Contains(visible, "wraith-run") || strings.Contains(visible, "{\"command\"") || !strings.Contains(visible, "reason: example") || !strings.Contains(visible, "printf x") || !strings.HasSuffix(visible, "after") {
+			t.Fatalf("wrapper leaked or content lost: %s", visible)
+		}
+		request, err := RequestedCommand(content)
+		if err != nil || request != nil {
+			t.Fatal("ordinary example became an execution request")
+		}
+	}
+	visible := DisplayContent("```sh\nwraith-run {\"command\":\"unfinished")
+	if strings.Contains(visible, "wraith-run") || !strings.Contains(visible, "incomplete") {
+		t.Fatal("partial wrapper leaked")
+	}
+}

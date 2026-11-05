@@ -9,6 +9,7 @@ type commandSection struct {
 	start, end int
 	text       string
 	complete   bool
+	suggestion bool
 }
 
 func commandSections(content string) []commandSection {
@@ -33,8 +34,25 @@ func commandSections(content string) []commandSection {
 			}
 			mark = line[:n]
 			if strings.TrimSpace(strings.TrimPrefix(line, mark)) != "wraith-run" {
-				fence = mark
-				offset += len(lines[i])
+				end, body := i+1, ""
+				for end < len(lines) && strings.TrimSpace(lines[end]) != mark {
+					body += lines[end]
+					end++
+				}
+				if strings.HasPrefix(strings.TrimSpace(body), "wraith-run") {
+					section := commandSection{start: offset, suggestion: true, complete: end < len(lines)}
+					section.text = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(body), "wraith-run"))
+					for i <= end && i < len(lines) {
+						offset += len(lines[i])
+						i++
+					}
+					i--
+					section.end = offset
+					sections = append(sections, section)
+				} else {
+					fence = mark
+					offset += len(lines[i])
+				}
 				continue
 			}
 		} else if !strings.HasPrefix(line, "wraith-run") {
