@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/erdajt/wraith/internal/ollama"
@@ -26,7 +27,14 @@ func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.R
 		body["response_format"] = map[string]string{"type": "json_object"}
 	}
 	if a.Config.ThinkingMode == "reasoning_effort" && req.Think != nil {
-		body["reasoning_effort"] = req.Think
+		effort := req.Think
+		if enabled, ok := effort.(bool); ok {
+			effort = "none"
+			if enabled {
+				effort = "medium"
+			}
+		}
+		body["reasoning_effort"] = effort
 	}
 	if a.Config.ThinkingMode == "thinking" && req.Think != nil {
 		mode := "enabled"
@@ -45,9 +53,10 @@ func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.R
 		return result, err
 	}
 	defer response.Body.Close()
+	var content, thinking strings.Builder
 	err = readSSE(response.Body, func(_ string, data []byte) error {
 		if string(data) == "[DONE]" {
-			result.Done = true
+			result.Done = result.Reason != ""
 			return nil
 		}
 		var chunk struct {
@@ -81,9 +90,9 @@ func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.R
 			if len(choice.Delta.Tools) > 0 {
 				return errors.New("provider returned an unsupported native tool call")
 			}
-			result.Message.Content += choice.Delta.Content
-			result.Message.Thinking += choice.Delta.Reasoning
-			if len(result.Message.Content)+len(result.Message.Thinking) > 16<<20 {
+			content.WriteString(choice.Delta.Content)
+			thinking.WriteString(choice.Delta.Reasoning)
+			if content.Len()+thinking.Len() > 16<<20 {
 				return errors.New("provider response exceeds 16 mib")
 			}
 			if emit != nil {
@@ -95,6 +104,7 @@ func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.R
 		}
 		return nil
 	})
+	result.Message.Content, result.Message.Thinking = content.String(), thinking.String()
 	result.EvalDuration = time.Since(start).Nanoseconds()
 	if err == nil && !result.Done {
 		err = errors.New("provider stream ended before completion")

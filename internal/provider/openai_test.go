@@ -61,3 +61,34 @@ func TestCompatibleStreamRejectsTruncationAndDoesNotExposeErrorBodies(t *testing
 		t.Fatal("provider error leaked response body")
 	}
 }
+
+func TestCompatibleThinkingUsesStringEffort(t *testing.T) {
+	for _, test := range []struct {
+		input any
+		want  string
+	}{{false, "none"}, {true, "medium"}, {"xhigh", "xhigh"}} {
+		a := API{Config: config.Provider{BaseURL: "https://provider.invalid", ThinkingMode: "reasoning_effort"}, HTTP: &http.Client{}}
+		a.HTTP.Transport = transport(func(r *http.Request) (*http.Response, error) {
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			if body["reasoning_effort"] != test.want {
+				t.Fatalf("effort: %v", body["reasoning_effort"])
+			}
+			return response("data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"), nil
+		})
+		if _, err := a.OpenAI(context.Background(), ollama.Request{Think: test.input}, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestCompatibleEndMarkerRequiresFinishedChoice(t *testing.T) {
+	a := API{Config: config.Provider{BaseURL: "https://provider.invalid"}, HTTP: &http.Client{Transport: transport(func(*http.Request) (*http.Response, error) {
+		return response("data: [DONE]\n\n"), nil
+	})}}
+	if _, err := a.OpenAI(context.Background(), ollama.Request{}, nil); err == nil {
+		t.Fatal("empty incomplete stream accepted")
+	}
+}
