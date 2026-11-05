@@ -127,7 +127,11 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 	if k.Type == tea.KeyRunes || k.Type == tea.KeySpace {
 		text = string(k.Runes)
 	}
+	pending, mode := a.Prompt.Pending, a.Prompt.Mode
 	a.Prompt.Key(key, text)
+	if a.Prompt.Pending == "" && len(a.Prompt.Register) > 0 && (key == "Y" && mode == "normal" || strings.HasPrefix(pending, "y") || key == "y" && strings.HasPrefix(mode, "visual")) {
+		return a.copyText(string(a.Prompt.Register), a.Prompt.Linewise)
+	}
 	a.completionQuery = strings.TrimPrefix(a.Prompt.String(), "/")
 	a.completionIndex = 0
 	return nil
