@@ -12,7 +12,11 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		if a.busy && !a.compacting && (a.partial.Content != "" || a.partial.Thinking != "") {
 			a.partial.Interrupted = true
 			a.Session.Messages = append(a.Session.Messages, a.partial)
-			_ = a.Store.Save(a.Session)
+			if err := a.Store.Save(a.Session); err != nil {
+				a.Session.Messages = a.Session.Messages[:len(a.Session.Messages)-1]
+				a.notice = "save failed; session remains open: " + err.Error()
+				return nil
+			}
 		}
 		a.Close()
 		return tea.Quit

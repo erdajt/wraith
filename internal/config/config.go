@@ -24,6 +24,7 @@ type Config struct {
 	Model       string            `json:"model"`
 	Context     int               `json:"context"`
 	Predict     int               `json:"predict"`
+	Threads     int               `json:"threads"`
 	Temperature float64           `json:"temperature"`
 	Thinking    string            `json:"thinking"`
 	Theme       string            `json:"theme"`
@@ -58,7 +59,7 @@ type Paths struct{ Config, Data, Cache string }
 
 func Default() Config {
 	return Config{Version: 1, Host: "http://127.0.0.1:11434", Model: DefaultModel,
-		Context: 8192, Predict: 2048, Temperature: 0.3, Thinking: "auto", Theme: "phosphor",
+		Context: 8192, Predict: 2048, Threads: 6, Temperature: 0.3, Thinking: "auto", Theme: "phosphor",
 		Editor: []string{"nvim"}, Shell: []string{"zsh", "-i"}, KeepAlive: "2m", Timeout: "10m",
 		Terminal: Terminal{Background: "inherit", Foreground: "inherit", OverlayWidth: 0.7, OverlayHeight: 0.6, SplitWidth: 0.4, Scrollback: 5000},
 		Compact:  Compact{Mode: "ask", Threshold: 0.9, KeepTurns: 2, Budget: 1536},
@@ -127,6 +128,9 @@ func (c Config) Validate() error {
 	}
 	if c.Predict < 128 || c.Predict > c.Context/2 {
 		return errors.New("predict must be between 128 and half the context")
+	}
+	if c.Threads < 0 || c.Threads > 512 {
+		return errors.New("threads must be between 0 and 512")
 	}
 	if c.Temperature < 0 || c.Temperature > 2 {
 		return errors.New("temperature must be between 0 and 2")
