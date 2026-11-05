@@ -54,6 +54,7 @@ type infoMsg struct {
 	Err    error
 }
 type modelsMsg struct {
+	Serial uint64
 	Models []ollama.Model
 	Err    error
 }
@@ -127,6 +128,7 @@ type App struct {
 	phase                              string
 	loadCancel                         context.CancelFunc
 	loadSerial                         uint64
+	catalogSerial                      uint64
 	loading                            bool
 	connected                          bool
 	demo                               bool

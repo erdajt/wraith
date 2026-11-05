@@ -3,12 +3,12 @@ package ui
 import (
 	"context"
 	"fmt"
-	"github.com/erdajt/wraith/internal/config"
 	"sort"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/contextual"
 )
 
@@ -18,13 +18,15 @@ func (a *App) modelCommand(name, arg string) tea.Cmd {
 		if arg != "" {
 			return a.set("model", arg)
 		}
-		client := a.Client
+		a.catalogSerial++
+		serial, client := a.catalogSerial, a.Client
+		a.popup = &menu{Kind: "models-loading", Title: "loading models · esc closes"}
 		return func() tea.Msg {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			models, err := client.Models(ctx)
 			sort.Slice(models, func(i, j int) bool { return models[i].Name < models[j].Name })
-			return modelsMsg{Models: models, Err: err}
+			return modelsMsg{Serial: serial, Models: models, Err: err}
 		}
 	case "think":
 		if arg != "" {

@@ -21,6 +21,7 @@ func (a *App) probe() tea.Cmd {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	a.loadCancel = cancel
 	a.loadSerial++
+	a.catalogSerial++
 	a.loading, a.connected = true, false
 	serial, model, client, cfg := a.loadSerial, a.Session.Model, a.Client, a.Config
 	logPath := filepath.Join(a.Paths.Cache, "ollama.log")

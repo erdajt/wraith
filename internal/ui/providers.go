@@ -13,6 +13,7 @@ import (
 )
 
 type providerModelsMsg struct {
+	Serial uint64
 	Name   string
 	Models []ollama.Model
 	Err    error
@@ -40,12 +41,15 @@ func (a *App) selectProvider(name string) tea.Cmd {
 	c := a.Config
 	c.Provider = name
 	client := provider.New(c)
+	a.catalogSerial++
+	serial := a.catalogSerial
+	a.popup = &menu{Kind: "provider-loading", Title: "loading " + name + " models · esc closes"}
 	a.notice = "loading models for " + name
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		models, err := client.Models(ctx)
-		return providerModelsMsg{Name: name, Models: models, Err: err}
+		return providerModelsMsg{Serial: serial, Name: name, Models: models, Err: err}
 	}
 }
 
@@ -77,9 +81,10 @@ func (a *App) activateProvider(name, model string) tea.Cmd {
 }
 
 func (a *App) providerModels(m providerModelsMsg) {
-	if a.busy {
+	if a.busy || m.Serial != a.catalogSerial || a.popup == nil || a.popup.Kind != "provider-loading" {
 		return
 	}
+	a.popup = nil
 	if m.Err != nil {
 		a.notice = "provider models: " + m.Err.Error()
 		return

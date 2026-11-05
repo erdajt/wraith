@@ -70,6 +70,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case providerModelsMsg:
 		a.providerModels(m)
 	case modelsMsg:
+		if m.Serial != a.catalogSerial || a.popup == nil || a.popup.Kind != "models-loading" {
+			break
+		}
+		a.popup = nil
 		if a.busy {
 			a.notice = "model list dismissed while a response is running"
 			break
@@ -84,7 +88,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		a.popup = &menu{Kind: "models", Title: a.Config.Provider + " models", Items: items}
 		if len(items) == 0 {
-			a.notice = "no local models found; pull a model with ollama first"
+			a.notice = "no models found; configure a model catalog or choose a model id"
 		}
 
 	}
