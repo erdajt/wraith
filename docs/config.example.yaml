@@ -1,0 +1,165 @@
+provider: ollama
+providers:
+    anthropic:
+        kind: anthropic
+        base_url: https://api.anthropic.com/v1
+        api_key: ""
+        key_env: ANTHROPIC_API_KEY
+        headers: {}
+        model: ""
+        models: []
+        command: []
+        system_prompt: ""
+        thinking: []
+        thinking_mode: ""
+        token_field: ""
+        extra: {}
+    claude:
+        kind: claude-cli
+        base_url: ""
+        api_key: ""
+        key_env: ""
+        headers: {}
+        model: default
+        models:
+            - default
+        command:
+            - claude
+        system_prompt: ""
+        thinking: []
+        thinking_mode: ""
+        token_field: ""
+        extra: {}
+    codex:
+        kind: codex-cli
+        base_url: ""
+        api_key: ""
+        key_env: ""
+        headers: {}
+        model: default
+        models:
+            - default
+        command:
+            - codex
+        system_prompt: ""
+        thinking: []
+        thinking_mode: ""
+        token_field: ""
+        extra: {}
+    deepseek:
+        kind: openai
+        base_url: https://api.deepseek.com
+        api_key: ""
+        key_env: DEEPSEEK_API_KEY
+        headers: {}
+        model: ""
+        models: []
+        command: []
+        system_prompt: ""
+        thinking: []
+        thinking_mode: ""
+        token_field: max_tokens
+        extra: {}
+    ollama:
+        kind: ollama
+        base_url: ""
+        api_key: ""
+        key_env: ""
+        headers: {}
+        model: ""
+        models: []
+        command: []
+        system_prompt: ""
+        thinking: []
+        thinking_mode: ""
+        token_field: ""
+        extra: {}
+    openai:
+        kind: openai
+        base_url: https://api.openai.com/v1
+        api_key: ""
+        key_env: OPENAI_API_KEY
+        headers: {}
+        model: ""
+        models: []
+        command: []
+        system_prompt: ""
+        thinking: []
+        thinking_mode: ""
+        token_field: max_completion_tokens
+        extra: {}
+clipboard:
+    - wl-copy
+appearance:
+    background: theme
+    mouse: true
+    thinking: false
+execution:
+    auto_share: false
+    mode: agent
+    max_steps: 8
+    output_context: 8192
+themes: {}
+leader: space
+bindings:
+    b: blocks
+    c a: archives
+    c c: compact
+    c e: edit-response
+    c n: clear
+    c s: sessions
+    e: edit
+    h: help
+    i: instructions
+    m: models
+    p: pins
+    r: history
+    s: settings
+    t: think
+    v: thinking
+auto_start: true
+version: 1
+host: http://127.0.0.1:11434
+model: hf.co/filvyb/Qwen3.5-9B-heretic-v2-GGUF:Q5_K_M
+context: 8192
+predict: 2048
+threads: 6
+temperature: 0.3
+thinking: auto
+theme: phosphor
+editor:
+    - nvim
+terminal:
+    background: inherit
+    foreground: inherit
+    overlay_width: 0.7
+    overlay_height: 0.6
+    split_width: 0.4
+    scrollback: 5000
+    directory: ""
+shell:
+    - zsh
+    - -i
+keep_alive: 2m
+timeout: 10m
+compact:
+    mode: ask
+    threshold: 0.9
+    keep_turns: 2
+    budget: 1536
+keys:
+    cancel: ctrl+c
+    editor: ctrl+e
+    focus: tab
+    output_share: ctrl+g
+    pin_edit: e
+    pin_remove: d
+    quit: ctrl+q
+    send: ctrl+s
+    setting_help: '?'
+    terminal_overlay: alt+e
+    terminal_split: alt+s
+    terminal_unfocus: ctrl+\
+    thinking_toggle: za
+animations: true
+

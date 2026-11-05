@@ -13,7 +13,7 @@ make install
 
 fixtures use an in-memory http transport, real linux ptys and temporary data directories. no installed model, gpu or running ollama service is required. the interactive subprocess test drives the actual bubble tea app through a pty, returns from a configured editor, hides and reopens a shell, and verifies that the side shell has independent state.
 
-focused checks cover stream completion and cancellation, model discovery, saved selection, bounded extraction, omission audits, exact pins and literals, third-decline compaction, original archives, failed replacement, editor save detection, command quoting, terminal control handling, unicode, layout dimensions, modal edits and read-only snapshots.
+focused checks cover stream completion and cancellation, provider request formats, native cli event decoding, model discovery, saved selection, bounded extraction, omission audits, exact pins and literals, third-decline compaction, original archives, corrective retries, failed replacement, output sharing, directory-scoped resume, input history, editor save detection, command quoting, terminal control handling, unicode, layout dimensions, modal edits and read-only snapshots.
 
 ```sh
 go test -race -shuffle=on -count=1 ./...
@@ -32,7 +32,6 @@ fuzz corpus entries that reproduce bugs belong beside the affected package. test
 [release](../.github/workflows/release.yml) handles version tags matching `v*`, then validates a semantic version before packaging. it runs the reusable checks first, builds both linux binaries with the version embedded, bundles the documentation and writes sha256 checksums. it creates a draft github release for review. nothing is published by a local build.
 
 actions are pinned to commit hashes, dependency updates are scheduled through dependabot, and only the packaging job has repository write permission. the workflow files require a github remote and a push before github can execute them; local tests do not establish that a hosted run passed.
-
 
 ## visual review
 
