@@ -111,6 +111,9 @@ func (a *App) settingMenu(key string) tea.Cmd {
 		return a.edit("config", "", "", -1)
 	}
 	items := []item{}
+	if key == "context" {
+		items = append(items, item{"custom capacity", "context=custom", "any positive integer"})
+	}
 	for _, v := range values[key] {
 		items = append(items, item{v, key + "=" + v, ""})
 	}

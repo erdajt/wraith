@@ -32,7 +32,7 @@ func TestConfigRoundTripAndPermissions(t *testing.T) {
 
 func TestRejectInvalidConfig(t *testing.T) {
 	tests := map[string]func(*Config){
-		"budget":    func(c *Config) { c.Predict = c.Context },
+		"budget":    func(c *Config) { c.Predict = 0 },
 		"threshold": func(c *Config) { c.Compact.Threshold = 1.2 },
 		"editor":    func(c *Config) { c.Editor = nil },
 		"host":      func(c *Config) { c.Host = "file:///etc/passwd" },
@@ -68,6 +68,23 @@ func TestRejectMalformedTrailingData(t *testing.T) {
 		}
 		if _, err := Load(path); err == nil {
 			t.Fatalf("accepted trailing %q", suffix)
+		}
+	}
+}
+
+func TestContextHasNoApplicationCeiling(t *testing.T) {
+	for _, size := range []int{1, 8192, 32768, 1000000} {
+		c := Default()
+		c.Context = size
+		if err := c.Validate(); err != nil {
+			t.Fatalf("context %d: %v", size, err)
+		}
+	}
+	for _, size := range []int{0, -1} {
+		c := Default()
+		c.Context = size
+		if c.Validate() == nil {
+			t.Fatalf("accepted context %d", size)
 		}
 	}
 }

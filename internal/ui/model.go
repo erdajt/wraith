@@ -22,6 +22,7 @@ import (
 
 type item struct{ Label, Value, Detail string }
 type menu struct {
+	Input                *vim.Buffer
 	All                  []item
 	Query, Prefix, Count string
 	Searching            bool

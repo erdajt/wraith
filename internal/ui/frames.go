@@ -19,6 +19,10 @@ func (a *App) menuFrame() []string {
 	if m.Searching || m.Query != "" {
 		content[1] = ink(p.Second, "/"+clean(m.Query)+"▏ · enter keeps filter · esc resets")
 	}
+	if m.Input != nil {
+		content = append(content, ink(p.Second, m.Input.Status()), cursorText(clean(m.Input.String()), m.Input.Pos, p))
+		return frame(content, w, p, false, "", "")
+	}
 	preview := ""
 	if m.Kind == "approval" && a.proposal != nil {
 		preview = a.proposal.Command

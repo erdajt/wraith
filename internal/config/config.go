@@ -173,11 +173,11 @@ func (c Config) Validate() error {
 	if strings.TrimSpace(c.Model) == "" {
 		return errors.New("model is empty")
 	}
-	if c.Context < 2048 || c.Context > 262144 {
-		return errors.New("context must be between 2048 and 262144")
+	if c.Context < 1 {
+		return errors.New("context must be a positive integer")
 	}
-	if c.Predict < 128 || c.Predict > c.Context/2 {
-		return errors.New("predict must be between 128 and half the context")
+	if c.Predict < 1 {
+		return errors.New("predict must be a positive integer")
 	}
 	if c.Threads < 0 || c.Threads > 512 {
 		return errors.New("threads must be between 0 and 512")
@@ -229,8 +229,8 @@ func (c Config) Validate() error {
 	if c.Compact.KeepTurns < 1 || c.Compact.KeepTurns > 20 {
 		return errors.New("compact.keep_turns must be between 1 and 20")
 	}
-	if c.Compact.Budget < 256 || c.Compact.Budget > c.Context/2 {
-		return errors.New("compact.budget must be between 256 and half the context")
+	if c.Compact.Budget < 256 {
+		return errors.New("compact.budget must be at least 256")
 	}
 	seen := map[string]bool{}
 	for _, key := range []string{"send", "editor", "focus", "cancel", "quit", "terminal_overlay", "terminal_split", "terminal_unfocus"} {
