@@ -45,7 +45,7 @@ var commandSpecs = []commandSpec{
 func matchingCommands(query string) []commandSpec {
 	query = strings.ToLower(query)
 	var exact, matches []commandSpec
-	for _, cmd := range commandSpecs {
+	for _, cmd := range commandChoices(query) {
 		if cmd.Name == query {
 			exact = append(exact, cmd)
 		} else if strings.HasPrefix(cmd.Name, query) {

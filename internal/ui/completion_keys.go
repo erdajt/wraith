@@ -33,6 +33,11 @@ func (a *App) slashKey(k tea.KeyMsg) (tea.Cmd, bool) {
 				return nil, true
 			}
 			choice := choices[index]
+			if k.String() == "tab" && len(subcommands[choice.Name]) > 0 {
+				a.Prompt.Set("/" + choice.Name + ".")
+				a.completionIndex = 0
+				return nil, true
+			}
 			if choice.NeedsArgument || k.String() == "tab" {
 				a.Prompt.Set("/" + choice.Name + " ")
 				a.completionIndex = 0

@@ -22,6 +22,16 @@ func (a *App) runCommand(line string) tea.Cmd {
 			return nil
 		}
 	}
+	if strings.HasPrefix(name, "settings.") {
+		for _, cmd := range subcommands["settings"] {
+			if cmd.Name == name {
+				a.settingsCategory(strings.TrimPrefix(name, "settings."))
+				return nil
+			}
+		}
+		a.notice = "unknown settings category"
+		return nil
+	}
 	switch name {
 	case "history":
 		return a.openHistory()
