@@ -39,6 +39,13 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, a.readTerminal(m.Index)
 
+	case streamMsg:
+		return a, a.receive(m)
+	case progressMsg:
+		a.phase = string(m)
+		return a, a.next()
+	case compactMsg:
+		return a, a.finishCompact(m)
 	}
 	return a, nil
 }

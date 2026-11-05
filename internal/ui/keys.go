@@ -20,6 +20,13 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 	if strings.HasPrefix(a.focus, "terminal") {
 		return a.terminalKey(k)
 	}
+	if key == a.Config.Keys["send"] {
+		return a.submit()
+	}
+	if key == a.Config.Keys["cancel"] && a.cancel != nil {
+		a.cancel()
+		return nil
+	}
 	text := ""
 	if k.Type == tea.KeyRunes {
 		text = string(k.Runes)
