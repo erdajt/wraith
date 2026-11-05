@@ -31,6 +31,9 @@ func (a *App) menuFrame() []string {
 	preview := ""
 	if m.Kind == "approval" && a.proposal != nil {
 		preview = a.proposal.Command
+		if a.proposal.Reason != "" {
+			preview += "\n\nreason: " + a.proposal.Reason
+		}
 	}
 	if m.Kind == "block-actions" {
 		preview = a.selectedBlock.Text

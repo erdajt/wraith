@@ -47,7 +47,7 @@ func (a *App) selectedBlocks() tea.Cmd {
 		a.notice = "select an assistant response containing code"
 		return nil
 	}
-	blocks := editor.Blocks(a.Session.Messages[index].Content)
+	blocks := editor.Blocks(a.messageAt(index))
 	if len(blocks) == 1 {
 		return a.blockActions(blocks[0])
 	}

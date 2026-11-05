@@ -6,6 +6,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/session"
 )
@@ -66,7 +67,7 @@ func Export(s session.Session) string {
 		}
 	}
 	for _, m := range s.Messages {
-		fmt.Fprintf(&b, "\n## %s\n\n%s\n", m.Role, m.Content)
+		fmt.Fprintf(&b, "\n## %s\n\n%s\n", m.Role, contextual.DisplayContent(m.Content))
 		if m.Edited {
 			b.WriteString("\n*edited locally*\n")
 		}

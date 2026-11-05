@@ -22,8 +22,8 @@ type runMsg struct {
 	Err    error
 }
 type proposal struct {
-	Command, Language, Text, Source string
-	Continue                        bool
+	Command, Language, Text, Source, Reason string
+	Continue                                bool
 }
 
 func (a *App) history() runner.History {

@@ -158,7 +158,7 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 		case "blocks":
 			var mi, bi int
 			_, _ = fmt.Sscanf(choice.Value, "%d:%d", &mi, &bi)
-			blocks := editor.Blocks(a.Session.Messages[mi].Content)
+			blocks := editor.Blocks(a.messageAt(mi))
 			return a.blockActions(blocks[bi])
 		}
 	}

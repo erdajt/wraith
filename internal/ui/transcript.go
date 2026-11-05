@@ -6,6 +6,7 @@ import (
 	"unicode"
 
 	"github.com/charmbracelet/x/ansi"
+	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/markdown"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/mattn/go-runewidth"
@@ -75,7 +76,7 @@ func (a *App) transcript(w int) []rendered {
 			}
 		}
 
-		lines, nextBlock := markdown.Render(clean(m.Content), w, p, block)
+		lines, nextBlock := markdown.Render(clean(contextual.DisplayContent(m.Content)), w, p, block)
 		block = nextBlock
 		for _, line := range lines {
 			start := len(out)

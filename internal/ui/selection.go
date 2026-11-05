@@ -61,7 +61,7 @@ func (a *App) yank() tea.Cmd {
 	if a.visualMode != "" {
 		text = a.selectedText()
 	} else if a.selected >= 0 && a.selected < len(a.Session.Messages) {
-		text = a.Session.Messages[a.selected].Content
+		text = a.messageAt(a.selected)
 	}
 	if text == "" {
 		a.notice = "nothing selected"

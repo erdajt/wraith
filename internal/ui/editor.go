@@ -48,7 +48,7 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 			a.notice = "no response selected"
 			return nil
 		}
-		text = a.Session.Messages[index].Content
+		text = a.messageAt(index)
 	case "block", "run":
 		ext = editor.Extension(language)
 	}

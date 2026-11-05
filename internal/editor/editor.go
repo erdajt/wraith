@@ -128,6 +128,9 @@ func Extension(lang string) string {
 }
 
 func Stage(dir, lang, text string) (string, string, error) {
+	if lang == "wraith-run" || strings.HasPrefix(strings.TrimSpace(text), "wraith-run") {
+		return "", "", errors.New("internal command request cannot be staged as shell input")
+	}
 	if strings.ContainsRune(text, 0) {
 		return "", "", errors.New("code contains a null byte")
 	}

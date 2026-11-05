@@ -56,11 +56,11 @@ func (a *App) memoryCommand(name, arg string) tea.Cmd {
 		a.popup = &menu{Kind: "pins", Title: "exact pins · " + a.Config.Keys["pin_edit"] + " edit · " + a.Config.Keys["pin_remove"] + " unpin", Items: items}
 	case "blocks":
 		items := []item{}
-		for mi, m := range a.Session.Messages {
-			if m.Role != "assistant" {
+		for mi := range a.Session.Messages {
+			if a.Session.Messages[mi].Role != "assistant" {
 				continue
 			}
-			for bi, b := range editor.Blocks(m.Content) {
+			for bi, b := range editor.Blocks(a.messageAt(mi)) {
 				first, _, _ := strings.Cut(strings.TrimSpace(b.Text), "\n")
 				items = append(items, item{fmt.Sprintf("%d · %s · %s", len(items)+1, b.Language, first), fmt.Sprintf("%d:%d", mi, bi), fmt.Sprintf("message %d", mi+1)})
 			}

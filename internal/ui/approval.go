@@ -15,7 +15,7 @@ func (a *App) approvalAction(action string) tea.Cmd {
 	case "edit":
 		return a.edit("run", a.proposal.Language, a.proposal.Text, -1)
 	case "view":
-		a.showText("command-preview", "full command · esc returns to approval", a.proposal.Command)
+		a.showText("command-preview", "full command · esc returns to approval", a.proposal.Command+"\n\nreason: "+a.proposal.Reason)
 	case "cancel":
 		a.declineCommand()
 	}

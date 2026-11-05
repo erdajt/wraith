@@ -149,7 +149,7 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 				a.notice = "command step limit reached · send a prompt to continue"
 				return nil
 			}
-			a.proposal = &proposal{Command: request.Command, Text: request.Command, Language: "sh", Source: "model", Continue: true}
+			a.proposal = &proposal{Command: request.Command, Reason: request.Reason, Text: request.Command, Language: "sh", Source: "model", Continue: true}
 		}
 	}
 	switch contextual.Decision(a.Config.Compact.Mode, a.Session.Declines, contextual.NeedsCompact(a.Session, a.Config, a.Instructions)) {
