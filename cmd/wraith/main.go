@@ -36,6 +36,7 @@ func run(args []string, out io.Writer) error {
 	showVersion := flags.Bool("version", false, "print version")
 	demo := flags.Bool("demo", false, "open a demo without model requests or saved changes")
 	snapshot := flags.Bool("snapshot", false, "render one demo frame to stdout")
+	resume := flags.Bool("resume", false, "choose a saved session")
 	fresh := flags.Bool("new", false, "start a new chat")
 	id := flags.String("session", "", "resume a session id")
 	model := flags.String("model", "", "model for this chat")
@@ -50,6 +51,9 @@ func run(args []string, out io.Writer) error {
 			return nil
 		}
 		return err
+	}
+	if *resume && (*fresh || *id != "") {
+		return errors.New("--resume cannot be combined with --new or --session")
 	}
 	if *showVersion {
 		fmt.Fprintln(out, "wraith", version)
@@ -126,7 +130,6 @@ func run(args []string, out io.Writer) error {
 			_, e = io.WriteString(out, ui.Export(v))
 			return e
 		default:
-			return fmt.Errorf("unknown command %q; use doctor, config, models, sessions or export", flags.Arg(0))
 		}
 	}
 	chat := session.New(c.Model)
@@ -168,6 +171,10 @@ func run(args []string, out io.Writer) error {
 		return err
 	}
 	defer a.Close()
+	a.Prompt.Set(strings.Join(flags.Args(), " "))
+	if *resume {
+		a.OpenSessions()
+	}
 	if *snapshot {
 		_, _ = a.Update(tea.WindowSizeMsg{Width: max(50, *width), Height: max(18, *height)})
 		_, err = fmt.Fprintln(out, a.View())
