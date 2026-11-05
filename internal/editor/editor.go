@@ -137,10 +137,8 @@ func Stage(dir, lang, text string) (string, string, error) {
 	}
 	var argv []string
 	switch lang {
-	case "sh", "bash", "shell", "console":
-		argv = []string{"bash", f.Path}
-	case "zsh":
-		argv = []string{"zsh", f.Path}
+	case "sh", "bash", "shell", "console", "zsh":
+		return f.Path, strings.TrimRight(text, "\r\n"), nil
 	case "python", "py":
 		argv = []string{"python3", f.Path}
 	case "javascript", "js":

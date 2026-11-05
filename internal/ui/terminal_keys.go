@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -24,7 +25,12 @@ func (a *App) terminalKey(k tea.KeyMsg) tea.Cmd {
 		}
 		if p.Pending != "" {
 			if key == "enter" {
-				if err := p.PTY.Write([]byte(p.Pending)); err != nil {
+				data, err := stagedInput(p.Pending, p.Screen.Bracketed)
+				if err != nil {
+					a.notice = err.Error()
+					return nil
+				}
+				if err := p.PTY.Write(data); err != nil {
 					a.notice = err.Error()
 				} else {
 					a.notice = "command inserted into shell; review it, then press enter to execute"
@@ -53,4 +59,17 @@ func (a *App) terminalKey(k tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 	return nil
+}
+
+func stagedInput(command string, bracketed bool) ([]byte, error) {
+	if strings.ContainsAny(command, "\x00\x1b\r") {
+		return nil, errors.New("command contains terminal control bytes; edit before staging")
+	}
+	if bracketed {
+		return []byte("\x1b[200~" + command + "\x1b[201~"), nil
+	}
+	if strings.Contains(command, "\n") {
+		return nil, errors.New("shell has no bracketed paste; use the block run action for multiline commands")
+	}
+	return []byte(command), nil
 }
