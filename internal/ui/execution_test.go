@@ -15,14 +15,13 @@ func TestBlockNeedsApprovalAndSavesOutput(t *testing.T) {
 	marker := filepath.Join(t.TempDir(), "approved")
 	command := "printf evidence; touch " + editor.Quote(marker)
 	a.blockActions(editor.Block{Language: "sh", Text: command})
-	a.blockAction("run")
 	if _, err := os.Stat(marker); !os.IsNotExist(err) {
 		t.Fatal("block executed before approval")
 	}
-	if !strings.Contains(a.View(), "printf evidence") {
-		t.Fatal("approval did not show actual command")
+	a.blockAction("run")
+	if !a.executing {
+		t.Fatal("run asked for a second approval")
 	}
-	a.approvalAction("run")
 	drain(t, a)
 	records, err := a.history().List()
 	if err != nil || len(records) != 1 {

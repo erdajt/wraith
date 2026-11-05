@@ -19,8 +19,15 @@ func (a *App) menuFrame() []string {
 	if m.Searching || m.Query != "" {
 		content[1] = ink(p.Second, "/"+clean(m.Query)+"▏ · enter keeps filter · esc resets")
 	}
+	preview := ""
 	if m.Kind == "approval" && a.proposal != nil {
-		lines := strings.Split(ansi.Hardwrap(clean(a.proposal.Command), w-6, true), "\n")
+		preview = a.proposal.Command
+	}
+	if m.Kind == "block-actions" {
+		preview = a.selectedBlock.Text
+	}
+	if preview != "" {
+		lines := strings.Split(ansi.Hardwrap(clean(preview), w-6, true), "\n")
 		for _, line := range lines[:min(len(lines), max(1, height-10))] {
 			content = append(content, ink(p.Accent, "$ "+line))
 		}

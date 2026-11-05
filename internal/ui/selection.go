@@ -67,8 +67,14 @@ func (a *App) yank() tea.Cmd {
 		a.notice = "nothing selected"
 		return nil
 	}
+	linewise := a.visualMode == "visual-line"
+	a.visualMode = ""
+	return a.copyText(text, linewise)
+}
+
+func (a *App) copyText(text string, linewise bool) tea.Cmd {
 	a.Prompt.Register = []rune(text)
-	a.Prompt.Linewise = a.visualMode == "visual-line"
+	a.Prompt.Linewise = linewise
 	a.visualMode = ""
 	a.notice = "copied to wraith register"
 	argv := append([]string(nil), a.Config.Clipboard...)

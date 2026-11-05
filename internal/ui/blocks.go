@@ -35,7 +35,8 @@ func (a *App) blockAction(action string) tea.Cmd {
 			a.notice = "saved " + path + "; no interpreter mapped"
 			return nil
 		}
-		return a.approve(proposal{Command: command, Text: b.Text, Language: b.Language, Source: "block"})
+		a.proposal = &proposal{Command: command, Text: b.Text, Language: b.Language, Source: "block"}
+		return a.runApproved()
 	}
 	return nil
 }
