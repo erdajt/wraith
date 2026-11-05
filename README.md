@@ -140,3 +140,7 @@ make check
 checks cover race detection, provider streams, cancellation, corrective compaction, compressed recovery, real ptys, editor handoff, command approval, output sharing, search and modal editing. tests use local fixtures without a model or GPU. fuzz targets exercise terminal parsing and prompt edits.
 
 [ci](.github/workflows/ci.yml) runs on pushes and pull requests, verifies modules, fuzzes parsers and cross-builds linux amd64/arm64. [tagged releases](.github/workflows/release.yml) run checks before creating checksummed draft packages. [architecture](docs/architecture.md) · [development](docs/development.md)
+
+## freedom
+
+wraith is free software under the [GNU GPL, version 3 or later](LICENSE). see [NOTICE](NOTICE) for the project copyright and grant.

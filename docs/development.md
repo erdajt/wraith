@@ -29,7 +29,7 @@ fuzz corpus entries that reproduce bugs belong beside the affected package. test
 
 [checks](../.github/workflows/ci.yml) runs on pushes and pull requests. it verifies modules, formatting and vet; runs race/integration tests; fuzzes both parsers; builds linux amd64 and arm64; and uploads coverage. it can also be called by the release workflow.
 
-[release](../.github/workflows/release.yml) handles version tags matching `v*`, then validates a semantic version before packaging. it runs the reusable checks first, builds both linux binaries with the version embedded, bundles the documentation and writes sha256 checksums. it creates a draft github release for review. nothing is published by a local build.
+[release](../.github/workflows/release.yml) handles version tags matching `v*`, then validates a semantic version before packaging. it runs the reusable checks first, builds both linux binaries with the version embedded, bundles the documentation, license and copyright notice, and writes sha256 checksums. it creates a draft github release for review. nothing is published by a local build.
 
 actions are pinned to commit hashes, dependency updates are scheduled through dependabot, and only the packaging job has repository write permission. the workflow files require a github remote and a push before github can execute them; local tests do not establish that a hosted run passed.
 
