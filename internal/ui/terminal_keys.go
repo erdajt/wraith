@@ -32,6 +32,8 @@ func (a *App) terminalKey(k tea.KeyMsg) tea.Cmd {
 			} else if key == "esc" {
 				p.Pending = ""
 				a.notice = "staged command dismissed"
+			} else if key == "e" {
+				return a.editStaged(index)
 			}
 			return nil
 		}

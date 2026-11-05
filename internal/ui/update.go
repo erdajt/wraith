@@ -46,6 +46,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, a.next()
 	case compactMsg:
 		return a, a.finishCompact(m)
+	case editedMsg:
+		return a, a.finishEdit(m)
 	}
 	return a, nil
 }
