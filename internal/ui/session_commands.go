@@ -15,7 +15,11 @@ import (
 
 func (a *App) sessionCommand(name, arg string) tea.Cmd {
 	switch name {
-	case "new":
+	case "new", "clear":
+		if err := a.Store.Save(a.Session); err != nil {
+			a.notice = err.Error()
+			return nil
+		}
 		s := session.New(a.Config.Model)
 		if err := a.Store.Save(s); err != nil {
 			a.notice = err.Error()
