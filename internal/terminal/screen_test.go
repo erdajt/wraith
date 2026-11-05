@@ -87,3 +87,27 @@ func FuzzScreen(f *testing.F) {
 		}
 	})
 }
+
+func TestStyleChangePreservesPendingWrap(t *testing.T) {
+	s := NewScreen(3, 2, 0)
+	s.Feed([]byte("abc\x1b[31md"))
+	if s.Cells[0][2].Text != "c" || s.Cells[1][0].Text != "d" {
+		t.Fatalf("sgr overwrote right margin: %q", text(s))
+	}
+	s.Feed([]byte("\x1b[-900A\x1b[-900D"))
+	if s.X < 0 || s.Y < 0 || s.X >= s.Width || s.Y >= s.Height {
+		t.Fatal("negative parameters escaped screen")
+	}
+}
+
+func TestWideGlyphCombiningAndResize(t *testing.T) {
+	s := NewScreen(4, 2, 0)
+	s.Feed([]byte("界\u0301"))
+	if s.Cells[0][0].Text != "界\u0301" {
+		t.Fatal("combining mark lost its base")
+	}
+	s.Resize(1, 2)
+	if s.Cells[0][0].Text != "" {
+		t.Fatal("wide glyph survived inside a single column")
+	}
+}

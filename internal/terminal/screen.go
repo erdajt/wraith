@@ -46,6 +46,9 @@ func (s *Screen) Resize(w, h int) {
 			out[y] = row(w)
 			if y < len(old) {
 				copy(out[y], old[y])
+				if out[y][w-1].Width == 2 {
+					out[y][w-1] = Cell{}
+				}
 			}
 		}
 		return out
@@ -71,6 +74,9 @@ func (s *Screen) put(r rune) {
 			x = s.X
 		}
 		if x >= 0 {
+			if s.Cells[s.Y][x].Width == -1 && x > 0 {
+				x--
+			}
 			s.Cells[s.Y][x].Text += string(r)
 		}
 		return
