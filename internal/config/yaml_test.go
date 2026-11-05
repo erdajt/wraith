@@ -41,3 +41,14 @@ func TestYAMLRejectsUnknownAndDuplicateFields(t *testing.T) {
 		}
 	}
 }
+
+func TestExplicitBindingsReplaceDefaultSequences(t *testing.T) {
+	path := File(t.TempDir())
+	if err := os.WriteFile(path, []byte("leader: ','\nbindings:\n  x y: settings\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	c, err := Load(path)
+	if err != nil || len(c.Bindings) != 1 || c.Bindings["x y"] != "settings" {
+		t.Fatalf("bindings merged unexpectedly: %v %v", c.Bindings, err)
+	}
+}

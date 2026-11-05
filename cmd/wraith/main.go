@@ -147,8 +147,10 @@ func run(args []string, out io.Writer) error {
 		if *model != "" {
 			chat.Model = *model
 		}
-		if err = s.Save(chat); err != nil {
-			return err
+		if !*resume {
+			if err = s.Save(chat); err != nil {
+				return err
+			}
 		}
 		memory := filepath.Join(p.Config, "instructions.md")
 		if _, e = os.Stat(memory); errors.Is(e, os.ErrNotExist) {

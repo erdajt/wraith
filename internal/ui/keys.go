@@ -9,13 +9,17 @@ import (
 
 func (a *App) key(k tea.KeyMsg) tea.Cmd {
 	if k.Type == tea.KeyRunes && len(k.Runes) > 1 && !k.Paste && !k.Alt && (a.focus == "chat" || a.Prompt.Mode == "normal") {
-		var commands []tea.Cmd
-		for _, r := range k.Runes {
+
+		for i, r := range k.Runes {
 			if cmd := a.key(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}}); cmd != nil {
-				commands = append(commands, cmd)
+				if i == len(k.Runes)-1 {
+					return cmd
+				}
+				rest := append([]rune(nil), k.Runes[i+1:]...)
+				return tea.Sequence(cmd, func() tea.Msg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: rest} })
 			}
 		}
-		return tea.Sequence(commands...)
+		return nil
 	}
 	key := k.String()
 	if key == a.Config.Keys["quit"] || (key == "q" && a.popup == nil && !a.commandMode && !a.searchMode && (a.focus == "chat" || (a.focus == "prompt" && a.Prompt.Mode == "normal"))) {

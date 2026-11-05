@@ -108,6 +108,13 @@ func Load(path string) (Config, error) {
 	if err != nil {
 		return c, err
 	}
+	var fields map[string]any
+	if err := yaml.Unmarshal(b, &fields); err != nil {
+		return c, fmt.Errorf("config: %w", err)
+	}
+	if _, ok := fields["bindings"]; ok {
+		c.Bindings = nil
+	}
 	var d interface{ Decode(any) error }
 	if strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml") {
 		yd := yaml.NewDecoder(bytes.NewReader(b))
