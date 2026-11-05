@@ -8,7 +8,7 @@ import (
 )
 
 func (a *App) menuFrame() []string {
-	p := palettes[a.Config.Theme]
+	p := a.Config.Palette()
 	m := a.popup
 	w := min(a.width-6, 90)
 	height := min(a.height-8, 18)
@@ -52,7 +52,7 @@ func frame(content []string, w int, p palette, inherit bool, fg, bg string) []st
 }
 
 func (a *App) terminalFrame(index, w, h int) []string {
-	p := palettes[a.Config.Theme]
+	p := a.Config.Palette()
 	pane := a.panes[index]
 	cfg := a.Config.Terminal
 	fg, bg := "", ""

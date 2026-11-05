@@ -62,7 +62,16 @@ func (a *App) modelCommand(name, arg string) tea.Cmd {
 		if arg != "" {
 			return a.set("theme", arg)
 		}
-		a.popup = &menu{Kind: "theme", Title: "choose a theme", Items: []item{{"phosphor · mint / violet", "phosphor", ""}, {"tokyo · blue / lilac", "tokyo", ""}, {"ember · amber / rose", "ember", ""}, {"ice · cyan / silver", "ice", ""}, {"mono · grayscale", "mono", ""}}}
+		themes := config.BuiltinThemes()
+		for name, p := range a.Config.Themes {
+			themes[name] = p
+		}
+		items := []item{}
+		for name := range themes {
+			items = append(items, item{name, name, ""})
+		}
+		sort.Slice(items, func(i, j int) bool { return items[i].Label < items[j].Label })
+		a.popup = &menu{Kind: "theme", Title: "choose a theme", Items: items}
 	case "context":
 		a.notice = fmt.Sprintf("~%d / %d context tokens · output reserve %d · %d ledger facts · %d pins · %d archives · measured last prompt %d", contextual.Used(a.Session, a.Instructions), a.Config.Context, a.Config.Predict, len(a.Session.Facts), len(a.Session.Pins), len(a.Session.Archives), a.Session.Usage.Prompt)
 	case "compact":

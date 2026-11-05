@@ -11,7 +11,7 @@ func (a *App) completionFrame() []string {
 	if !visible {
 		return nil
 	}
-	p := palettes[a.Config.Theme]
+	p := a.Config.Palette()
 	w := min(a.mainWidth()-4, 90)
 	count := max(1, min(6, a.bodyHeight()-4))
 	start := max(0, min(index-count/2, len(choices)-count))

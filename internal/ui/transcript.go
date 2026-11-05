@@ -16,7 +16,7 @@ type rendered struct {
 }
 
 func (a *App) transcript(w int) []rendered {
-	p := palettes[a.Config.Theme]
+	p := a.Config.Palette()
 	var out []rendered
 	add := func(text string, index int) {
 		for _, line := range strings.Split(ansi.Hardwrap(text, w, true), "\n") {
@@ -86,7 +86,7 @@ func (a *App) transcript(w int) []rendered {
 }
 
 func (a *App) promptLines(w int) []string {
-	p := palettes[a.Config.Theme]
+	p := a.Config.Palette()
 	b := a.Prompt
 	var lines []string
 	var line strings.Builder
