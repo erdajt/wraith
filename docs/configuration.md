@@ -1,61 +1,80 @@
 # configuration
 
-settings live in `~/.config/wraith/config.json`, or `$XDG_CONFIG_HOME/wraith/config.json`. the first launch writes defaults. [config.example.json](config.example.json) contains the complete schema. omitted fields receive defaults; unknown fields, malformed trailing data and invalid values are rejected.
+settings live in `~/.config/wraith/config.yaml`, or `$XDG_CONFIG_HOME/wraith/config.yaml`. the first launch writes defaults. legacy `config.json` is migrated when YAML does not yet exist; the original remains available. omitted values receive defaults, while unknown fields and invalid values are rejected.
 
-use `/settings` for common choices, press `e` there to edit the entire file, or set a value directly:
+`/settings` groups values into model, execution, context, appearance, terminals, and keys/editor categories. `/settings.appearance` opens one directly. press `?` on a setting for its detailed explanation, enter to choose a value, or `e` to edit the complete file. invalid saved edits remain in a recovery file and do not replace the active configuration.
 
 ```text
 /set editor ["nvim"]
 /set shell ["bash", "-i"]
-/set theme tokyo
-/set context 16384
-/set predict 2048
-/set threads 6
+/set context 1000000
 /set compact.mode auto
-/set compact.threshold 0.9
-/set keys.terminal_overlay alt+x
-/set animations false
+/set execution.auto_share false
+/set appearance.background inherit
 ```
 
-editor and shell values are argument arrays. arguments are passed directly to the executable, without shell expansion or `eval`. use an absolute executable path if it is outside `PATH`. editor arguments precede the temporary file path. neovim is the default regardless of `$EDITOR`; set the array explicitly to choose another editor.
+context accepts any positive integer representable by the binary. the custom-capacity field is beside the presets. 8192 is a default, not a maximum. model architecture, provider limits and available memory determine what can actually be used. output reservations and source fragments still have to fit before a request is sent.
 
-| setting | default | constraint or effect |
+| setting | default | effect |
 | --- | --- | --- |
-| `host` | `http://127.0.0.1:11434` | native ollama endpoint; http(s), no embedded credentials |
-| `model` | qwen3.5 heretic q5 model in the example | new-chat default; `/models` selects from installed models |
-| `context` | `8192` | 2048–262144; requested context, not a guarantee of model capacity |
-| `predict` | `2048` | at least 128, at most half the context; includes native thinking output |
-| `threads` | `6` | 0 uses ollama's default; otherwise 1–512 cpu inference threads |
-| `temperature` | `0.3` | 0–2 |
-| `thinking` | `auto` | native supported value; validated when sent |
-| `theme` | `phosphor` | phosphor, tokyo, ember, ice, mono |
-| `keep_alive` | `2m` | positive duration; request that ollama unload an idle model after this interval |
-| `timeout` | `10m` | positive duration for each generation or whole compaction operation |
-| `compact.mode` | `ask` | ask, auto or manual |
-| `compact.threshold` | `0.9` | 0.5–0.95 of the configured context |
-| `compact.keep_turns` | `2` | retain 1–20 recent user/assistant pairs |
-| `compact.budget` | `1536` | per extraction/audit output budget; 256 to half the context |
-| `animations` | `true` | animate the activity indicator; false reduces redraw cadence |
+| `provider` | `ollama` | active backend profile |
+| `providers` | six named profiles | endpoints, credentials, cli commands and model options; [details](providers.md) |
+| `host` | `http://127.0.0.1:11434` | fallback Ollama endpoint |
+| `auto_start` | `true` | start a refused local Ollama endpoint |
+| `model` | qwen3.5 heretic 9b q5 | initial model |
+| `context` / `predict` | `8192` / `2048` | positive context and generated-token budgets |
+| `thinking` | `auto` | native model default or supported effort value |
+| `threads` / `temperature` | `6` / `0.3` | Ollama inference options; API-specific options belong in provider `extra` |
+| `keep_alive` / `timeout` | `2m` / `10m` | Ollama idle retention and request/compaction deadline |
+| `execution.mode` | `agent` | request approval when execution is useful; `blocks` keeps text suggestions |
+| `execution.auto_share` | `false` | share completed tracked output automatically |
+| `execution.max_steps` | `8` | approved model commands per user turn, 1–100 |
+| `execution.output_context` | `8192` | maximum shared output bytes, 256–65536; further bounded by context |
+| `compact.mode` | `ask` | `ask`, `auto` or `manual` |
+| `compact.threshold` | `0.9` | compaction threshold, 0.5–0.95 |
+| `compact.keep_turns` | `2` | retained user/assistant pairs, 1–20 |
+| `compact.budget` | `1536` | extraction/audit output budget, at least 256 |
+| `theme` / `themes` | `phosphor` / empty | built-in or custom palette; [details](themes.md) |
+| `appearance.background` | `theme` | theme background or host-terminal inheritance |
+| `appearance.mouse` / `appearance.thinking` | `true` / `false` | mouse events and initial reasoning visibility |
+| `animations` | `true` | activity indicators and rotating welcome art |
+| `clipboard` | `[wl-copy]` | clipboard executable and arguments; empty disables external copying |
+| `leader` | `space` | prefix for command hints |
+| `bindings` / `keys` | see example | leader sequences and direct action bindings |
 
-terminal appearance and dimensions are documented in [terminals.md](terminals.md). bindings use terminal key names such as `ctrl+s`, `alt+e`, `tab`, and `ctrl+\`. all global action bindings must be nonempty and distinct. choose keys your host terminal actually forwards. the prompt's modal grammar remains fixed; your external editor can provide arbitrary remaps.
+editor, shell, clipboard and CLI commands are argument arrays. arguments are passed directly, without shell interpolation. the editor receives the temporary filename as its last argument. normal tracked shell runs intentionally use the selected shell executable with `-c`.
 
-## resource use
+an explicit `bindings` map replaces the default leader map. spaces separate sequence keys:
 
-8192 context and 2048 output are starting defaults for the selected 9b q5 model and 12 gb gpu. they are not a benchmark or vram reservation. model weights, kv cache, context length, concurrent requests and the desktop share gpu memory. wraith makes one inference request at a time; compaction extraction and audit requests are sequential.
+```yaml
+leader: space
+bindings:
+  b: blocks
+  s: settings
+  c c: compact
+  c s: resume
+keys:
+  output_share: ctrl+g
+  terminal_overlay: alt+e
+  terminal_split: alt+s
+  setting_help: '?'
+```
 
-increase context in steps and check `ollama ps` while generating. if it reports cpu execution or mixed offload, fix ollama's gpu backend or reduce model/context size. wraith cannot turn a cpu-only ollama installation into a cuda installation. its thread setting also cannot reserve gpu compute for games. a short keep-alive releases an idle model sooner; `ollama stop MODEL` unloads it explicitly.
+[config.example.yaml](config.example.yaml) is generated from the defaults. [terminal settings](terminals.md) cover pane dimensions, colors, shell and scrollback. fonts, numerical opacity and blur belong to the host terminal; Wraith can inherit its background but cannot assign independent pane alpha.
 
-## files and overrides
+## storage
 
-| location | contents |
+| location below the wraith root | contents |
 | --- | --- |
-| `~/.config/wraith/config.json` | validated settings |
-| `~/.config/wraith/instructions.md` | global user instructions, up to 64 kib |
-| `~/.local/share/wraith/sessions/` | active conversations as gzip json |
-| `~/.local/share/wraith/archives/` | immutable original transcripts as gzip json |
-| `~/.local/share/wraith/snippets/` | edited source files staged for execution |
-| `~/.local/share/wraith/exports/` | default markdown export destination |
-| `~/.cache/wraith/compaction/sessions/` | latest pre-compaction recovery snapshot per chat |
-| `~/.cache/wraith/edits/` | editor buffers; failed saved edits are retained |
+| config: `config.yaml`, `instructions.md` | settings and global user preferences |
+| data: `sessions/`, `archives/` | compressed active sessions and immutable originals |
+| data: `commands/` | compressed tracked command metadata and output |
+| data: `input/` | bounded compressed prompt/command history per directory |
+| data: `snippets/`, `exports/` | edited source and markdown exports |
+| cache: `compaction/sessions/` | pre-compaction recovery snapshots |
+| cache: `edits/` | editor buffers and retained invalid edits |
+| cache: `ollama.log` | locally started server logs |
 
-`XDG_DATA_HOME` and `XDG_CACHE_HOME` override their corresponding roots. only absolute xdg paths are used. command-line directory overrides take precedence. newly created directories use mode 0700; files use 0600. gzip provides compression, not encryption. archives have no automatic deletion policy.
+roots default to `~/.config/wraith`, `~/.local/share/wraith` and `~/.cache/wraith`. absolute XDG environment paths and CLI directory overrides are supported. new directories use 0700 and new files use 0600. gzip is compression, not encryption. archives and command records are not automatically deleted.
+
+Wraith does not reserve VRAM or control GPU offload. for Ollama, inspect `ollama ps` during generation and adjust model/context size to leave space for desktop work. cloud requests use the selected account and endpoint; CLI backends use their installed authentication.
