@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/terminal"
@@ -44,6 +45,7 @@ func (a *App) openTerminal(index int) tea.Cmd {
 		a.notice = "shell: " + err.Error()
 		return nil
 	}
+	a.panes[index].Started = time.Now()
 	a.panes[index].PTY = p
 	a.panes[index].Screen = terminal.NewScreen(w-2, h-2, a.Config.Terminal.Scrollback)
 	a.focus = fmt.Sprintf("terminal%d", index)

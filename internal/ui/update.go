@@ -41,14 +41,15 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, a.mouse(m)
 	case tea.KeyMsg:
 		return a, a.key(m)
+	case restartTerminalMsg:
+		return a, a.restartExitedTerminal(m)
 	case terminalMsg:
 		p := a.panes[m.Index]
 		if p == nil || p.PTY != m.PTY {
 			break
 		}
 		if !m.Open || m.Event.Err != nil {
-			p.Err = "shell exited · /terminal-restart " + fmt.Sprint(m.Index+1)
-			break
+			return a, a.terminalExited(m)
 		}
 		if reply := p.Screen.Feed(m.Event.Data); len(reply) > 0 {
 			_ = p.PTY.Write(reply)

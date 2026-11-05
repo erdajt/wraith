@@ -4,6 +4,10 @@
 
 inside a terminal, ordinary keys and `ctrl+c` go to the shell. wraith reserves its configured quit, pane toggle and unfocus bindings. `shift+pageup` and `shift+pagedown` browse the pane's bounded scrollback. editing a suggested block places it in the scratch pane's staging area; it does not write or execute it until you explicitly insert it.
 
+## copy mode
+
+press escape three times within a second to open a stable scrollback snapshot. use vim motions, counts, `/`, `n`/`N`, `v`/`V`, `y`, `Y`, `ye` and `yf<char>` to browse and copy. search highlights matches and moves the cursor to them. `r` refreshes the snapshot; `i`, `q` or escape returns to live input. the first two escape keys still reach the foreground program.
+
 ## appearance
 
 ```text
@@ -24,7 +28,9 @@ fonts, font size, opacity, blur and wallpaper compositing belong to the host ter
 
 ## shell lifecycle
 
-shells start in the launch directory unless `terminal.directory` is configured. a `~/` prefix is expanded. changing the shell or directory applies when starting a new pane; `/terminal-restart 1` or `/terminal-restart 2` replaces an existing shell. exiting wraith closes both ptys and terminates their shell process groups.
+shells start in the launch directory unless `terminal.directory` is configured. a `~/` prefix is expanded. changing the shell or directory applies when starting a new pane; `/terminal-restart 1` or `/terminal-restart 2` replaces an existing shell. typing `exit` automatically starts a replacement shell in the same pane. three rapid restarts stop the loop if shell startup keeps failing; use `/terminal-restart` after correcting the shell configuration. hidden panes remain hidden during replacement.
+
+exiting wraith closes both ptys and terminates their shell process groups.
 
 these are linux ptys with a built-in vt screen renderer. cursor movement, alternate screens, scroll regions, bracketed paste, ansi/256/truecolor text, unicode and device reports are supported. scrollback is bounded; resizing preserves cells without paragraph reflow. image protocols, terminal multiplexing protocols and full emulator equivalence are outside the renderer's scope. use the external editor for your complete neovim setup.
 
