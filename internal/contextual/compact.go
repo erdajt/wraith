@@ -24,7 +24,8 @@ type Memory struct {
 
 var literal = regexp.MustCompile("`[^`\\n]{1,1000}`|https?://[^\\s<>]+|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}(?::[0-9]+)?|(?:~?/|[A-Za-z]:\\\\)[A-Za-z0-9_./\\\\:@%+-]+|CVE-[0-9]{4}-[0-9]+")
 
-func Compact(ctx context.Context, client Chatter, s session.Session, c config.Config, instructions string, think any, progress func(string)) (session.Session, error) {
+func compactAttempt(ctx context.Context, client Chatter, s session.Session, c config.Config, instructions string, think any, progress func(string), feedback string) (session.Session, error) {
+	compactPrompt, auditPrompt := CompactPrompt+feedback, AuditPrompt+feedback
 	cut := len(s.Messages) - c.Compact.KeepTurns*2
 	for cut > 0 && cut < len(s.Messages) && s.Messages[cut].Role != "user" {
 		cut--
@@ -35,10 +36,12 @@ func Compact(ctx context.Context, client Chatter, s session.Session, c config.Co
 	before := Used(s, instructions)
 	candidate := s.Clone()
 	candidate.Messages = append([]session.Message(nil), s.Messages[cut:]...)
-	chunkBytes := (c.Context - c.Compact.Budget - Estimate([]session.Message{{Content: CompactPrompt + AuditPrompt}}) - 512) * 3 / 2
-	if chunkBytes < 256 {
+	room := c.Context - c.Compact.Budget
+	overhead := Estimate([]session.Message{{Content: compactPrompt + auditPrompt}}) + 512
+	if room < overhead+256 {
 		return s, errors.New("compaction budget leaves no room for source fragments")
 	}
+	chunkBytes := min(room-overhead, 64<<20) * 3 / 2
 	chunks := Fragments(s.Messages[:cut], chunkBytes)
 	facts := append([]string(nil), s.Facts...)
 	if s.Summary != "" {
@@ -53,7 +56,7 @@ func Compact(ctx context.Context, client Chatter, s session.Session, c config.Co
 			progress(fmt.Sprintf("extracting fragment %d/%d", i+1, len(chunks)))
 		}
 		var memory Memory
-		if err := extract(ctx, client, c, think, CompactPrompt, chunk, &memory); err != nil {
+		if err := extract(ctx, client, c, think, compactPrompt, chunk, &memory); err != nil {
 			return s, fmt.Errorf("fragment %d: %w", i+1, err)
 		}
 		if strings.TrimSpace(memory.Summary) == "" || len(memory.Facts) == 0 {
@@ -66,7 +69,7 @@ func Compact(ctx context.Context, client Chatter, s session.Session, c config.Co
 		}
 		encoded, _ := json.Marshal(memory)
 		auditInput := "SOURCE FRAGMENT:\n" + chunk + "\nCANDIDATE MEMORY:\n" + string(encoded)
-		if Estimate([]session.Message{{Content: AuditPrompt}, {Content: auditInput}})+c.Compact.Budget+128 > c.Context {
+		if Estimate([]session.Message{{Content: auditPrompt}, {Content: auditInput}})+c.Compact.Budget+128 > c.Context {
 			return s, errors.New("memory audit exceeds context; lower compact.budget or increase context")
 		}
 		if progress != nil {
@@ -75,7 +78,7 @@ func Compact(ctx context.Context, client Chatter, s session.Session, c config.Co
 		var audit struct {
 			Missing []string `json:"missing"`
 		}
-		if err := extract(ctx, client, c, think, AuditPrompt, auditInput, &audit); err != nil {
+		if err := extract(ctx, client, c, think, auditPrompt, auditInput, &audit); err != nil {
 			return s, fmt.Errorf("audit %d: %w", i+1, err)
 		}
 		if audit.Missing == nil {
@@ -94,7 +97,7 @@ func Compact(ctx context.Context, client Chatter, s session.Session, c config.Co
 	candidate.Usage = session.Usage{}
 	after := Used(candidate, instructions)
 	if after >= before {
-		return s, errors.New("compaction did not reduce context without dropping protected facts; original context retained")
+		return s, fmt.Errorf("compaction did not reduce context without dropping protected facts: before %d tokens, candidate %d tokens; shorten the summary and remove repeated new facts without losing details; original context retained", before, after)
 	}
 	if err := Fits(candidate, c, instructions); err != nil {
 		return s, fmt.Errorf("protected facts and recent turns still exceed the context window: %w", err)

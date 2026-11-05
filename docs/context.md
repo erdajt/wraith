@@ -38,3 +38,9 @@ protected facts are never silently pruned. a large ledger may eventually prevent
 `/archives` lists originals for the current chat. selecting one creates a new session id and keeps the archived file unchanged. `/restore filename.json.gz` does the same explicitly. the recovery cache is an additional last-known original; the permanent archive directory retains earlier originals as well.
 
 active sessions, archives and recovery snapshots all contain the session schema in compressed json. inspect a copy with `gzip -dc file.json.gz`. edits to assistant replies also archive the previous session before replacement. failed compaction attempts may leave valid archives that were never referenced by a committed replacement; the archive picker includes them.
+
+## failed compaction
+
+wraith retries a failed model compaction up to three times after the first attempt. each retry receives the validation error and a bounded excerpt of the rejected extraction and audit. it starts from the original conversation, not the failed candidate. cancellation and invalid local budgets stop immediately. exhausting retries leaves the active conversation unchanged; the recovery cache and archive remain available.
+
+protected facts cannot always fit into a smaller context. retries do not relax preservation checks or silently trim them. increase context, reduce recent turns, or start another session if the protected material itself fills the window.
