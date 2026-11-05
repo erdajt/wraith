@@ -22,7 +22,7 @@ func Key(k tea.KeyMsg, application, bracketed bool) []byte {
 			return []byte{r[0] & 0x1f}
 		}
 	}
-	if k.Type == tea.KeyRunes {
+	if k.Type == tea.KeyRunes || k.Type == tea.KeySpace {
 		text := string(k.Runes)
 		if k.Paste && bracketed {
 			return []byte("\x1b[200~" + text + "\x1b[201~")
