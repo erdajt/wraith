@@ -74,6 +74,8 @@ type App struct {
 	follow                  bool
 	popup                   *menu
 	command, search         string
+	completionQuery         string
+	completionIndex         int
 	commandMode, searchMode bool
 	panes                   [2]*pane
 	busy, compacting        bool
