@@ -73,7 +73,7 @@ func run(args []string, out io.Writer) error {
 	}
 	c := config.Default()
 	if !*demo && !*snapshot {
-		c, err = config.Load(filepath.Join(p.Config, "config.json"))
+		c, err = config.LoadDirectory(p.Config)
 		if err != nil {
 			return err
 		}
@@ -93,7 +93,7 @@ func run(args []string, out io.Writer) error {
 		case "doctor":
 			return doctor(c, p, out)
 		case "config":
-			fmt.Fprintln(out, filepath.Join(p.Config, "config.json"))
+			fmt.Fprintln(out, config.File(p.Config))
 			return nil
 		case "models":
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

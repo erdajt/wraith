@@ -2,7 +2,6 @@ package ui
 
 import (
 	"encoding/json"
-	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -54,7 +53,7 @@ func (a *App) set(key, value string) tea.Cmd {
 			return nil
 		}
 	}
-	if err := config.Save(filepath.Join(a.Paths.Config, "config.json"), c); err != nil {
+	if err := config.Save(config.File(a.Paths.Config), c); err != nil {
 		a.notice = err.Error()
 		return nil
 	}
