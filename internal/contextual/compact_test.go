@@ -50,7 +50,7 @@ func TestCompactionPreservesLedgerPinsRecentTurnsAndAudit(t *testing.T) {
 	s := longSession()
 	c := config.Default()
 	f := &fakeChat{}
-	got, err := Compact(context.Background(), f, s, c, "", nil)
+	got, err := Compact(context.Background(), f, s, c, "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func TestCompactionPreservesLedgerPinsRecentTurnsAndAudit(t *testing.T) {
 func TestFailedCompactionLeavesOriginal(t *testing.T) {
 	for _, f := range []*fakeChat{{fail: true}, {truncated: true}} {
 		s := longSession()
-		got, err := Compact(context.Background(), f, s, config.Default(), "", nil)
+		got, err := Compact(context.Background(), f, s, config.Default(), "", nil, nil)
 		if err == nil || len(got.Messages) != len(s.Messages) || got.Summary != "" {
 			t.Fatal("failed compaction replaced context")
 		}
