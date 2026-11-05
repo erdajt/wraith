@@ -22,6 +22,7 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 		}
 		s := session.New(a.Config.Model)
 		s.Directory = a.Directory
+		s.Provider = a.Config.Provider
 		if err := a.Store.Save(s); err != nil {
 			a.notice = err.Error()
 			return nil

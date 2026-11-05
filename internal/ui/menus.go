@@ -128,6 +128,10 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 			return a.blockAction(choice.Value)
 		case "approval":
 			return a.approvalAction(choice.Value)
+		case "providers":
+			return a.selectProvider(choice.Value)
+		case "provider-models":
+			return a.activateProvider(m.Prefix, choice.Value)
 		case "models":
 			return a.set("model", choice.Value)
 		case "theme":

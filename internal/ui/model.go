@@ -143,6 +143,12 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 		instructions = nil
 	}
 	c.Model = s.Model
+	if s.Provider != "" {
+		c.Provider = s.Provider
+	}
+	if _, ok := c.Providers[c.Provider]; !ok {
+		return nil, errors.New("session provider is not configured")
+	}
 	dir, err := os.Getwd()
 	if err != nil {
 		return nil, err

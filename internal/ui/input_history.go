@@ -8,7 +8,7 @@ import (
 
 func (a *App) rememberInput(text string) {
 	text = strings.TrimSpace(text)
-	if a.demo || text == "" {
+	if a.demo || text == "" || strings.HasPrefix(text, "/set providers") {
 		return
 	}
 	a.inputIndex = -1

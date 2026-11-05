@@ -130,6 +130,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 		a.Config = c
 		a.Client = provider.New(c)
 		a.Session.Model = c.Model
+		a.Session.Provider = c.Provider
 		a.resizePanes()
 		a.persist("settings saved · shell changes apply to new panes")
 		return a.probe()

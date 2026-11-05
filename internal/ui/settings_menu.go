@@ -22,7 +22,7 @@ func (a *App) settingsMenu() tea.Cmd {
 
 func (a *App) settingsCategory(category string) {
 	groups := map[string][]string{
-		"model":      {"model", "thinking", "context", "predict", "threads", "auto_start"},
+		"model":      {"provider", "model", "thinking", "context", "predict", "threads", "auto_start", "providers"},
 		"execution":  {"execution.mode", "execution.auto_share", "execution.max_steps", "execution.output_context"},
 		"context":    {"compact.mode", "compact.threshold", "compact.keep_turns", "compact.budget"},
 		"appearance": {"theme", "appearance.background", "appearance.thinking", "appearance.mouse", "animations", "themes"},
@@ -39,6 +39,9 @@ func (a *App) settingsCategory(category string) {
 			value = value.(map[string]any)[part]
 		}
 		b, _ := json.Marshal(value)
+		if key == "providers" {
+			b = []byte("edit provider profiles and credentials")
+		}
 		items = append(items, item{Label: key, Value: key, Detail: string(b)})
 	}
 	items = append(items, item{"edit config.yaml", "edit", "all values, custom palettes and key bindings"})

@@ -67,6 +67,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, a.finishCompact(m)
 	case editedMsg:
 		return a, a.finishEdit(m)
+	case providerModelsMsg:
+		a.providerModels(m)
 	case modelsMsg:
 		if a.busy {
 			a.notice = "model list dismissed while a response is running"
@@ -78,13 +80,20 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		items := make([]item, 0, len(m.Models))
 		for _, model := range m.Models {
-			items = append(items, item{model.Name, model.Name, fmt.Sprintf("%.1f gb", float64(model.Size)/1e9)})
+			items = append(items, item{model.Name, model.Name, modelSize(model.Size)})
 		}
-		a.popup = &menu{Kind: "models", Title: "installed models", Items: items}
+		a.popup = &menu{Kind: "models", Title: a.Config.Provider + " models", Items: items}
 		if len(items) == 0 {
 			a.notice = "no local models found; pull a model with ollama first"
 		}
 
 	}
 	return a, nil
+}
+
+func modelSize(size int64) string {
+	if size == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%.1f gb", float64(size)/1e9)
 }

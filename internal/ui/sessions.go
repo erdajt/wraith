@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/ollama"
+	"github.com/erdajt/wraith/internal/provider"
 	"github.com/erdajt/wraith/internal/session"
 )
 
@@ -22,6 +23,15 @@ func (a *App) resume(id string) tea.Cmd {
 		}
 		return cmd
 	}
+	if s.Provider == "" {
+		s.Provider = "ollama"
+	}
+	if _, ok := a.Config.Providers[s.Provider]; !ok {
+		a.notice = "session provider is not configured: " + s.Provider
+		return nil
+	}
+	a.Config.Provider = s.Provider
+	a.Client = provider.New(a.Config)
 	a.Session = s
 	a.resetChatNavigation()
 	a.agentSteps = 0

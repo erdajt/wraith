@@ -22,7 +22,7 @@ func (a *App) View() string {
 	}
 	state := "offline"
 	if a.connected {
-		state = "local"
+		state = a.Config.Provider
 	}
 	if a.demo {
 		state = "demo"

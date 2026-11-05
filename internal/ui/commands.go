@@ -34,6 +34,11 @@ func (a *App) runCommand(line string) tea.Cmd {
 		return nil
 	}
 	switch name {
+	case "provider", "providers":
+		if arg != "" {
+			return a.selectProvider(arg)
+		}
+		return a.providerMenu()
 	case "history":
 		return a.openHistory()
 	case "model", "models", "think", "settings", "set", "theme", "context", "compact", "cancel", "thinking":

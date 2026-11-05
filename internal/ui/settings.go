@@ -15,6 +15,9 @@ func (a *App) set(key, value string) tea.Cmd {
 		a.notice = "settings are read-only in demo mode"
 		return nil
 	}
+	if key == "provider" {
+		return a.selectProvider(value)
+	}
 	b, _ := json.Marshal(a.Config)
 	var data map[string]any
 	_ = json.Unmarshal(b, &data)
@@ -45,6 +48,9 @@ func (a *App) set(key, value string) tea.Cmd {
 		return nil
 	}
 	if key == "model" {
+		p := c.Providers[c.Provider]
+		p.Model = c.Model
+		c.Providers[c.Provider] = p
 		c.Thinking = "auto"
 	}
 	if err := c.Validate(); err != nil {
@@ -74,6 +80,11 @@ func (a *App) set(key, value string) tea.Cmd {
 	}
 	a.resizePanes()
 	a.notice = "saved " + key + " = " + value
+	if strings.HasPrefix(key, "providers") {
+		a.notice = "saved provider settings"
+		a.Client = provider.New(c)
+		return a.probe()
+	}
 	if key == "host" {
 		a.Client = provider.New(c)
 		a.connected = false
@@ -97,6 +108,9 @@ func (a *App) settingMenu(key string) tea.Cmd {
 	}
 	if key == "edit" {
 		return a.edit("config", "", "", -1)
+	}
+	if key == "provider" {
+		return a.providerMenu()
 	}
 	if key == "model" {
 		return a.modelCommand("models", "")

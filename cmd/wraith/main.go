@@ -38,6 +38,7 @@ func run(args []string, out io.Writer) error {
 	snapshot := flags.Bool("snapshot", false, "render one demo frame to stdout")
 	resume := flags.Bool("resume", false, "choose a saved session")
 	id := flags.String("session", "", "resume a session id")
+	backend := flags.String("provider", "", "provider profile")
 	model := flags.String("model", "", "model for this chat")
 	theme := flags.String("theme", "", "theme override")
 	configDir := flags.String("config-dir", "", "override the configuration directory")
@@ -76,6 +77,18 @@ func run(args []string, out io.Writer) error {
 		c, err = config.LoadDirectory(p.Config)
 		if err != nil {
 			return err
+		}
+	}
+	if *backend != "" {
+		profile, ok := c.Providers[*backend]
+		if !ok {
+			return fmt.Errorf("unknown provider: %s", *backend)
+		}
+		c.Provider = *backend
+		if profile.Model != "" {
+			c.Model = profile.Model
+		} else if *model == "" {
+			return errors.New("choose a provider model with --model or configure its default in config.yaml")
 		}
 	}
 	if *model != "" {
@@ -134,6 +147,7 @@ func run(args []string, out io.Writer) error {
 	}
 	var resumeProblem error
 	chat := session.New(c.Model)
+	chat.Provider = c.Provider
 	if !*demo && !*snapshot {
 		unlock, e := s.Lock()
 		if e != nil {
@@ -145,8 +159,15 @@ func run(args []string, out io.Writer) error {
 			if loadErr != nil {
 				resumeProblem = loadErr
 			} else {
+				if loaded.Provider == "" {
+					loaded.Provider = "ollama"
+				}
 				chat = loaded
 			}
+		}
+		if *backend != "" {
+			chat.Provider = c.Provider
+			chat.Model = c.Model
 		}
 		if *model != "" {
 			chat.Model = *model

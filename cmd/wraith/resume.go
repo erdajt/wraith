@@ -11,7 +11,7 @@ func resumeArgs(args []string) []string {
 			break
 		}
 		name := strings.TrimLeft(arg, "-")
-		if !strings.Contains(arg, "=") && strings.Contains("|session|model|theme|config-dir|data-dir|cache-dir|width|height|", "|"+name+"|") && i+1 < len(args) {
+		if !strings.Contains(arg, "=") && strings.Contains("|session|provider|model|theme|config-dir|data-dir|cache-dir|width|height|", "|"+name+"|") && i+1 < len(args) {
 			out = append(out, arg, args[i+1])
 			i++
 			continue

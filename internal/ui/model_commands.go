@@ -15,6 +15,9 @@ import (
 func (a *App) modelCommand(name, arg string) tea.Cmd {
 	switch name {
 	case "model", "models":
+		if arg != "" {
+			return a.set("model", arg)
+		}
 		client := a.Client
 		return func() tea.Msg {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

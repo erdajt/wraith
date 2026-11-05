@@ -24,6 +24,7 @@ type Usage struct {
 }
 
 type Session struct {
+	Provider   string    `json:"provider,omitempty"`
 	Directory  string    `json:"directory,omitempty"`
 	SharedRuns []string  `json:"shared_runs,omitempty"`
 	Version    int       `json:"version"`
