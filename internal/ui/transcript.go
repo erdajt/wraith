@@ -11,8 +11,9 @@ import (
 )
 
 type rendered struct {
-	Text    string
-	Message int
+	Thinking bool
+	Text     string
+	Message  int
 }
 
 func (a *App) transcript(w int) []rendered {
@@ -20,7 +21,7 @@ func (a *App) transcript(w int) []rendered {
 	var out []rendered
 	add := func(text string, index int) {
 		for _, line := range strings.Split(ansi.Hardwrap(text, w, true), "\n") {
-			out = append(out, rendered{line, index})
+			out = append(out, rendered{Text: line, Message: index})
 		}
 	}
 	if a.Session.Summary != "" {
@@ -52,8 +53,20 @@ func (a *App) transcript(w int) []rendered {
 			meta += " · interrupted"
 		}
 		add(bold(c, marker+" "+label)+ink(p.Muted, fmt.Sprintf("  %02d%s", i+1, meta)), i)
-		if a.showThinking && m.Thinking != "" {
-			add(ink(p.Muted, "thinking: "+clean(m.Thinking)), i)
+		if m.Thinking != "" {
+			expanded := a.thinkingOpen(i)
+			arrow := "▸"
+			if expanded {
+				arrow = "▾"
+			}
+			start := len(out)
+			add(ink(p.Muted, arrow+" thinking · "+a.Config.Keys["thinking_toggle"]+" or click to toggle"), i)
+			for j := start; j < len(out); j++ {
+				out[j].Thinking = true
+			}
+			if expanded {
+				add(ink(p.Muted, clean(m.Thinking)), i)
+			}
 		}
 		inCode := false
 		fence := ""

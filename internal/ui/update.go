@@ -31,6 +31,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.notice = "model loaded · ready"
 			}
 		}
+	case tea.MouseMsg:
+		return a, a.mouse(m)
 	case tea.KeyMsg:
 		return a, a.key(m)
 	case terminalMsg:

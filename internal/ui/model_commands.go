@@ -81,6 +81,7 @@ func (a *App) modelCommand(name, arg string) tea.Cmd {
 		}
 	case "thinking":
 		a.showThinking = !a.showThinking
+		a.thinkingExpanded = map[string]bool{}
 		a.notice = fmt.Sprintf("thinking display: %t", a.showThinking)
 	}
 	return nil
