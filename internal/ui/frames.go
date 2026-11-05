@@ -12,7 +12,10 @@ func (a *App) menuFrame() []string {
 	m := a.popup
 	w := min(a.width-6, 90)
 	height := min(a.height-8, 18)
-	content := []string{bold(p.Accent, clean(m.Title)), ink(p.Muted, "j/k move · enter select · esc close"), ""}
+	content := []string{bold(p.Accent, clean(m.Title)), ink(p.Muted, "j/k move · / search · enter select · esc close"), ""}
+	if m.Searching || m.Query != "" {
+		content[1] = ink(p.Second, "/"+clean(m.Query)+"▏ · enter keeps filter · esc resets")
+	}
 	start := max(0, m.Index-(height-5)/2)
 	start = min(start, max(0, len(m.Items)-(height-5)))
 	if len(m.Items) == 0 {

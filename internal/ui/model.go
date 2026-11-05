@@ -20,9 +20,12 @@ import (
 
 type item struct{ Label, Value, Detail string }
 type menu struct {
-	Kind, Title string
-	Items       []item
-	Index       int
+	All           []item
+	Query, Prefix string
+	Searching     bool
+	Kind, Title   string
+	Items         []item
+	Index         int
 }
 type pane struct {
 	PTY                     *terminal.PTY

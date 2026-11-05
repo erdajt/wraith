@@ -43,6 +43,10 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 	if strings.HasPrefix(a.focus, "terminal") {
 		return a.terminalKey(k)
 	}
+	if !a.commandMode && !a.searchMode && (a.focus == "chat" || a.Prompt.Mode == "normal") && (key == a.Config.Leader || a.Config.Leader == "space" && key == " ") {
+		a.openLeader("")
+		return nil
+	}
 	if key == a.Config.Keys["cancel"] {
 		if a.cancel != nil && a.busy {
 			a.cancel()
