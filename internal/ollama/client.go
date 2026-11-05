@@ -40,8 +40,9 @@ type Response struct {
 	EvalDuration int64           `json:"eval_duration"`
 }
 type Info struct {
-	Capabilities []string `json:"capabilities"`
-	Thinking     struct {
+	ContextWindow int      `json:"context_window"`
+	Capabilities  []string `json:"capabilities"`
+	Thinking      struct {
 		Values  []any `json:"values"`
 		Default any   `json:"default"`
 	} `json:"thinking"`
@@ -112,7 +113,22 @@ func (c *Client) Show(ctx context.Context, model string) (Info, error) {
 		return info, err
 	}
 	defer resp.Body.Close()
-	err = json.NewDecoder(io.LimitReader(resp.Body, 4<<20)).Decode(&info)
+	var data struct {
+		Info
+		ModelInfo map[string]json.RawMessage `json:"model_info"`
+	}
+	err = json.NewDecoder(io.LimitReader(resp.Body, 4<<20)).Decode(&data)
+	info = data.Info
+	for key, raw := range data.ModelInfo {
+		if strings.HasSuffix(key, ".context_length") {
+			var capacity int
+			if json.Unmarshal(raw, &capacity) == nil && capacity > 0 {
+				if info.ContextWindow == 0 || capacity < info.ContextWindow {
+					info.ContextWindow = capacity
+				}
+			}
+		}
+	}
 	return info, err
 }
 

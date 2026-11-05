@@ -26,7 +26,7 @@ func (a *App) startCompact() tea.Cmd {
 		return nil
 	}
 	s := a.Session.Clone()
-	c := a.Config
+	c := a.runtimeConfig()
 	c.Model = s.Model
 	instructions := a.Instructions
 	client := a.Client

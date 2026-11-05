@@ -18,6 +18,9 @@ func (a *App) set(key, value string) tea.Cmd {
 	if key == "provider" {
 		return a.selectProvider(value)
 	}
+	if key == "context" {
+		return a.setContext(value)
+	}
 	b, _ := json.Marshal(a.Config)
 	var data map[string]any
 	_ = json.Unmarshal(b, &data)
@@ -90,7 +93,7 @@ func (a *App) set(key, value string) tea.Cmd {
 		a.connected = false
 		return a.probe()
 	}
-	if key == "model" || key == "context" || key == "threads" {
+	if key == "model" || key == "threads" {
 		if key == "model" {
 			a.Info = ollama.Info{}
 		}

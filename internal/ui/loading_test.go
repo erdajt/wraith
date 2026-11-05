@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"encoding/json"
+	"github.com/erdajt/wraith/internal/ollama"
 	"net/http"
 	"reflect"
 	"testing"
@@ -48,5 +50,41 @@ func TestStaleLoadCannotReplaceNewModelState(t *testing.T) {
 	a.Update(infoMsg{Serial: serial, Model: "test-model"})
 	if !a.loading || a.connected {
 		t.Fatal("stale load accepted after switching back")
+	}
+}
+
+func TestPreloadUsesModelCapacity(t *testing.T) {
+	for _, override := range []int{0, 1000000} {
+		a := fixture(t)
+		a.Config = a.Config.WithModelContext(a.Session.Model, override)
+		var loaded int
+		a.Client.HTTP.Transport = transport(func(r *http.Request) (*http.Response, error) {
+			switch r.URL.Path {
+			case "/api/tags":
+				return response(`{"models":[]}`), nil
+			case "/api/show":
+				return response(`{"model_info":{"test.context_length":4096}}`), nil
+			case "/api/generate":
+				var req struct {
+					Options ollama.Options `json:"options"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+					t.Fatal(err)
+				}
+				loaded = req.Options.Context
+				return response(`{"done":true}`), nil
+			default:
+				t.Fatalf("unexpected request %s", r.URL.Path)
+				return nil, nil
+			}
+		})
+		a.Update(a.probe()())
+		want := 4096
+		if override > 0 {
+			want = override
+		}
+		if loaded != want || a.contextLimit() != want {
+			t.Fatalf("loaded %d, displayed %d, want %d", loaded, a.contextLimit(), want)
+		}
 	}
 }

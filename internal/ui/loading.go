@@ -34,7 +34,7 @@ func (a *App) probe() tea.Cmd {
 		}
 		result.Info, result.Err = client.Show(ctx, model)
 		if result.Err == nil {
-			result.Err = client.Load(ctx, model, cfg.KeepAlive, ollama.Options{Context: cfg.Context, Threads: cfg.Threads, Predict: cfg.Predict, Temperature: cfg.Temperature})
+			result.Err = client.Load(ctx, model, cfg.KeepAlive, ollama.Options{Context: cfg.ContextFor(model, result.Info.ContextWindow), Threads: cfg.Threads, Predict: cfg.Predict, Temperature: cfg.Temperature})
 		}
 		return result
 	}

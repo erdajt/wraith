@@ -36,7 +36,7 @@ func (a *App) submit() tea.Cmd {
 	}
 	probe := a.Session.Clone()
 	probe.Messages = append(probe.Messages, session.Message{Role: "user", Content: text})
-	if err := contextual.Fits(probe, a.Config, a.Instructions); err != nil {
+	if err := contextual.Fits(probe, a.runtimeConfig(), a.Instructions); err != nil {
 		a.notice = err.Error()
 		a.pendingPrompt = text
 		if a.Config.Compact.Mode == "auto" {
@@ -82,7 +82,7 @@ func (a *App) startChat() tea.Cmd {
 		a.notice = err.Error() + "; /retry after changing /think"
 		return nil
 	}
-	if err = contextual.Fits(a.Session, a.Config, a.Instructions); err != nil {
+	if err = contextual.Fits(a.Session, a.runtimeConfig(), a.Instructions); err != nil {
 		a.notice = err.Error()
 		a.pendingAgent = true
 		if a.Config.Compact.Mode == "auto" {
@@ -99,7 +99,7 @@ func (a *App) startChat() tea.Cmd {
 	a.follow = true
 	a.partial = session.Message{Role: "assistant"}
 	a.phase = "connecting"
-	req := ollama.Request{Model: a.Session.Model, Messages: contextual.ForChat(a.Session, a.Config, a.Instructions), Think: think, KeepAlive: a.Config.KeepAlive, Options: ollama.Options{Context: a.Config.Context, Predict: a.Config.Predict, Temperature: a.Config.Temperature, Threads: a.Config.Threads}}
+	req := ollama.Request{Model: a.Session.Model, Messages: contextual.ForChat(a.Session, a.Config, a.Instructions), Think: think, KeepAlive: a.Config.KeepAlive, Options: ollama.Options{Context: a.contextLimit(), Predict: a.Config.Predict, Temperature: a.Config.Temperature, Threads: a.Config.Threads}}
 	client := a.Client
 	go func() {
 		defer cancel()
@@ -164,7 +164,7 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 			a.proposal = &proposal{Command: request.Command, Reason: request.Reason, Text: request.Command, Language: "sh", Source: "model", Continue: true}
 		}
 	}
-	switch contextual.Decision(a.Config.Compact.Mode, a.Session.Declines, contextual.NeedsCompact(a.Session, a.Config, a.Instructions)) {
+	switch contextual.Decision(a.Config.Compact.Mode, a.Session.Declines, contextual.NeedsCompact(a.Session, a.runtimeConfig(), a.Instructions)) {
 	case "compact":
 		return a.startCompact()
 	case "ask":

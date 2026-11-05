@@ -38,14 +38,14 @@ func (a *App) View() string {
 	right := ink(p.Second, mode) + ink(p.Muted, "  "+a.focus+"  ")
 	rows[0] = base(p, logo+strings.Repeat(" ", max(1, w-ansi.StringWidth(logo)-ansi.StringWidth(right)))+right, w)
 	used := contextual.ChatUsed(a.Session, a.Config, a.Instructions)
-	ratio := float64(used) / float64(a.Config.Context)
+	ratio := float64(used) / float64(a.contextLimit())
 	bar := int(ratio * 12)
 	bar = max(0, min(12, bar))
 	barColor := p.Accent
 	if ratio >= a.Config.Compact.Threshold {
 		barColor = p.Warn
 	}
-	usage := ink(barColor, strings.Repeat("━", bar)) + ink(p.Border, strings.Repeat("─", 12-bar)) + ink(p.Muted, fmt.Sprintf(" ~%d/%dk", used, a.Config.Context/1024))
+	usage := ink(barColor, strings.Repeat("━", bar)) + ink(p.Border, strings.Repeat("─", 12-bar)) + ink(p.Muted, fmt.Sprintf(" ~%d/%dk", used, a.contextLimit()/1024))
 	model := ink(p.Muted, "  ") + ink(p.FG, ansi.Truncate(clean(a.Session.Model), max(15, w-ansi.StringWidth(usage)-23), "…")) + ink(p.Second, "  think:"+a.Config.Thinking)
 	rows[1] = base(p, model+strings.Repeat(" ", max(1, w-ansi.StringWidth(model)-ansi.StringWidth(usage)-2))+usage, w)
 	rows[2] = base(p, ink(p.Border, strings.Repeat("─", w)), w)

@@ -12,7 +12,7 @@ import (
 
 func (a *App) outputExcerpt(output string) string {
 	output = clean(output)
-	budget := min(a.Config.Execution.OutputContext, max(256, (a.Config.Context-a.Config.Predict)/4))
+	budget := min(a.Config.Execution.OutputContext, max(256, (a.contextLimit()-a.Config.Predict)/4))
 	if len(output) <= budget {
 		return output
 	}

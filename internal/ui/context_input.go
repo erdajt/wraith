@@ -10,7 +10,7 @@ import (
 
 func (a *App) openContextInput() {
 	b := vim.New()
-	b.Set(strconv.Itoa(a.Config.Context))
+	b.Set(strconv.Itoa(a.contextLimit()))
 	a.popup = &menu{Kind: "context-input", Title: "context capacity · enter saves · esc normal/cancel · ctrl+u clears", Input: b}
 }
 
@@ -26,8 +26,8 @@ func (a *App) contextInput(k tea.KeyMsg) tea.Cmd {
 	if k.String() == "enter" || k.String() == a.Config.Keys["send"] {
 		value := strings.TrimSpace(a.popup.Input.String())
 		n, err := strconv.Atoi(value)
-		if err != nil || n < 1 {
-			a.notice = "context must be a positive integer"
+		if value != "auto" && (err != nil || n < 1) {
+			a.notice = "context must be a positive integer or auto"
 			return nil
 		}
 		a.popup = nil

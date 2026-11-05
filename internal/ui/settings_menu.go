@@ -2,6 +2,7 @@ package ui
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -39,6 +40,9 @@ func (a *App) settingsCategory(category string) {
 			value = value.(map[string]any)[part]
 		}
 		b, _ := json.Marshal(value)
+		if key == "context" {
+			b = []byte(fmt.Sprintf("%d · %s / %s", a.contextLimit(), a.Config.Provider, a.Session.Model))
+		}
 		if key == "providers" {
 			b = []byte("edit provider profiles and credentials")
 		}
