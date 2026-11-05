@@ -112,6 +112,10 @@ func (a *App) settingMenu(key string) tea.Cmd {
 	if key == "provider" {
 		return a.providerMenu()
 	}
+	if key == "context" {
+		a.openContextInput()
+		return nil
+	}
 	if key == "model" {
 		return a.modelCommand("models", "")
 	}
@@ -121,14 +125,11 @@ func (a *App) settingMenu(key string) tea.Cmd {
 	if key == "thinking" {
 		return a.runCommand("think")
 	}
-	values := map[string][]string{"execution.auto_share": {"false", "true"}, "context": {"4096", "8192", "16384", "32768", "65536"}, "predict": {"512", "1024", "2048", "4096"}, "compact.mode": {"ask", "auto", "manual"}, "compact.threshold": {"0.7", "0.8", "0.9", "0.95"}, "terminal.background": {"inherit", "theme"}, "appearance.background": {"theme", "inherit"}, "appearance.mouse": {"true", "false"}, "appearance.thinking": {"true", "false"}, "animations": {"true", "false"}, "execution.mode": {"agent", "blocks"}, "execution.max_steps": {"1", "4", "8", "16"}, "execution.output_context": {"1024", "4096", "8192", "16384"}, "auto_start": {"true", "false"}, "threads": {"0", "4", "6", "8"}, "terminal.overlay_width": {"0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "0.95"}, "terminal.overlay_height": {"0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9"}, "terminal.split_width": {"0.25", "0.3", "0.4", "0.5", "0.6", "0.7"}}
+	values := map[string][]string{"execution.auto_share": {"false", "true"}, "predict": {"512", "1024", "2048", "4096"}, "compact.mode": {"ask", "auto", "manual"}, "compact.threshold": {"0.7", "0.8", "0.9", "0.95"}, "terminal.background": {"inherit", "theme"}, "appearance.background": {"theme", "inherit"}, "appearance.mouse": {"true", "false"}, "appearance.thinking": {"true", "false"}, "animations": {"true", "false"}, "execution.mode": {"agent", "blocks"}, "execution.max_steps": {"1", "4", "8", "16"}, "execution.output_context": {"1024", "4096", "8192", "16384"}, "auto_start": {"true", "false"}, "threads": {"0", "4", "6", "8"}, "terminal.overlay_width": {"0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "0.95"}, "terminal.overlay_height": {"0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9"}, "terminal.split_width": {"0.25", "0.3", "0.4", "0.5", "0.6", "0.7"}}
 	if len(values[key]) == 0 {
 		return a.edit("config", "", "", -1)
 	}
 	items := []item{}
-	if key == "context" {
-		items = append(items, item{"custom capacity", "context=custom", "any positive integer"})
-	}
 	for _, v := range values[key] {
 		items = append(items, item{v, key + "=" + v, ""})
 	}

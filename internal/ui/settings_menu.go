@@ -11,7 +11,7 @@ func (a *App) settingsMenu() tea.Cmd {
 	a.popup = &menu{Kind: "settings", Title: "settings · e edits config.yaml", Items: []item{
 		{"model", "category.model", "model, thinking, context, startup"},
 		{"execution", "category.execution", "agent or blocks, step budget, output"},
-		{"context", "category.context", "compaction policy and threshold"},
+		{"context", "category.context", "capacity, compaction policy and threshold"},
 		{"appearance", "category.appearance", "themes, transparency, thinking, mouse"},
 		{"terminals", "category.terminals", "pane dimensions, colors, shell"},
 		{"keys and editor", "category.keys", "leader, command bindings, editor"},
@@ -24,7 +24,7 @@ func (a *App) settingsCategory(category string) {
 	groups := map[string][]string{
 		"model":      {"provider", "model", "thinking", "context", "predict", "threads", "auto_start", "providers"},
 		"execution":  {"execution.mode", "execution.auto_share", "execution.max_steps", "execution.output_context"},
-		"context":    {"compact.mode", "compact.threshold", "compact.keep_turns", "compact.budget"},
+		"context":    {"context", "compact.mode", "compact.threshold", "compact.keep_turns", "compact.budget"},
 		"appearance": {"theme", "appearance.background", "appearance.thinking", "appearance.mouse", "animations", "themes"},
 		"terminals":  {"terminal.overlay_width", "terminal.overlay_height", "terminal.split_width", "terminal.background", "terminal.foreground", "terminal.scrollback", "terminal.directory", "shell"},
 		"keys":       {"leader", "bindings", "keys", "editor", "clipboard"},

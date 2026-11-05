@@ -140,10 +140,6 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 			return a.set("thinking", choice.Value)
 		case "value":
 			key, value, _ := strings.Cut(choice.Value, "=")
-			if key == "context" && value == "custom" {
-				a.openContextInput()
-				return nil
-			}
 			return a.set(key, value)
 		case "settings":
 			return a.settingMenu(choice.Value)
