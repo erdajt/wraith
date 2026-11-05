@@ -74,7 +74,7 @@ func (s *Screen) Feed(data []byte) []byte {
 			}
 		case 2:
 			if b >= 0x40 && b <= 0x7e {
-
+				reply = append(reply, s.csi(string(s.seq), b)...)
 				s.state = 0
 				s.seq = nil
 			} else if len(s.seq) < 4096 {
