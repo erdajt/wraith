@@ -1,0 +1,99 @@
+package ui
+
+import (
+	"fmt"
+	"github.com/charmbracelet/x/ansi"
+	"strings"
+)
+
+func (a *App) menuFrame() []string {
+	p := palettes[a.Config.Theme]
+	m := a.popup
+	w := min(a.width-6, 90)
+	height := min(a.height-8, 18)
+	content := []string{bold(p.Accent, clean(m.Title)), ink(p.Muted, "j/k move · enter select · esc close"), ""}
+	start := max(0, m.Index-(height-5)/2)
+	start = min(start, max(0, len(m.Items)-(height-5)))
+	if len(m.Items) == 0 {
+		content = append(content, ink(p.Muted, "nothing here yet"))
+	}
+	for i := start; i < len(m.Items) && len(content) < height-1; i++ {
+		it := m.Items[i]
+		label := clean(it.Label)
+		if it.Detail != "" {
+			label += "  ·  " + clean(it.Detail)
+		}
+		label = ansi.Truncate(label, w-6, "…")
+		if i == m.Index {
+			content = append(content, bold(p.Accent, "› "+label))
+		} else {
+			content = append(content, ink(p.FG, "  "+label))
+		}
+	}
+	return frame(content, w, p, false, "", "")
+}
+
+func frame(content []string, w int, p palette, inherit bool, fg, bg string) []string {
+	wrap := func(s string) string {
+		if inherit {
+			return reset + fit(s, w) + reset
+		}
+		return base(p, s, w)
+	}
+	rows := []string{wrap(ink(p.Border, "╭"+strings.Repeat("─", w-2)+"╮"))}
+	for _, s := range content {
+		rows = append(rows, wrap(ink(p.Border, "│")+"\x1b[0"+fg+bg+"m"+fit(s, w-2)+reset+ink(p.Border, "│")))
+	}
+	return append(rows, wrap(ink(p.Border, "╰"+strings.Repeat("─", w-2)+"╯")))
+}
+
+func (a *App) terminalFrame(index, w, h int) []string {
+	p := palettes[a.Config.Theme]
+	pane := a.panes[index]
+	cfg := a.Config.Terminal
+	fg, bg := "", ""
+	if cfg.Foreground == "theme" {
+		fg = color(p.FG, false)
+	} else if cfg.Foreground != "inherit" {
+		fg = color(cfg.Foreground, false)
+	}
+	if cfg.Background == "theme" {
+		bg = color(p.BG, true)
+	} else if cfg.Background != "inherit" {
+		bg = color(cfg.Background, true)
+	}
+	lines := pane.Screen.Lines(a.focus == fmt.Sprintf("terminal%d", index) && pane.Pending == "", fg, bg)
+	if pane.Pending != "" {
+		lines[len(lines)-2] = ink(p.Warn, " enter inserts · e edits · esc dismisses")
+		lines[len(lines)-1] = ink(p.Accent, ansi.Truncate(pane.Pending, w-2, "…"))
+	}
+	if pane.Err != "" {
+		lines[len(lines)-1] = ink(p.Warn, pane.Err)
+	}
+	fgArg, bgArg := "", ""
+	if fg != "" {
+		fgArg = ";" + fg
+	}
+	if bg != "" {
+		bgArg = ";" + bg
+	}
+	box := frame(lines, w, p, cfg.Background == "inherit", fgArg, bgArg)
+	label := " scratch shell · " + a.Config.Keys["terminal_overlay"] + " "
+	if index == 1 {
+		label = " side shell · " + a.Config.Keys["terminal_split"] + " "
+	}
+	box[0] = reset + ink(p.Border, "╭─") + ink(p.Accent, label) + ink(p.Border, strings.Repeat("─", max(0, w-ansi.StringWidth(label)-3))+"╮") + reset
+	return box[:min(h, len(box))]
+}
+
+func (a *App) overlay(rows, box []string, x, y int) {
+	for i, line := range box {
+		if y+i < 0 || y+i >= len(rows) {
+			continue
+		}
+		w := ansi.StringWidth(line)
+		left := ansi.Cut(rows[y+i], 0, max(0, x))
+		right := ansi.Cut(rows[y+i], x+w, a.width)
+		rows[y+i] = left + reset + line + reset + right
+	}
+}
