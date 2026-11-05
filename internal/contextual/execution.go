@@ -75,6 +75,9 @@ func ForChat(s session.Session, c config.Config, instructions string) []session.
 		policy = AgentPrompt
 	}
 	messages[0].Content += "\n\n" + policy
+	if prompt := c.Providers[c.Provider].SystemPrompt; prompt != "" {
+		messages[0].Content += "\n\nprovider instructions:\n" + prompt
+	}
 	return messages
 }
 

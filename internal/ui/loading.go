@@ -28,7 +28,7 @@ func (a *App) probe() tea.Cmd {
 		defer cancel()
 		result := infoMsg{Serial: serial, Model: model}
 		if err := client.EnsureServer(ctx, cfg.AutoStart, logPath); err != nil {
-			result.Err = fmt.Errorf("ollama startup: %w · log: %s", err, logPath)
+			result.Err = fmt.Errorf("%s startup: %w · log: %s", client.Name, err, logPath)
 			return result
 		}
 		result.Info, result.Err = client.Show(ctx, model)

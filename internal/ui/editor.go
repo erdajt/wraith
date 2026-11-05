@@ -8,7 +8,7 @@ import (
 	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/editor"
 	"github.com/erdajt/wraith/internal/fsutil"
-	"github.com/erdajt/wraith/internal/ollama"
+	"github.com/erdajt/wraith/internal/provider"
 )
 
 type editedMsg struct {
@@ -128,7 +128,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 		}
 		applied = true
 		a.Config = c
-		a.Client = ollama.New(c.Host)
+		a.Client = provider.New(c)
 		a.Session.Model = c.Model
 		a.resizePanes()
 		a.persist("settings saved · shell changes apply to new panes")

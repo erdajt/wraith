@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/ollama"
+	"github.com/erdajt/wraith/internal/provider"
 )
 
 func (a *App) set(key, value string) tea.Cmd {
@@ -74,7 +75,7 @@ func (a *App) set(key, value string) tea.Cmd {
 	a.resizePanes()
 	a.notice = "saved " + key + " = " + value
 	if key == "host" {
-		a.Client = ollama.New(c.Host)
+		a.Client = provider.New(c)
 		a.connected = false
 		return a.probe()
 	}

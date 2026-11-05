@@ -13,6 +13,7 @@ import (
 	"github.com/erdajt/wraith/internal/editor"
 	"github.com/erdajt/wraith/internal/fsutil"
 	"github.com/erdajt/wraith/internal/ollama"
+	"github.com/erdajt/wraith/internal/provider"
 	"github.com/erdajt/wraith/internal/runner"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/store"
@@ -99,7 +100,7 @@ type App struct {
 	Paths                              config.Paths
 	Store                              store.Store
 	Session                            session.Session
-	Client                             *ollama.Client
+	Client                             *provider.Client
 	Info                               ollama.Info
 	Instructions                       string
 	Prompt                             *vim.Buffer
@@ -149,7 +150,7 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 	if real, e := filepath.EvalSymlinks(dir); e == nil {
 		dir = real
 	}
-	a := &App{inputIndex: -1, Directory: dir, Config: c, Paths: p, Store: store.Store{Root: p.Data}, Session: s, Client: ollama.New(c.Host), Instructions: string(instructions), Prompt: vim.New(), width: 100, height: 30, chatCursor: -1, focus: "prompt", follow: true, events: make(chan tea.Msg, 128), done: make(chan struct{}), demo: demo, notice: "/help commands · ctrl+s send · ctrl+e editor"}
+	a := &App{inputIndex: -1, Directory: dir, Config: c, Paths: p, Store: store.Store{Root: p.Data}, Session: s, Client: provider.New(c), Instructions: string(instructions), Prompt: vim.New(), width: 100, height: 30, chatCursor: -1, focus: "prompt", follow: true, events: make(chan tea.Msg, 128), done: make(chan struct{}), demo: demo, notice: "/help commands · ctrl+s send · ctrl+e editor"}
 	if !demo {
 		entries, e := a.Store.Inputs(a.Directory)
 		if e != nil {

@@ -15,7 +15,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/fsutil"
-	"github.com/erdajt/wraith/internal/ollama"
+	"github.com/erdajt/wraith/internal/provider"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/store"
 	"github.com/erdajt/wraith/internal/ui"
@@ -98,7 +98,7 @@ func run(args []string, out io.Writer) error {
 		case "models":
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			models, e := ollama.New(c.Host).Models(ctx)
+			models, e := provider.New(c).Models(ctx)
 			if e != nil {
 				return e
 			}
@@ -207,7 +207,7 @@ func doctor(c config.Config, p config.Paths, out io.Writer) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	client := ollama.New(c.Host)
+	client := provider.New(c)
 	models, err := client.Models(ctx)
 	if err != nil {
 		return err
