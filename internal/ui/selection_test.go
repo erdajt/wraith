@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestVisualCopyAndWholeMessageRegister(t *testing.T) {
+func TestVisualCopyAndNormalLineYank(t *testing.T) {
 	a := fixture(t)
 	a.Config.Clipboard = nil
 	a.focus = "chat"
@@ -21,9 +21,9 @@ func TestVisualCopyAndWholeMessageRegister(t *testing.T) {
 	if string(a.Prompt.Register) != "alpha\nbeta" || a.visualMode != "" {
 		t.Fatalf("visual copy: %q", a.Prompt.Register)
 	}
-	a.key(key("y"))
-	if string(a.Prompt.Register) != "alpha\nbeta" {
-		t.Fatal("whole message copy lost raw content")
+	a.key(key("Y"))
+	if string(a.Prompt.Register) != "beta" {
+		t.Fatalf("line copy: %q", a.Prompt.Register)
 	}
 }
 

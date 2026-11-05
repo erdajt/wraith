@@ -36,8 +36,7 @@ func (a *App) revealCursor(count int) {
 func (a *App) chatKey(k tea.KeyMsg) tea.Cmd {
 	key := k.String()
 	if a.chatMotionPending != "" {
-		a.moveChatText(key, 1)
-		return nil
+		return a.moveChatText(key, 1)
 	}
 	if a.chatZ {
 		a.chatZ = false
@@ -84,7 +83,12 @@ func (a *App) chatKey(k tea.KeyMsg) tea.Cmd {
 	case "esc":
 		a.visualMode = ""
 	case "y":
-		return a.yank()
+		if a.visualMode != "" {
+			return a.yank()
+		}
+		return a.moveChatText(key, count)
+	case "Y":
+		return a.moveChatText(key, count)
 	case "j", "down":
 		a.chatCursor += count
 	case "k", "up":
@@ -131,8 +135,7 @@ func (a *App) chatKey(k tea.KeyMsg) tea.Cmd {
 		a.findNext(true)
 		return nil
 	case "^", "{", "}", "w", "W", "b", "B", "e", "E", "f", "F", "t", "T", "%":
-		a.moveChatText(key, count)
-		return nil
+		return a.moveChatText(key, count)
 	case "enter":
 		if len(lines) > 0 && lines[a.chatCursor].Block >= 0 {
 			return a.editCursorBlock(lines[a.chatCursor])

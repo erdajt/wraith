@@ -21,7 +21,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 	key := k.String()
-	if key == a.Config.Keys["quit"] || (key == "q" && a.popup == nil && !a.commandMode && !a.searchMode && (a.focus == "chat" || (a.focus == "prompt" && a.Prompt.Mode == "normal"))) {
+	if key == a.Config.Keys["quit"] || (key == "q" && a.chatMotionPending == "" && a.Prompt.Pending == "" && a.popup == nil && !a.commandMode && !a.searchMode && (a.focus == "chat" || (a.focus == "prompt" && a.Prompt.Mode == "normal"))) {
 		if a.busy && !a.compacting && (a.partial.Content != "" || a.partial.Thinking != "") {
 			a.partial.Interrupted = true
 			a.Session.Messages = append(a.Session.Messages, a.partial)
@@ -46,7 +46,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 	if strings.HasPrefix(a.focus, "terminal") {
 		return a.terminalKey(k)
 	}
-	if !a.commandMode && !a.searchMode && (a.focus == "chat" || a.Prompt.Mode == "normal") && (key == a.Config.Leader || a.Config.Leader == "space" && key == " ") {
+	if a.chatMotionPending == "" && a.Prompt.Pending == "" && !a.commandMode && !a.searchMode && (a.focus == "chat" || a.Prompt.Mode == "normal") && (key == a.Config.Leader || a.Config.Leader == "space" && key == " ") {
 		a.openLeader("")
 		return nil
 	}

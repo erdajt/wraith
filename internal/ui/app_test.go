@@ -79,7 +79,7 @@ func TestInvalidSavedConfigRetainsEditedFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = os.WriteFile(f.Path, []byte(`{"context":1}`), 0600); err != nil {
+	if err = os.WriteFile(f.Path, []byte(`{"context":0}`), 0600); err != nil {
 		t.Fatal(err)
 	}
 	a.finishEdit(editedMsg{Kind: "config", File: f})

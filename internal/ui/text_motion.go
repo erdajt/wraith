@@ -1,6 +1,7 @@
 package ui
 
 import (
+	tea "github.com/charmbracelet/bubbletea"
 	"strconv"
 	"strings"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
-func (a *App) moveChatText(key string, count int) {
+func (a *App) moveChatText(key string, count int) tea.Cmd {
 	a.ensureChatCursor()
 	lines := a.transcript(max(10, a.mainWidth()-5))
 	var plain []string
@@ -55,4 +56,27 @@ func (a *App) moveChatText(key string, count int) {
 		a.selected = lines[min(a.chatCursor, len(lines)-1)].Message
 	}
 	a.revealCursor(len(lines))
+	if len(b.Register) > 0 {
+		first, left := textPosition(b.Text, b.YankStart)
+		last, right := textPosition(b.Text, max(b.YankStart, b.YankEnd-1))
+		a.visualRow, a.visualColumn = first, left
+		savedRow, savedColumn := a.chatCursor, a.chatColumn
+		a.chatCursor, a.chatColumn, a.visualMode = last, right, "visual"
+		text := a.selectedText()
+		a.chatCursor, a.chatColumn = savedRow, savedColumn
+		return a.copyText(text, b.Linewise)
+	}
+	return nil
+}
+
+func textPosition(text []rune, end int) (row, column int) {
+	for _, r := range text[:min(end, len(text))] {
+		if r == '\n' {
+			row++
+			column = 0
+		} else {
+			column += runewidth.RuneWidth(r)
+		}
+	}
+	return
 }
