@@ -14,23 +14,17 @@ func (b *Buffer) pendingKey(key, text string, n int) bool {
 		b.Pending = ""
 		return true
 	}
-	if strings.Contains("fFtT", b.Pending) && len(b.Pending) == 1 && text != "" {
-		forward := b.Pending == "f" || b.Pending == "t"
-		step := 1
-		if !forward {
-			step = -1
+	if b.findPending() && text != "" {
+		pending := b.Pending
+		motion := pending[len(pending)-1:]
+		start := b.Pos
+		found := b.findCharacter(motion, []rune(text)[0], n)
+		b.Pending, b.Count = "", ""
+		if len(pending) == 2 && found {
+			end := b.Pos
+			b.Pos = start
+			b.apply(pending[:1], min(start, end), min(len(b.Text), max(start, end)+1), false)
 		}
-		target := []rune(text)[0]
-		for i := b.Pos + step; i >= b.lineStart(b.Pos) && i < b.lineEnd(b.Pos); i += step {
-			if b.Text[i] == target {
-				b.Pos = i
-				if b.Pending == "t" || b.Pending == "T" {
-					b.Pos -= step
-				}
-				break
-			}
-		}
-		b.Pending = ""
 		return true
 	}
 	if strings.HasSuffix(b.Pending, "i") || strings.HasSuffix(b.Pending, "a") {
@@ -52,6 +46,10 @@ func (b *Buffer) pendingKey(key, text string, n int) bool {
 	}
 	if b.Pending == "d" || b.Pending == "c" || b.Pending == "y" {
 		op := b.Pending
+		if len(key) == 1 && strings.Contains("fFtT", key) {
+			b.Pending += key
+			return true
+		}
 		if key == "i" || key == "a" {
 			b.Pending += key
 			return true

@@ -7,17 +7,18 @@ type snapshot struct {
 	Pos  int
 }
 type Buffer struct {
-	Text       []rune
-	Pos        int
-	Mode       string
-	Anchor     int
-	Register   []rune
-	Linewise   bool
-	Pending    string
-	Count      string
-	Search     string
-	query      string
-	undo, redo []snapshot
+	YankStart, YankEnd int
+	Text               []rune
+	Pos                int
+	Mode               string
+	Anchor             int
+	Register           []rune
+	Linewise           bool
+	Pending            string
+	Count              string
+	Search             string
+	query              string
+	undo, redo         []snapshot
 }
 
 func New() *Buffer               { return &Buffer{Mode: "insert"} }

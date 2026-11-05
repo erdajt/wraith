@@ -76,7 +76,9 @@ func (b *Buffer) Key(key, text string) {
 		b.restore(true)
 		return
 	}
-	if (b.Pending == "r" || len(b.Pending) == 1 && strings.Contains("fFtT", b.Pending)) && b.pendingKey(key, text, 1) {
+	if b.Pending == "r" || b.findPending() {
+		n, _ := strconv.Atoi(b.Count)
+		b.pendingKey(key, text, max(1, n))
 		return
 	}
 	if key >= "0" && key <= "9" && (key != "0" || b.Count != "") {
@@ -151,6 +153,14 @@ func (b *Buffer) Key(key, text string) {
 	case "s":
 		b.remove(b.Pos, min(b.lineEnd(b.Pos), b.Pos+n))
 		b.Mode = "insert"
+	case "Y":
+		start, end := b.lineStart(b.Pos), b.lineEnd(b.Pos)
+		for range n - 1 {
+			if end < len(b.Text) {
+				end = b.lineEnd(end + 1)
+			}
+		}
+		b.apply("y", start, min(len(b.Text), end+1), true)
 	case "D", "C":
 		b.apply("d", b.Pos, b.lineEnd(b.Pos), false)
 		if key == "C" {
@@ -215,7 +225,8 @@ func (b *Buffer) Key(key, text string) {
 func (b *Buffer) apply(op string, a, z int, line bool) {
 	b.Linewise = line
 	if op == "y" {
-		b.Register = append([]rune(nil), b.Text[max(0, a):min(z, len(b.Text))]...)
+		b.YankStart, b.YankEnd = max(0, a), min(z, len(b.Text))
+		b.Register = append([]rune(nil), b.Text[b.YankStart:b.YankEnd]...)
 		b.Pos = a
 		b.Mode = "normal"
 		b.clamp()
