@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1038" height="716" viewBox="0 0 1038 716">
+<title>wraith terminal demo</title>
+<desc>actual demo frame rendered by wraith, showing a tls review, code block, context meter and modal prompt.</desc>
+<rect width="100%" height="100%" rx="14" fill="#080c10"/>
+<rect x="12" y="42" width="1014" height="662" rx="5" fill="#101419"/>
+<circle cx="28" cy="24" r="5" fill="#ff777e"/><circle cx="46" cy="24" r="5" fill="#ffcd70"/><circle cx="64" cy="24" r="5" fill="#73f5bd"/>
+<text x="90" y="29" fill="#788b87" font-family="monospace" font-size="12">wraith · local workspace · demo</text>
+<g font-family="DejaVu Sans Mono, monospace" font-size="14" xml:space="preserve">
+<text x="24" y="67" fill="#73f5bd" font-weight="bold" textLength="135" lengthAdjust="spacingAndGlyphs">  ◈ W R A I T H</text><text x="159" y="67" fill="#788b87" textLength="81" lengthAdjust="spacingAndGlyphs">  /  demo</text><text x="861" y="67" fill="#bb9aff" textLength="63" lengthAdjust="spacingAndGlyphs">INSERT </text><text x="924" y="67" fill="#788b87" textLength="90" lengthAdjust="spacingAndGlyphs">  prompt  </text>
+<text x="42" y="87" fill="#d8e4df" textLength="414" lengthAdjust="spacingAndGlyphs">hf.co/filvyb/Qwen3.5-9B-heretic-v2-GGUF:Q5_K_M</text><text x="456" y="87" fill="#bb9aff" textLength="108" lengthAdjust="spacingAndGlyphs">  think:auto</text><text x="807" y="87" fill="#73f5bd" textLength="9" lengthAdjust="spacingAndGlyphs">━</text><text x="816" y="87" fill="#354743" textLength="99" lengthAdjust="spacingAndGlyphs">───────────</text><text x="915" y="87" fill="#788b87" textLength="81" lengthAdjust="spacingAndGlyphs"> ~1131/8k</text>
+<text x="24" y="107" fill="#354743" textLength="990" lengthAdjust="spacingAndGlyphs">──────────────────────────────────────────────────────────────────────────────────────────────────────────────</text>
+<text x="42" y="127" fill="#73f5bd" font-weight="bold" textLength="45" lengthAdjust="spacingAndGlyphs">◇ YOU</text><text x="87" y="127" fill="#788b87" textLength="36" lengthAdjust="spacingAndGlyphs">  01</text>
+<text x="42" y="147" fill="#d8e4df" textLength="918" lengthAdjust="spacingAndGlyphs">Review the TLS configuration on my isolated lab service. Preserve the hostname and verification steps.</text>
+
+<text x="42" y="187" fill="#bb9aff" font-weight="bold" textLength="72" lengthAdjust="spacingAndGlyphs">◇ WRAITH</text><text x="114" y="187" fill="#788b87" textLength="36" lengthAdjust="spacingAndGlyphs">  02</text>
+<text x="42" y="207" fill="#d8e4df" textLength="972" lengthAdjust="spacingAndGlyphs">Start by inspecting the certificate and negotiated protocol. This checks the service without changing its   </text>
+<text x="24" y="227" fill="#d8e4df" textLength="153" lengthAdjust="spacingAndGlyphs">   configuration.</text>
+
+<text x="42" y="267" fill="#354743" textLength="27" lengthAdjust="spacingAndGlyphs">╭─ </text><text x="69" y="267" fill="#bb9aff" textLength="108" lengthAdjust="spacingAndGlyphs">sh · block 1</text><text x="177" y="267" fill="#788b87" textLength="162" lengthAdjust="spacingAndGlyphs"> · /blocks to edit</text>
+<text x="42" y="287" fill="#354743" textLength="18" lengthAdjust="spacingAndGlyphs">│ </text><text x="60" y="287" fill="#73f5bd" textLength="396" lengthAdjust="spacingAndGlyphs">openssl s_client -connect lab.internal:443 \</text>
+<text x="42" y="307" fill="#354743" textLength="18" lengthAdjust="spacingAndGlyphs">│ </text><text x="60" y="307" fill="#73f5bd" textLength="396" lengthAdjust="spacingAndGlyphs">  -servername lab.internal -brief &lt;/dev/null</text>
+<text x="42" y="327" fill="#354743" textLength="369" lengthAdjust="spacingAndGlyphs">╰────────────────────────────────────────</text>
+
+<text x="42" y="367" fill="#d8e4df" textLength="972" lengthAdjust="spacingAndGlyphs">Record the protocol, cipher suite, issuer, and expiration. A successful handshake alone does not establis   </text>
+<text x="24" y="387" fill="#d8e4df" textLength="432" lengthAdjust="spacingAndGlyphs">  h that every supported protocol is acceptable.</text>
+
+<text x="42" y="427" fill="#d8e4df" textLength="594" lengthAdjust="spacingAndGlyphs">Next: compare the observed settings with your expected TLS policy.</text>
+
+
+
+
+<text x="24" y="527" fill="#354743" textLength="981" lengthAdjust="spacingAndGlyphs">╭─ prompt ──────────────────────────────────────────────────────────────────────────────────────────────────╮</text>
+<text x="24" y="547" fill="#354743" textLength="9" lengthAdjust="spacingAndGlyphs">│</text><rect x="42" y="532" width="9" height="20" fill="#d8e4df"/><text x="1005" y="547" fill="#354743" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
+<text x="24" y="567" fill="#354743" textLength="9" lengthAdjust="spacingAndGlyphs">│</text><text x="1005" y="567" fill="#354743" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
+<text x="24" y="587" fill="#354743" textLength="9" lengthAdjust="spacingAndGlyphs">│</text><text x="1005" y="587" fill="#354743" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
+<text x="24" y="607" fill="#354743" textLength="9" lengthAdjust="spacingAndGlyphs">│</text><text x="1005" y="607" fill="#354743" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
+<text x="24" y="627" fill="#354743" textLength="990" lengthAdjust="spacingAndGlyphs">╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</text>
+<text x="42" y="647" fill="#73f5bd" textLength="306" lengthAdjust="spacingAndGlyphs">demo workspace · no model requests</text>
+<text x="24" y="667" fill="#788b87" textLength="990" lengthAdjust="spacingAndGlyphs">  ctrl+s send  ·  tab focus  ·  : commands  ·  /help  ·  ctrl+q quit                                          </text>
+<text x="24" y="687" fill="#354743" textLength="261" lengthAdjust="spacingAndGlyphs">  tls assessment  ·  12ccd07b</text>
+</g>
+</svg>
