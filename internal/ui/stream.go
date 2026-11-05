@@ -22,6 +22,10 @@ func (a *App) submit() tea.Cmd {
 		a.Prompt = vim.New()
 		return a.runCommand(strings.TrimPrefix(text, "/"))
 	}
+	if a.loading {
+		a.notice = "model is loading · draft retained"
+		return nil
+	}
 	if a.busy {
 		a.notice = "wait for the current operation or press ctrl+c"
 		return nil
@@ -57,6 +61,10 @@ func (a *App) submit() tea.Cmd {
 }
 
 func (a *App) startChat() tea.Cmd {
+	if a.loading {
+		a.notice = "model is loading"
+		return nil
+	}
 	if a.demo {
 		return nil
 	}

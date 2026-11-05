@@ -19,6 +19,7 @@ import (
 const DefaultModel = "hf.co/filvyb/Qwen3.5-9B-heretic-v2-GGUF:Q5_K_M"
 
 type Config struct {
+	AutoStart   bool              `json:"auto_start"`
 	Version     int               `json:"version"`
 	Host        string            `json:"host"`
 	Model       string            `json:"model"`
@@ -58,7 +59,7 @@ type Terminal struct {
 type Paths struct{ Config, Data, Cache string }
 
 func Default() Config {
-	return Config{Version: 1, Host: "http://127.0.0.1:11434", Model: DefaultModel,
+	return Config{AutoStart: true, Version: 1, Host: "http://127.0.0.1:11434", Model: DefaultModel,
 		Context: 8192, Predict: 2048, Threads: 6, Temperature: 0.3, Thinking: "auto", Theme: "phosphor",
 		Editor: []string{"nvim"}, Shell: []string{"zsh", "-i"}, KeepAlive: "2m", Timeout: "10m",
 		Terminal: Terminal{Background: "inherit", Foreground: "inherit", OverlayWidth: 0.7, OverlayHeight: 0.6, SplitWidth: 0.4, Scrollback: 5000},

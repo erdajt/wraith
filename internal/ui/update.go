@@ -20,11 +20,15 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, tea.Tick(time.Second, func(t time.Time) tea.Msg { return tick(t) })
 	case infoMsg:
-		if m.Model == a.Session.Model {
+		if m.Model == a.Session.Model && m.Serial == a.loadSerial {
+			a.loading = false
+			a.loadCancel = nil
 			a.Info = m.Info
 			a.connected = m.Err == nil
 			if m.Err != nil {
 				a.notice = m.Err.Error()
+			} else {
+				a.notice = "model loaded · ready"
 			}
 		}
 	case tea.KeyMsg:
