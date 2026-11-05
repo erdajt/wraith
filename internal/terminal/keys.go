@@ -7,6 +7,9 @@ import (
 )
 
 func Key(k tea.KeyMsg, application, bracketed bool) []byte {
+	if k.Type == tea.KeyEsc && k.Alt {
+		return []byte("\x1b\x1b")
+	}
 	key := k.String()
 	prefix := "\x1b["
 	if application {
