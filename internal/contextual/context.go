@@ -50,11 +50,11 @@ func Used(s session.Session, instructions string) int {
 }
 
 func NeedsCompact(s session.Session, c config.Config, instructions string) bool {
-	return Used(s, instructions) >= int(float64(c.Context)*c.Compact.Threshold)
+	return ChatUsed(s, c, instructions) >= int(float64(c.Context)*c.Compact.Threshold)
 }
 
 func Fits(s session.Session, c config.Config, instructions string) error {
-	n := Used(s, instructions)
+	n := ChatUsed(s, c, instructions)
 	if n+c.Predict+128 > c.Context {
 		return fmt.Errorf("context budget: about %d input + %d output tokens exceeds %d; compact, trim the prompt, or increase context", n, c.Predict, c.Context)
 	}
