@@ -58,6 +58,16 @@ func (a *App) set(key, value string) tea.Cmd {
 		return nil
 	}
 	a.Config = c
+	if key == "appearance.thinking" {
+		a.showThinking = c.Appearance.Thinking
+		a.thinkingExpanded = map[string]bool{}
+	}
+	if key == "appearance.mouse" {
+		if c.Appearance.Mouse {
+			return tea.EnableMouseCellMotion
+		}
+		return tea.DisableMouse
+	}
 	a.resizePanes()
 	a.notice = "saved " + key + " = " + value
 	if key == "host" {

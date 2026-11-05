@@ -66,6 +66,7 @@ type terminalMsg struct {
 }
 
 type App struct {
+	thinkingExpanded        map[string]bool
 	agentSteps              int
 	pendingAgent            bool
 	selectedBlock           editor.Block
@@ -122,6 +123,8 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 	}
 	c.Model = s.Model
 	a := &App{Config: c, Paths: p, Store: store.Store{Root: p.Data}, Session: s, Client: ollama.New(c.Host), Instructions: string(instructions), Prompt: vim.New(), width: 100, height: 30, focus: "prompt", follow: true, events: make(chan tea.Msg, 128), done: make(chan struct{}), demo: demo, notice: "/help commands · ctrl+s send · ctrl+e editor"}
+	a.showThinking = c.Appearance.Thinking
+	a.thinkingExpanded = map[string]bool{}
 	if demo {
 		a.connected = true
 		a.notice = "demo workspace · no model requests"

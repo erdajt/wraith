@@ -114,6 +114,10 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 	if a.focus == "chat" {
+		if key == a.Config.Keys["thinking_toggle"] {
+			a.toggleThinking(a.selected)
+			return nil
+		}
 		if len(key) == 1 && key[0] >= '0' && key[0] <= '9' {
 			if len(a.chatCount) < 6 {
 				a.chatCount += key

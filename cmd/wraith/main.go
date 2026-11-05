@@ -180,7 +180,11 @@ func run(args []string, out io.Writer) error {
 		_, err = fmt.Fprintln(out, a.View())
 		return err
 	}
-	_, err = tea.NewProgram(a, tea.WithAltScreen(), tea.WithOutput(out)).Run()
+	options := []tea.ProgramOption{tea.WithAltScreen(), tea.WithOutput(out)}
+	if c.Appearance.Mouse {
+		options = append(options, tea.WithMouseCellMotion())
+	}
+	_, err = tea.NewProgram(a, options...).Run()
 	return err
 }
 
