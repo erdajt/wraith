@@ -19,7 +19,14 @@ import (
 
 const DefaultModel = "hf.co/filvyb/Qwen3.5-9B-heretic-v2-GGUF:Q5_K_M"
 
+type Execution struct {
+	Mode          string `json:"mode" yaml:"mode"`
+	MaxSteps      int    `json:"max_steps" yaml:"max_steps"`
+	OutputContext int    `json:"output_context" yaml:"output_context"`
+}
+
 type Config struct {
+	Execution   Execution          `json:"execution" yaml:"execution"`
 	Themes      map[string]Palette `json:"themes" yaml:"themes"`
 	Leader      string             `json:"leader" yaml:"leader"`
 	Bindings    map[string]string  `json:"bindings" yaml:"bindings"`
@@ -63,7 +70,7 @@ type Terminal struct {
 type Paths struct{ Config, Data, Cache string }
 
 func Default() Config {
-	return Config{Leader: "space", Bindings: DefaultBindings(), AutoStart: true, Version: 1, Host: "http://127.0.0.1:11434", Model: DefaultModel,
+	return Config{Execution: Execution{Mode: "agent", MaxSteps: 8, OutputContext: 8192}, Leader: "space", Bindings: DefaultBindings(), AutoStart: true, Version: 1, Host: "http://127.0.0.1:11434", Model: DefaultModel,
 		Context: 8192, Predict: 2048, Threads: 6, Temperature: 0.3, Thinking: "auto", Theme: "phosphor",
 		Editor: []string{"nvim"}, Shell: []string{"zsh", "-i"}, KeepAlive: "2m", Timeout: "10m",
 		Terminal: Terminal{Background: "inherit", Foreground: "inherit", OverlayWidth: 0.7, OverlayHeight: 0.6, SplitWidth: 0.4, Scrollback: 5000},
@@ -126,6 +133,9 @@ func Save(path string, c Config) error {
 }
 
 func (c Config) Validate() error {
+	if !slices.Contains([]string{"agent", "blocks"}, c.Execution.Mode) || c.Execution.MaxSteps < 1 || c.Execution.MaxSteps > 100 || c.Execution.OutputContext < 256 || c.Execution.OutputContext > 65536 {
+		return errors.New("execution requires agent or blocks mode, 1-100 steps and 256-65536 output bytes")
+	}
 	if err := c.validateBindings(); err != nil {
 		return err
 	}
