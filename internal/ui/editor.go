@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"encoding/json"
 	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -34,9 +33,9 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 	case "instructions":
 		text = a.Instructions
 	case "config":
-		b, _ := json.MarshalIndent(a.Config, "", "  ")
+		b, _ := config.Encode(a.Config, "config.yaml")
 		text = string(b) + "\n"
-		ext = ".json"
+		ext = ".yaml"
 	case "response":
 		if index < 0 || index >= len(a.Session.Messages) {
 			a.notice = "no response selected"
@@ -113,7 +112,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 			a.notice = "config unchanged: " + e.Error()
 			return nil
 		}
-		if err = config.Save(filepath.Join(a.Paths.Config, "config.json"), c); err != nil {
+		if err = config.Save(config.File(a.Paths.Config), c); err != nil {
 			a.notice = err.Error()
 			return nil
 		}

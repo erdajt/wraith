@@ -14,46 +14,47 @@ import (
 	"time"
 
 	"github.com/erdajt/wraith/internal/fsutil"
+	"gopkg.in/yaml.v3"
 )
 
 const DefaultModel = "hf.co/filvyb/Qwen3.5-9B-heretic-v2-GGUF:Q5_K_M"
 
 type Config struct {
-	AutoStart   bool              `json:"auto_start"`
-	Version     int               `json:"version"`
-	Host        string            `json:"host"`
-	Model       string            `json:"model"`
-	Context     int               `json:"context"`
-	Predict     int               `json:"predict"`
-	Threads     int               `json:"threads"`
-	Temperature float64           `json:"temperature"`
-	Thinking    string            `json:"thinking"`
-	Theme       string            `json:"theme"`
-	Editor      []string          `json:"editor"`
-	Terminal    Terminal          `json:"terminal"`
-	Shell       []string          `json:"shell"`
-	KeepAlive   string            `json:"keep_alive"`
-	Timeout     string            `json:"timeout"`
-	Compact     Compact           `json:"compact"`
-	Keys        map[string]string `json:"keys"`
-	Animations  bool              `json:"animations"`
+	AutoStart   bool              `json:"auto_start" yaml:"auto_start"`
+	Version     int               `json:"version" yaml:"version"`
+	Host        string            `json:"host" yaml:"host"`
+	Model       string            `json:"model" yaml:"model"`
+	Context     int               `json:"context" yaml:"context"`
+	Predict     int               `json:"predict" yaml:"predict"`
+	Threads     int               `json:"threads" yaml:"threads"`
+	Temperature float64           `json:"temperature" yaml:"temperature"`
+	Thinking    string            `json:"thinking" yaml:"thinking"`
+	Theme       string            `json:"theme" yaml:"theme"`
+	Editor      []string          `json:"editor" yaml:"editor"`
+	Terminal    Terminal          `json:"terminal" yaml:"terminal"`
+	Shell       []string          `json:"shell" yaml:"shell"`
+	KeepAlive   string            `json:"keep_alive" yaml:"keep_alive"`
+	Timeout     string            `json:"timeout" yaml:"timeout"`
+	Compact     Compact           `json:"compact" yaml:"compact"`
+	Keys        map[string]string `json:"keys" yaml:"keys"`
+	Animations  bool              `json:"animations" yaml:"animations"`
 }
 
 type Compact struct {
-	Mode      string  `json:"mode"`
-	Threshold float64 `json:"threshold"`
-	KeepTurns int     `json:"keep_turns"`
-	Budget    int     `json:"budget"`
+	Mode      string  `json:"mode" yaml:"mode"`
+	Threshold float64 `json:"threshold" yaml:"threshold"`
+	KeepTurns int     `json:"keep_turns" yaml:"keep_turns"`
+	Budget    int     `json:"budget" yaml:"budget"`
 }
 
 type Terminal struct {
-	Background    string  `json:"background"`
-	Foreground    string  `json:"foreground"`
-	OverlayWidth  float64 `json:"overlay_width"`
-	OverlayHeight float64 `json:"overlay_height"`
-	SplitWidth    float64 `json:"split_width"`
-	Scrollback    int     `json:"scrollback"`
-	Directory     string  `json:"directory"`
+	Background    string  `json:"background" yaml:"background"`
+	Foreground    string  `json:"foreground" yaml:"foreground"`
+	OverlayWidth  float64 `json:"overlay_width" yaml:"overlay_width"`
+	OverlayHeight float64 `json:"overlay_height" yaml:"overlay_height"`
+	SplitWidth    float64 `json:"split_width" yaml:"split_width"`
+	Scrollback    int     `json:"scrollback" yaml:"scrollback"`
+	Directory     string  `json:"directory" yaml:"directory"`
 }
 
 type Paths struct{ Config, Data, Cache string }
@@ -90,8 +91,16 @@ func Load(path string) (Config, error) {
 	if err != nil {
 		return c, err
 	}
-	d := json.NewDecoder(bytes.NewReader(b))
-	d.DisallowUnknownFields()
+	var d interface{ Decode(any) error }
+	if strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml") {
+		yd := yaml.NewDecoder(bytes.NewReader(b))
+		yd.KnownFields(true)
+		d = yd
+	} else {
+		jd := json.NewDecoder(bytes.NewReader(b))
+		jd.DisallowUnknownFields()
+		d = jd
+	}
 	if err := d.Decode(&c); err != nil {
 		return c, fmt.Errorf("config: %w", err)
 	}
@@ -106,7 +115,7 @@ func Save(path string, c Config) error {
 	if err := c.Validate(); err != nil {
 		return err
 	}
-	b, err := json.MarshalIndent(c, "", "  ")
+	b, err := Encode(c, path)
 	if err != nil {
 		return err
 	}
@@ -204,4 +213,28 @@ func validColor(s string) bool {
 		}
 	}
 	return true
+}
+
+func Encode(c Config, path string) ([]byte, error) {
+	if strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml") {
+		return yaml.Marshal(c)
+	}
+	return json.MarshalIndent(c, "", "  ")
+}
+
+func File(dir string) string { return filepath.Join(dir, "config.yaml") }
+
+func LoadDirectory(dir string) (Config, error) {
+	path := File(dir)
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		legacy := filepath.Join(dir, "config.json")
+		if _, err := os.Stat(legacy); err == nil {
+			c, err := Load(legacy)
+			if err != nil {
+				return c, err
+			}
+			return c, Save(path, c)
+		}
+	}
+	return Load(path)
 }

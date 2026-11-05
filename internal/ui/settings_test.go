@@ -20,7 +20,7 @@ func TestPaneSettingsPersistAndResizeGeometry(t *testing.T) {
 	if afterW <= beforeW || afterH <= beforeH {
 		t.Fatal("pane geometry did not grow")
 	}
-	c, err := config.Load(a.Paths.Config + "/config.json")
+	c, err := config.Load(a.Paths.Config + "/config.yaml")
 	if err != nil || c.Terminal.OverlayWidth != 0.9 || c.Terminal.OverlayHeight != 0.9 {
 		t.Fatalf("not persisted: %+v %v", c, err)
 	}
