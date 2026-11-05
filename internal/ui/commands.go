@@ -13,7 +13,7 @@ func (a *App) runCommand(line string) tea.Cmd {
 		a.notice = "wait for the current operation or use /cancel"
 		return nil
 	}
-	handlers := map[string]func(string, string) tea.Cmd{"model": a.modelCommand, "models": a.modelCommand, "think": a.modelCommand, "settings": a.modelCommand, "set": a.modelCommand, "theme": a.modelCommand, "context": a.modelCommand, "compact": a.modelCommand, "cancel": a.modelCommand, "thinking": a.modelCommand}
+	handlers := map[string]func(string, string) tea.Cmd{"model": a.modelCommand, "models": a.modelCommand, "think": a.modelCommand, "settings": a.modelCommand, "set": a.modelCommand, "theme": a.modelCommand, "context": a.modelCommand, "compact": a.modelCommand, "cancel": a.modelCommand, "thinking": a.modelCommand, "new": a.sessionCommand, "chats": a.sessionCommand, "sessions": a.sessionCommand, "resume": a.sessionCommand, "archives": a.sessionCommand, "restore": a.sessionCommand, "export": a.sessionCommand, "retry": a.sessionCommand, "terminal-restart": a.sessionCommand, "quit": a.sessionCommand, "q": a.sessionCommand}
 	if handler, ok := handlers[name]; ok {
 		return handler(name, arg)
 	}
