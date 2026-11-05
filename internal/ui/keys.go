@@ -60,6 +60,9 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 				return nil
 			}
 			a.commandMode = false
+			if strings.TrimSpace(value) == "w" {
+				return a.submit()
+			}
 			return a.runCommand(value)
 		}
 		if key == "backspace" {
@@ -71,6 +74,9 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 			a.command += string(k.Runes)
 		}
 		return nil
+	}
+	if cmd, handled := a.slashKey(k); handled {
+		return cmd
 	}
 	if key == a.Config.Keys["focus"] {
 		if a.focus == "chat" {
@@ -151,5 +157,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		text = string(k.Runes)
 	}
 	a.Prompt.Key(key, text)
+	a.completionQuery = strings.TrimPrefix(a.Prompt.String(), "/")
+	a.completionIndex = 0
 	return nil
 }
