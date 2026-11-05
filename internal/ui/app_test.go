@@ -104,3 +104,20 @@ func TestDemoCommandsCannotWriteUserData(t *testing.T) {
 		t.Fatal("demo changed persistent instructions")
 	}
 }
+
+func TestSpaceEventsSurvivePromptAndCommandEditing(t *testing.T) {
+	a := fixture(t)
+	for _, k := range []tea.KeyMsg{key("host"), {Type: tea.KeySpace, Runes: []rune{' '}}, key("name")} {
+		a.key(k)
+	}
+	if a.Prompt.String() != "host name" {
+		t.Fatalf("prompt lost space: %q", a.Prompt.String())
+	}
+	a.commandMode = true
+	for _, k := range []tea.KeyMsg{key("set"), {Type: tea.KeySpace, Runes: []rune{' '}}, key("context")} {
+		a.key(k)
+	}
+	if a.command != "set context" {
+		t.Fatalf("command lost space: %q", a.command)
+	}
+}

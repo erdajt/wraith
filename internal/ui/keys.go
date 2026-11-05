@@ -63,7 +63,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 			if len(r) > 0 {
 				a.command = string(r[:len(r)-1])
 			}
-		} else if k.Type == tea.KeyRunes {
+		} else if k.Type == tea.KeyRunes || k.Type == tea.KeySpace {
 			a.command += string(k.Runes)
 		}
 		return nil
@@ -143,7 +143,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 	text := ""
-	if k.Type == tea.KeyRunes {
+	if k.Type == tea.KeyRunes || k.Type == tea.KeySpace {
 		text = string(k.Runes)
 	}
 	a.Prompt.Key(key, text)

@@ -1,0 +1,24 @@
+package terminal
+
+import (
+	tea "github.com/charmbracelet/bubbletea"
+	"testing"
+)
+
+func TestTerminalKeysPreserveSpacesAndBracketedPaste(t *testing.T) {
+	tests := []struct {
+		key       tea.KeyMsg
+		bracketed bool
+		want      string
+	}{
+		{tea.KeyMsg{Type: tea.KeySpace, Runes: []rune{' '}}, false, " "},
+		{tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("echo test\n"), Paste: true}, true, "\x1b[200~echo test\n\x1b[201~"},
+		{tea.KeyMsg{Type: tea.KeyCtrlC}, false, "\x03"},
+		{tea.KeyMsg{Type: tea.KeyEnter}, false, "\r"},
+	}
+	for _, tt := range tests {
+		if got := string(Key(tt.key, false, tt.bracketed)); got != tt.want {
+			t.Fatalf("key %s: got %q, want %q", tt.key, got, tt.want)
+		}
+	}
+}
