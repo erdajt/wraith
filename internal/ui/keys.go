@@ -27,6 +27,9 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		a.cancel()
 		return nil
 	}
+	if key == a.Config.Keys["editor"] {
+		return a.edit("prompt", "", "", -1)
+	}
 	text := ""
 	if k.Type == tea.KeyRunes {
 		text = string(k.Runes)
