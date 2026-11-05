@@ -53,6 +53,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case editedMsg:
 		return a, a.finishEdit(m)
 	case modelsMsg:
+		if a.busy {
+			a.notice = "model list dismissed while a response is running"
+			break
+		}
 		if m.Err != nil {
 			a.notice = m.Err.Error()
 			break

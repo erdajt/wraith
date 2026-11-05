@@ -30,6 +30,16 @@ func (b *Buffer) wordBounds() (int, int) {
 }
 
 func (b *Buffer) motion(key string, n int) {
+	classify := category
+	if key == "W" || key == "B" || key == "E" {
+		classify = func(r rune) int {
+			if unicode.IsSpace(r) {
+				return 0
+			}
+			return 1
+		}
+	}
+
 	for range n {
 		switch key {
 		case "h", "left":
@@ -53,8 +63,8 @@ func (b *Buffer) motion(key string, n int) {
 			b.Pos = b.lineStart(len(b.Text))
 		case "w", "W":
 			if b.Pos < len(b.Text) {
-				kind := category(b.Text[b.Pos])
-				for b.Pos < len(b.Text) && category(b.Text[b.Pos]) == kind {
+				kind := classify(b.Text[b.Pos])
+				for b.Pos < len(b.Text) && classify(b.Text[b.Pos]) == kind {
 					b.Pos++
 				}
 				for b.Pos < len(b.Text) && unicode.IsSpace(b.Text[b.Pos]) {
@@ -67,8 +77,8 @@ func (b *Buffer) motion(key string, n int) {
 				b.Pos--
 			}
 			if b.Pos < len(b.Text) {
-				kind := category(b.Text[b.Pos])
-				for b.Pos > 0 && category(b.Text[b.Pos-1]) == kind {
+				kind := classify(b.Text[b.Pos])
+				for b.Pos > 0 && classify(b.Text[b.Pos-1]) == kind {
 					b.Pos--
 				}
 			}
@@ -78,8 +88,8 @@ func (b *Buffer) motion(key string, n int) {
 				b.Pos++
 			}
 			if b.Pos < len(b.Text) {
-				kind := category(b.Text[b.Pos])
-				for b.Pos+1 < len(b.Text) && category(b.Text[b.Pos+1]) == kind {
+				kind := classify(b.Text[b.Pos])
+				for b.Pos+1 < len(b.Text) && classify(b.Text[b.Pos+1]) == kind {
 					b.Pos++
 				}
 			}

@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 func (b *Buffer) Key(key, text string) {
@@ -66,13 +67,16 @@ func (b *Buffer) Key(key, text string) {
 		}
 		return
 	}
-	if len(text) > 1 {
+	if utf8.RuneCountInString(text) > 1 {
 		b.Insert(text)
 		b.clamp()
 		return
 	}
 	if key == "ctrl+r" {
 		b.restore(true)
+		return
+	}
+	if (b.Pending == "r" || len(b.Pending) == 1 && strings.Contains("fFtT", b.Pending)) && b.pendingKey(key, text, 1) {
 		return
 	}
 	if key >= "0" && key <= "9" && (key != "0" || b.Count != "") {
