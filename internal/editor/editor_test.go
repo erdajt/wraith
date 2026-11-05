@@ -2,7 +2,6 @@ package editor
 
 import (
 	"os"
-	"strings"
 	"testing"
 	"time"
 )
@@ -36,14 +35,14 @@ func TestBlocksAndStagingNeverExecute(t *testing.T) {
 	}
 	dir := t.TempDir()
 	marker := dir + "/must-not-exist"
-	path, cmd, err := Stage(dir, "bash", "touch "+Quote(marker))
+	_, cmd, err := Stage(dir, "bash", "touch "+Quote(marker))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err = os.Stat(marker); !os.IsNotExist(err) {
 		t.Fatal("staging executed code")
 	}
-	if !strings.Contains(cmd, Quote(path)) || strings.ContainsAny(cmd, "\r\n") {
+	if cmd != "touch "+Quote(marker) {
 		t.Fatalf("invalid stage command: %q", cmd)
 	}
 	if _, cmd, err = Stage(dir, "sql", "select 1;"); err != nil || cmd != "" {
