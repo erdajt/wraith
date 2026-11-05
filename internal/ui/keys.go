@@ -21,7 +21,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 	key := k.String()
-	if key == a.Config.Keys["quit"] || (key == "q" && a.chatMotionPending == "" && a.Prompt.Pending == "" && a.popup == nil && !a.commandMode && !a.searchMode && (a.focus == "chat" || (a.focus == "prompt" && a.Prompt.Mode == "normal"))) {
+	if key == a.Config.Keys["quit"] || (key == "q" && a.chatMotionPending == "" && a.Prompt.Pending == "" && a.popup == nil && !a.commandMode && !a.searchMode && ((a.focus == "chat" && a.visualMode == "") || (a.focus == "prompt" && a.Prompt.Mode == "normal"))) {
 		if a.busy && !a.compacting && (a.partial.Content != "" || a.partial.Thinking != "") {
 			a.partial.Interrupted = true
 			a.Session.Messages = append(a.Session.Messages, a.partial)
@@ -121,7 +121,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 	if key == a.Config.Keys["send"] {
 		return a.submit()
 	}
-	if (a.focus == "chat" || a.Prompt.Mode == "normal") && key == ":" {
+	if (a.focus == "chat" || a.Prompt.Mode == "normal") && a.chatMotionPending == "" && a.Prompt.Pending == "" && key == ":" {
 		a.commandMode = true
 		a.command = ""
 		return nil
@@ -134,9 +134,8 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		text = string(k.Runes)
 	}
 	a.inputIndex = -1
-	pending, mode := a.Prompt.Pending, a.Prompt.Mode
 	a.Prompt.Key(key, text)
-	if a.Prompt.Pending == "" && len(a.Prompt.Register) > 0 && (key == "Y" && mode == "normal" || strings.HasPrefix(pending, "y") || key == "y" && strings.HasPrefix(mode, "visual")) {
+	if a.Prompt.Yanked && len(a.Prompt.Register) > 0 {
 		return a.copyText(string(a.Prompt.Register), a.Prompt.Linewise)
 	}
 	a.completionQuery = strings.TrimPrefix(a.Prompt.String(), "/")

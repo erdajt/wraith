@@ -56,7 +56,7 @@ func (a *App) moveChatText(key string, count int) tea.Cmd {
 		a.selected = lines[min(a.chatCursor, len(lines)-1)].Message
 	}
 	a.revealCursor(len(lines))
-	if len(b.Register) > 0 {
+	if b.Yanked && len(b.Register) > 0 {
 		first, left := textPosition(b.Text, b.YankStart)
 		last, right := textPosition(b.Text, max(b.YankStart, b.YankEnd-1))
 		a.visualRow, a.visualColumn = first, left

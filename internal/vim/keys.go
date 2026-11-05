@@ -8,6 +8,7 @@ import (
 )
 
 func (b *Buffer) Key(key, text string) {
+	b.Yanked = false
 	if key == "esc" {
 		if b.Mode == "insert" && b.Pos > b.lineStart(b.Pos) {
 			b.Pos--
@@ -225,6 +226,7 @@ func (b *Buffer) Key(key, text string) {
 func (b *Buffer) apply(op string, a, z int, line bool) {
 	b.Linewise = line
 	if op == "y" {
+		b.Yanked = true
 		b.YankStart, b.YankEnd = max(0, a), min(z, len(b.Text))
 		b.Register = append([]rune(nil), b.Text[b.YankStart:b.YankEnd]...)
 		b.Pos = a

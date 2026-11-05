@@ -51,7 +51,7 @@ func (r *reader) key(k tea.KeyMsg, height int) (string, bool) {
 		b.Key("esc", "")
 		return "", false
 	}
-	beforeMode, pending := b.Mode, b.Pending
+	pending := b.Pending
 	switch key {
 	case "ctrl+d", "pgdown", "ctrl+f", "ctrl+u", "pgup", "ctrl+b":
 		count, _ := strconv.Atoi(b.Count)
@@ -74,7 +74,7 @@ func (r *reader) key(k tea.KeyMsg, height int) (string, bool) {
 		}
 	}
 	b.Key(key, key)
-	if len(b.Register) > 0 && b.Pending == "" && (key == "Y" || strings.HasPrefix(pending, "y") || (key == "y" && strings.HasPrefix(beforeMode, "visual"))) {
+	if b.Yanked && len(b.Register) > 0 {
 		return string(b.Register), false
 	}
 	return "", false

@@ -34,3 +34,28 @@ func TestPromptYanksReachClipboardAndRegister(t *testing.T) {
 		})
 	}
 }
+
+func TestFindColonAndCancelledYanksPreserveClipboard(t *testing.T) {
+	a := fixture(t)
+	a.Config.Clipboard = nil
+	a.Prompt.Set("abc:def")
+	a.Prompt.Mode, a.Prompt.Pos = "normal", 0
+	for _, r := range "yf:" {
+		a.key(key(string(r)))
+	}
+	if a.commandMode || string(a.Prompt.Register) != "abc:" {
+		t.Fatal("colon opened command mode during yank")
+	}
+	for _, end := range []string{"esc", "z"} {
+		a.key(key("y"))
+		if cmd := a.key(key(end)); cmd != nil {
+			t.Fatal("cancelled or unsupported yank copied old register")
+		}
+	}
+	r := newReader("abc:def")
+	r.Buffer.Register = []rune("previous")
+	r.key(key("y"), 5)
+	if copied, _ := r.key(key("z"), 5); copied != "" {
+		t.Fatal("failed reader yank copied stale register")
+	}
+}

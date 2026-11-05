@@ -7,6 +7,7 @@ type snapshot struct {
 	Pos  int
 }
 type Buffer struct {
+	Yanked             bool
 	YankStart, YankEnd int
 	Text               []rune
 	Pos                int
