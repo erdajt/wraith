@@ -1,0 +1,57 @@
+name: checks
+
+on:
+  push:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-checks
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: verify dependencies and formatting
+        run: |
+          go mod download
+          go mod verify
+          test -z "$(gofmt -l cmd internal)"
+          go vet ./...
+      - name: run race and integration tests
+        run: go test -race -shuffle=on -count=1 -timeout=3m -coverprofile=coverage.out ./...
+      - name: fuzz terminal parsing
+        env:
+          GOMAXPROCS: '2'
+        run: go test ./internal/terminal -run '^$' -fuzz '^FuzzScreen$' -fuzztime=15s -parallel=2
+      - name: fuzz modal editing
+        env:
+          GOMAXPROCS: '2'
+        run: go test ./internal/vim -run '^$' -fuzz '^FuzzEditing$' -fuzztime=15s -parallel=2
+      - name: build linux targets
+        env:
+          CGO_ENABLED: '0'
+          GOOS: linux
+        run: |
+          GOARCH=amd64 go build -trimpath -o bin/wraith-amd64 ./cmd/wraith
+          GOARCH=arm64 go build -trimpath -o bin/wraith-arm64 ./cmd/wraith
+          bin/wraith-amd64 --version
+          bin/wraith-amd64 --snapshot > /dev/null
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: coverage.out
+          retention-days: 14
+          if-no-files-found: error
