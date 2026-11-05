@@ -3,12 +3,13 @@ package ui
 import (
 	"context"
 	"fmt"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/erdajt/wraith/internal/contextual"
-	"github.com/erdajt/wraith/internal/store"
 	"path/filepath"
 	"strings"
 	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/erdajt/wraith/internal/contextual"
+	"github.com/erdajt/wraith/internal/store"
 )
 
 func (a *App) startCompact() tea.Cmd {

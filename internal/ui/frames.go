@@ -2,8 +2,9 @@ package ui
 
 import (
 	"fmt"
-	"github.com/charmbracelet/x/ansi"
 	"strings"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 func (a *App) menuFrame() []string {

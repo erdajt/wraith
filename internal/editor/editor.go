@@ -3,10 +3,8 @@ package editor
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -161,10 +159,3 @@ func Stage(dir, lang, text string) (string, string, error) {
 }
 
 func Quote(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'" }
-
-func CopyTo(path, text string) error {
-	if !filepath.IsAbs(path) {
-		return fmt.Errorf("expected an absolute path: %s", path)
-	}
-	return fsutil.Bytes(path, []byte(text))
-}

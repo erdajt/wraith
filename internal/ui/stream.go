@@ -3,13 +3,14 @@ package ui
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/vim"
-	"strings"
-	"time"
 )
 
 func (a *App) submit() tea.Cmd {

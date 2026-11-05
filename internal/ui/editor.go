@@ -2,12 +2,13 @@ package ui
 
 import (
 	"encoding/json"
+	"path/filepath"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/editor"
 	"github.com/erdajt/wraith/internal/fsutil"
 	"github.com/erdajt/wraith/internal/ollama"
-	"path/filepath"
 )
 
 type editedMsg struct {

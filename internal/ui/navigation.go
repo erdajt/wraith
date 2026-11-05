@@ -1,8 +1,9 @@
 package ui
 
 import (
-	"github.com/charmbracelet/x/ansi"
 	"strings"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 func (a *App) jumpSelected() {

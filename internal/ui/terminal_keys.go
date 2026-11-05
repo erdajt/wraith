@@ -1,9 +1,10 @@
 package ui
 
 import (
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/terminal"
-	"strings"
 )
 
 func (a *App) terminalKey(k tea.KeyMsg) tea.Cmd {

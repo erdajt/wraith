@@ -2,8 +2,9 @@ package ui
 
 import (
 	"fmt"
-	tea "github.com/charmbracelet/bubbletea"
 	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -29,7 +30,6 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		return a, a.key(m)
 	case terminalMsg:
-
 		p := a.panes[m.Index]
 		if p == nil || p.PTY != m.PTY {
 			break
@@ -53,7 +53,6 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case editedMsg:
 		return a, a.finishEdit(m)
 	case modelsMsg:
-
 		if m.Err != nil {
 			a.notice = m.Err.Error()
 			break

@@ -2,12 +2,13 @@ package ui
 
 import (
 	"fmt"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/erdajt/wraith/internal/editor"
-	"github.com/erdajt/wraith/internal/fsutil"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/erdajt/wraith/internal/editor"
+	"github.com/erdajt/wraith/internal/fsutil"
 )
 
 func (a *App) memoryCommand(name, arg string) tea.Cmd {

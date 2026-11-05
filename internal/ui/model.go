@@ -3,6 +3,11 @@ package ui
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/fsutil"
@@ -11,10 +16,6 @@ import (
 	"github.com/erdajt/wraith/internal/store"
 	"github.com/erdajt/wraith/internal/terminal"
 	"github.com/erdajt/wraith/internal/vim"
-	"os"
-	"path/filepath"
-	"sync"
-	"time"
 )
 
 type item struct{ Label, Value, Detail string }
