@@ -28,7 +28,6 @@ func TestResumePickerSupportsArrowsVimAndSearch(t *testing.T) {
 	}
 	a.key(key("/"))
 	a.key(key("beta"))
-	a.key(tea.KeyMsg{Type: tea.KeyEnter})
 	if len(a.popup.Items) != 1 {
 		t.Fatal("session filter failed")
 	}

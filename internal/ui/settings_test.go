@@ -1,6 +1,7 @@
 package ui
 
 import (
+	tea "github.com/charmbracelet/bubbletea"
 	"testing"
 
 	"github.com/erdajt/wraith/internal/config"
@@ -42,5 +43,22 @@ func TestClearKeepsPreviousSessionAvailable(t *testing.T) {
 	saved, err := a.Store.Load(previous)
 	if err != nil || saved.Messages[0].Content != "retain this" {
 		t.Fatalf("previous chat lost: %v", err)
+	}
+}
+
+func TestFilteredSettingsSelectWithOneEnter(t *testing.T) {
+	a := fixture(t)
+	a.settingsMenu()
+	a.key(key("/"))
+	a.key(key("appearance"))
+	a.key(tea.KeyMsg{Type: tea.KeyEnter})
+	if a.popup == nil || a.popup.Title != "settings · appearance" {
+		t.Fatal("first enter did not choose filtered category")
+	}
+	a.key(key("/"))
+	a.key(key("background"))
+	a.key(tea.KeyMsg{Type: tea.KeyEnter})
+	if a.popup == nil || a.popup.Kind != "value" || a.popup.Title != "appearance.background" {
+		t.Fatal("first enter did not choose filtered setting")
 	}
 }

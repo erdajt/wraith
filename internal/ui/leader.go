@@ -59,7 +59,13 @@ func (a *App) menuSearch(k tea.KeyMsg) bool {
 	switch key {
 	case "enter", "down", "up":
 		m.Searching = false
-		return key == "enter"
+		if key == "enter" {
+			switch m.Kind {
+			case "pins", "help", "run-output", "command-preview", "block-preview", "setting-help":
+				return true
+			}
+		}
+		return false
 	case "esc":
 		m.Searching = false
 		m.Query = ""
