@@ -8,19 +8,21 @@ import (
 )
 
 type Provider struct {
-	Kind         string            `json:"kind" yaml:"kind"`
-	BaseURL      string            `json:"base_url" yaml:"base_url"`
-	APIKey       string            `json:"api_key" yaml:"api_key"`
-	KeyEnv       string            `json:"key_env" yaml:"key_env"`
-	Headers      map[string]string `json:"headers" yaml:"headers"`
-	Model        string            `json:"model" yaml:"model"`
-	Models       []string          `json:"models" yaml:"models"`
-	Command      []string          `json:"command" yaml:"command"`
-	SystemPrompt string            `json:"system_prompt" yaml:"system_prompt"`
-	Thinking     []string          `json:"thinking" yaml:"thinking"`
-	ThinkingMode string            `json:"thinking_mode" yaml:"thinking_mode"`
-	TokenField   string            `json:"token_field" yaml:"token_field"`
-	Extra        map[string]any    `json:"extra" yaml:"extra"`
+	Context       int               `json:"context" yaml:"context"`
+	ModelContexts map[string]int    `json:"model_contexts" yaml:"model_contexts"`
+	Kind          string            `json:"kind" yaml:"kind"`
+	BaseURL       string            `json:"base_url" yaml:"base_url"`
+	APIKey        string            `json:"api_key" yaml:"api_key"`
+	KeyEnv        string            `json:"key_env" yaml:"key_env"`
+	Headers       map[string]string `json:"headers" yaml:"headers"`
+	Model         string            `json:"model" yaml:"model"`
+	Models        []string          `json:"models" yaml:"models"`
+	Command       []string          `json:"command" yaml:"command"`
+	SystemPrompt  string            `json:"system_prompt" yaml:"system_prompt"`
+	Thinking      []string          `json:"thinking" yaml:"thinking"`
+	ThinkingMode  string            `json:"thinking_mode" yaml:"thinking_mode"`
+	TokenField    string            `json:"token_field" yaml:"token_field"`
+	Extra         map[string]any    `json:"extra" yaml:"extra"`
 }
 
 func DefaultProviders() map[string]Provider {
@@ -39,6 +41,14 @@ func (c Config) ValidateProviders() error {
 		return fmt.Errorf("unknown provider: %s", c.Provider)
 	}
 	for name, p := range c.Providers {
+		if p.Context < 0 {
+			return fmt.Errorf("provider %s context must be zero for automatic or a positive integer", name)
+		}
+		for model, capacity := range p.ModelContexts {
+			if strings.TrimSpace(model) == "" || capacity < 1 {
+				return fmt.Errorf("provider %s model contexts need a model id and positive capacity", name)
+			}
+		}
 		if strings.TrimSpace(name) == "" {
 			return fmt.Errorf("provider names cannot be empty")
 		}
