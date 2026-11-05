@@ -6,14 +6,18 @@ import (
 )
 
 func (a *App) runCommand(line string) tea.Cmd {
-	switch strings.Trim(line, " /:") {
-	case "compact":
-		return a.startCompact()
-	case "cancel":
-		if a.cancel != nil {
-			a.cancel()
-		}
+	line = strings.TrimSpace(strings.TrimLeft(line, "/:"))
+	name, arg, _ := strings.Cut(line, " ")
+	arg = strings.TrimSpace(arg)
+	if a.busy && name != "help" && name != "context" && name != "cancel" {
+		a.notice = "wait for the current operation or use /cancel"
+		return nil
 	}
+	handlers := map[string]func(string, string) tea.Cmd{"model": a.modelCommand, "models": a.modelCommand, "think": a.modelCommand, "settings": a.modelCommand, "set": a.modelCommand, "theme": a.modelCommand, "context": a.modelCommand, "compact": a.modelCommand, "cancel": a.modelCommand, "thinking": a.modelCommand}
+	if handler, ok := handlers[name]; ok {
+		return handler(name, arg)
+	}
+	a.notice = "unknown command · /help"
 	return nil
 }
 func (a *App) persist(message string) {

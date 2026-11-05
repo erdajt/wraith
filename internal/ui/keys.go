@@ -30,6 +30,9 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 	if key == a.Config.Keys["editor"] {
 		return a.edit("prompt", "", "", -1)
 	}
+	if a.popup != nil {
+		return a.menuKey(k)
+	}
 	text := ""
 	if k.Type == tea.KeyRunes {
 		text = string(k.Runes)

@@ -48,6 +48,21 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, a.finishCompact(m)
 	case editedMsg:
 		return a, a.finishEdit(m)
+	case modelsMsg:
+
+		if m.Err != nil {
+			a.notice = m.Err.Error()
+			break
+		}
+		items := make([]item, 0, len(m.Models))
+		for _, model := range m.Models {
+			items = append(items, item{model.Name, model.Name, fmt.Sprintf("%.1f gb", float64(model.Size)/1e9)})
+		}
+		a.popup = &menu{Kind: "models", Title: "installed models", Items: items}
+		if len(items) == 0 {
+			a.notice = "no local models found; pull a model with ollama first"
+		}
+
 	}
 	return a, nil
 }
