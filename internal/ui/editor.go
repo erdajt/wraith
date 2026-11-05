@@ -74,6 +74,9 @@ func (a *App) editResponse() tea.Cmd {
 			i--
 		}
 	}
+	if i >= 0 && a.Session.Messages[i].Role == "user" {
+		return a.confirmFork(i)
+	}
 	return a.edit("response", "", "", i)
 }
 

@@ -66,6 +66,7 @@ type terminalMsg struct {
 }
 
 type App struct {
+	forkIndex                          int
 	chatMotionPending, chatMotionCount string
 	chatZ                              bool
 	chatCursor, chatColumn             int

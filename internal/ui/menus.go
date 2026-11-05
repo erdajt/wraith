@@ -102,6 +102,10 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 		choice := m.Items[m.Index]
 		a.popup = nil
 		switch m.Kind {
+		case "fork":
+			if choice.Value == "yes" {
+				return a.forkPrompt()
+			}
 		case "leader":
 			return a.runCommand(choice.Value)
 		case "history":
