@@ -104,7 +104,11 @@ func (a *App) terminalFrame(index, w, h int) []string {
 	lines := pane.Screen.Lines(a.focus == fmt.Sprintf("terminal%d", index) && pane.Pending == "", fg, bg)
 	if pane.Reader != nil {
 		lines = pane.Reader.lines(w-2, h-3, p)
-		lines = append(lines, ink(p.Muted, pane.Reader.Buffer.Status()+" · / search · v select · y yank · r refresh · i shell"))
+		hint := pane.Reader.Buffer.Status() + " · / search · v select · y yank · r refresh · i shell"
+		if !a.Config.Execution.AutoShare {
+			hint = a.Config.Keys["output_share"] + " share to agent · " + hint
+		}
+		lines = append(lines, ink(p.Muted, hint))
 	}
 	if pane.Pending != "" {
 		lines[len(lines)-2] = ink(p.Warn, " enter inserts · r tracked run · e edits · esc dismisses")

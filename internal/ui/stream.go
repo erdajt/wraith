@@ -70,6 +70,12 @@ func (a *App) startChat() tea.Cmd {
 	if a.demo {
 		return nil
 	}
+	if a.Config.Execution.AutoShare {
+		if err := a.syncTerminalEvidence(); err != nil {
+			a.notice = err.Error()
+			return nil
+		}
+	}
 	think, err := a.Info.Think(a.Config.Thinking)
 	if err != nil {
 		a.notice = err.Error() + "; /retry after changing /think"

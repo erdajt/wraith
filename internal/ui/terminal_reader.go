@@ -33,6 +33,9 @@ func (a *App) terminalReaderKey(index int, k tea.KeyMsg) (bool, tea.Cmd) {
 	p := a.panes[index]
 	if p.Reader != nil {
 		b := p.Reader.Buffer
+		if k.String() == a.Config.Keys["output_share"] && !a.Config.Execution.AutoShare {
+			return true, a.shareTerminal(index)
+		}
 		if k.String() == "r" && b.Pending == "" && b.Mode == "normal" {
 			p.Reader = newReader(terminalText(p.Screen))
 			return true, nil

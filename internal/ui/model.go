@@ -33,6 +33,7 @@ type menu struct {
 	Index                int
 }
 type pane struct {
+	SharedText              string
 	Reader                  *reader
 	Escapes                 int
 	EscapedAt               time.Time
