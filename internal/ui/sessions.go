@@ -72,3 +72,5 @@ func Export(s session.Session) string {
 	}
 	return b.String()
 }
+
+func (a *App) OpenSessions() { a.sessionCommand("sessions", "") }

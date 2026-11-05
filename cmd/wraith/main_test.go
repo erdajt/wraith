@@ -54,3 +54,22 @@ func TestExportIncludesRecoveredFacts(t *testing.T) {
 		}
 	}
 }
+
+func TestPositionalWordsPopulateDraft(t *testing.T) {
+	var out bytes.Buffer
+	err := run([]string{"--snapshot", "i", "need", "to", "scan", "192.1.1", "for", "open", "ports"}, &out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(ansi.Strip(out.String()), "i need to scan 192.1.1 for open ports") {
+		t.Fatal("positional prompt missing")
+	}
+}
+
+func TestResumeRejectsConflictingSessionFlags(t *testing.T) {
+	for _, args := range [][]string{{"--resume", "--new"}, {"--resume", "--session", "123"}} {
+		if err := run(args, &bytes.Buffer{}); err == nil {
+			t.Fatalf("accepted %v", args)
+		}
+	}
+}

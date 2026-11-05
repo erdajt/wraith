@@ -56,3 +56,23 @@ func TestBatchedNormalMotionsDoNotInsertDigits(t *testing.T) {
 		t.Fatal("motion inserted text")
 	}
 }
+
+func TestSlashSearchFollowsFocusedSurface(t *testing.T) {
+	a := fixture(t)
+	a.Prompt.Set("alpha beta alpha")
+	a.Prompt.Mode, a.Prompt.Pos = "normal", 0
+	a.key(key("/"))
+	a.key(key("beta"))
+	a.key(tea.KeyMsg{Type: tea.KeyEnter})
+	if a.Prompt.Pos != 6 || a.Prompt.Search != "beta" || a.search != "" {
+		t.Fatal("prompt search escaped its buffer")
+	}
+	a.Session.Messages = []session.Message{{Role: "user", Content: "needle"}, {Role: "assistant", Content: strings.Repeat("answer\n", 50)}}
+	a.focus = "chat"
+	a.key(key("/"))
+	a.key(key("needle"))
+	a.key(tea.KeyMsg{Type: tea.KeyEnter})
+	if a.search != "needle" || a.Prompt.Search != "beta" || a.follow {
+		t.Fatal("transcript search changed prompt search")
+	}
+}
