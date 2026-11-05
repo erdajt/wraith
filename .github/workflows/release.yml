@@ -44,7 +44,7 @@ jobs:
             cp -R docs "dist/$package/"
             tar -C dist -czf "dist/$package.tar.gz" "$package"
           done
-          cd dist
+          cd dist || exit 1
           sha256sum ./*.tar.gz > checksums.txt
       - name: create draft release
         env:
