@@ -52,3 +52,23 @@ func TestPlaceholderRequestNeverOpensApproval(t *testing.T) {
 		t.Fatal("wrapper was accepted as a shell command")
 	}
 }
+
+func TestSmallApprovalKeepsCommandAndSelectedActionVisible(t *testing.T) {
+	a := fixture(t)
+	a.width, a.height = 50, 18
+	a.approve(proposal{Command: "printf evidence", Reason: "inspect output"})
+	for i := range a.popup.Items {
+		a.popup.Index = i
+		frame := a.menuFrame()
+		view := ansi.Strip(strings.Join(frame, "\n"))
+		if len(frame) > a.height || !strings.Contains(view, "printf evidence") || !strings.Contains(view, "reason: inspect output") || !strings.Contains(view, "› "+a.popup.Items[i].Label) {
+			t.Fatalf("approval hid command, reason or action %d: %s", i, view)
+		}
+	}
+	a.proposal.Command = strings.Repeat("long command argument ", 20)
+	a.popup.Index = len(a.popup.Items) - 1
+	view := ansi.Strip(strings.Join(a.menuFrame(), "\n"))
+	if !strings.Contains(view, "› reject") || !strings.Contains(view, "view full command") {
+		t.Fatal("long preview hid selected action or full preview access")
+	}
+}

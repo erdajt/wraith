@@ -12,6 +12,9 @@ func (a *App) menuFrame() []string {
 	m := a.popup
 	w := min(a.width-6, 90)
 	height := min(a.height-8, 18)
+	if m.Kind == "approval" || m.Kind == "modify-command" {
+		height = min(a.height-4, 22)
+	}
 	if m.Reader != nil {
 		content := []string{bold(p.Accent, clean(m.Title)), ink(p.Muted, m.Reader.Buffer.Status()+" · / search · v select · y yank · r refresh · q close")}
 		if !a.Config.Execution.AutoShare {
@@ -32,27 +35,31 @@ func (a *App) menuFrame() []string {
 	if (m.Kind == "approval" || m.Kind == "modify-command") && a.proposal != nil {
 		preview = a.proposal.Command
 		if a.proposal.Reason != "" {
-			preview = "reason: " + a.proposal.Reason + "\n\n" + preview
+			preview += "\nreason: " + a.proposal.Reason
 		}
 	}
 	if m.Kind == "block-actions" {
 		preview = a.selectedBlock.Text
 	}
 	if preview != "" {
+		limit := max(2, height-len(content)-min(len(m.Items), 5)-2)
 		lines := strings.Split(ansi.Hardwrap(clean(preview), w-6, true), "\n")
-		for _, line := range lines[:min(len(lines), max(1, height-10))] {
-			content = append(content, ink(p.Accent, "$ "+line))
+		for _, line := range lines[:min(len(lines), limit)] {
+			content = append(content, ink(p.Accent, line))
 		}
-		if len(lines) > max(1, height-10) {
+		if len(lines) > limit {
 			content = append(content, ink(p.Muted, "… use view full command"))
 		}
 	}
 	if m.Input != nil {
-		content = append(content, ink(p.Second, m.Input.Status()), cursorText(clean(m.Input.String()), m.Input.Pos, p))
+		content = append(content, ink(p.Second, m.Input.Status()))
+		r := &reader{Buffer: m.Input}
+		content = append(content, r.lines(w-2, max(1, height-len(content)-1), p)...)
 		return frame(content, w, p, false, "", "")
 	}
-	start := max(0, m.Index-(height-5)/2)
-	start = min(start, max(0, len(m.Items)-(height-5)))
+	slots := max(1, height-1-len(content))
+	start := max(0, m.Index-slots/2)
+	start = min(start, max(0, len(m.Items)-slots))
 	if len(m.Items) == 0 {
 		content = append(content, ink(p.Muted, "nothing here yet"))
 	}
