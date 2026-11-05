@@ -12,6 +12,14 @@ import (
 func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 	key := k.String()
 	m := a.popup
+	if a.menuSearch(k) {
+		return nil
+	}
+	if m.Kind == "leader" && !m.Searching && m.Query == "" {
+		if cmd, ok := a.leaderKey(k); ok {
+			return cmd
+		}
+	}
 	switch key {
 	case "esc", "q":
 		if m.Kind == "overflow" {
@@ -61,6 +69,8 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 		choice := m.Items[m.Index]
 		a.popup = nil
 		switch m.Kind {
+		case "leader":
+			return a.runCommand(choice.Value)
 		case "models":
 			a.Session.Model = choice.Value
 			a.Config.Model = choice.Value
