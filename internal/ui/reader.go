@@ -104,7 +104,7 @@ func (r *reader) lines(width, height int, p palette) []string {
 	for i, line := range text {
 		size := len([]rune(line))
 		if i >= r.Offset && i < r.Offset+height {
-			styled := highlightMatches(ink(p.FG, line), b.Search, p)
+			styled := highlightMatches(ink(p.FG, line), b.SearchQuery(), p)
 			if left >= 0 && right > position && left <= position+size {
 				runes := []rune(line)
 				start := max(0, left-position)

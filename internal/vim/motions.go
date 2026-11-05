@@ -130,7 +130,7 @@ func (b *Buffer) find(reverse bool) {
 	}
 	for n := 1; n <= len(b.Text); n++ {
 		p := (b.Pos + step*n + len(b.Text)) % len(b.Text)
-		if p+len(needle) <= len(b.Text) && string(b.Text[p:p+len(needle)]) == b.Search {
+		if p+len(needle) <= len(b.Text) && strings.EqualFold(string(b.Text[p:p+len(needle)]), b.Search) {
 			b.Pos = p
 			return
 		}

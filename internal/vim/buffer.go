@@ -103,3 +103,10 @@ func (b *Buffer) Status() string {
 	}
 	return strings.ToUpper(b.Mode) + " " + b.Count + b.Pending
 }
+
+func (b *Buffer) SearchQuery() string {
+	if b.Mode == "search" {
+		return b.query
+	}
+	return b.Search
+}

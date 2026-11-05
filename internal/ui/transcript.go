@@ -97,6 +97,17 @@ func (a *App) promptLines(w int) []string {
 	column := 0
 	cursorRow := 0
 	left, right := b.Selection()
+	matches := make([]bool, len(b.Text))
+	needle := []rune(b.SearchQuery())
+	if len(needle) > 0 {
+		for i := 0; i+len(needle) <= len(b.Text); i++ {
+			if strings.EqualFold(string(b.Text[i:i+len(needle)]), string(needle)) {
+				for j := i; j < i+len(needle); j++ {
+					matches[j] = true
+				}
+			}
+		}
+	}
 	for i := 0; i <= len(b.Text); i++ {
 		r := ' '
 		if i < len(b.Text) {
@@ -141,6 +152,8 @@ func (a *App) promptLines(w int) []string {
 		}
 		if cursor || (i >= left && i < right) {
 			line.WriteString(cursorText(s, 0, p))
+		} else if i < len(matches) && matches[i] {
+			line.WriteString(highlightRange(s, 0, width, p.Warn, p))
 		} else {
 			line.WriteString(ink(p.FG, s))
 		}
