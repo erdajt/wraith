@@ -23,6 +23,8 @@ func (a *App) runCommand(line string) tea.Cmd {
 		}
 	}
 	switch name {
+	case "history":
+		return a.openHistory()
 	case "model", "models", "think", "settings", "set", "theme", "context", "compact", "cancel", "thinking":
 		return a.modelCommand(name, arg)
 	case "new", "clear", "chats", "sessions", "resume", "archives", "restore", "export", "retry", "terminal-restart", "quit", "q":

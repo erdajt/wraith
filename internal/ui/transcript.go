@@ -29,7 +29,7 @@ func (a *App) transcript(w int) []rendered {
 		add("", -1)
 	}
 	messages := append([]session.Message(nil), a.Session.Messages...)
-	if a.busy && !a.compacting {
+	if a.busy && !a.compacting && !a.executing {
 		messages = append(messages, a.partial)
 	}
 	block := 0

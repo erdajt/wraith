@@ -71,6 +71,15 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 		switch m.Kind {
 		case "leader":
 			return a.runCommand(choice.Value)
+		case "history":
+			record, err := a.history().Load(choice.Value)
+			if err != nil {
+				a.notice = err.Error()
+				return nil
+			}
+			a.showRun(record, record.Output)
+		case "approval":
+			return a.approvalAction(choice.Value)
 		case "models":
 			a.Session.Model = choice.Value
 			a.Config.Model = choice.Value

@@ -12,6 +12,7 @@ import (
 	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/fsutil"
 	"github.com/erdajt/wraith/internal/ollama"
+	"github.com/erdajt/wraith/internal/runner"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/store"
 	"github.com/erdajt/wraith/internal/terminal"
@@ -64,6 +65,11 @@ type terminalMsg struct {
 }
 
 type App struct {
+	proposal                *proposal
+	executing, runContinue  bool
+	activeRun               runner.Record
+	runPreview              string
+	workers                 sync.WaitGroup
 	Config                  config.Config
 	Paths                   config.Paths
 	Store                   store.Store
@@ -139,6 +145,7 @@ func (a *App) Close() {
 			a.cancel()
 		}
 		close(a.done)
+		a.workers.Wait()
 		for _, p := range a.panes {
 			if p != nil && p.PTY != nil {
 				p.PTY.Close()
