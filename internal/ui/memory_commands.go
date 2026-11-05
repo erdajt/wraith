@@ -14,7 +14,7 @@ import (
 func (a *App) memoryCommand(name, arg string) tea.Cmd {
 	switch name {
 	case "help", "h", "?":
-		a.popup = &menu{Kind: "help", Title: "wraith · command reference", Items: helpItems()}
+		a.popup = &menu{Kind: "help", Title: "wraith · command reference", Items: a.helpItems()}
 	case "instructions", "memory":
 		return a.edit("instructions", "", "", -1)
 	case "remember":

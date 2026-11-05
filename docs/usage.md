@@ -1,91 +1,87 @@
 # using wraith
 
-wraith runs on linux in a truecolor terminal. install go 1.27 or newer to build, ollama to serve models, and neovim for the default editor. the default shell is zsh; change `shell` if you use something else.
+build with go 1.27+ on linux. the defaults use ollama, neovim and zsh. change the editor, shell or provider in `~/.config/wraith/config.yaml`.
 
 ```sh
 make install
 ollama pull hf.co/filvyb/Qwen3.5-9B-heretic-v2-GGUF:Q5_K_M
-wraith doctor
 wraith
 ```
 
-ollama must already be serving requests at the configured address. wraith connects to it; it does not start or reconfigure the daemon. `wraith doctor` checks the editor, shell, endpoint, model and thinking setting. use `ollama ps` during generation to inspect cpu/gpu placement.
+wraith starts a local Ollama server when its configured loopback connection is refused, then loads the selected model before you send anything. it reuses an existing server and leaves that shared server running on exit. `/model` also loads a newly selected local model immediately. API and CLI backends use their own connection checks; see [providers](providers.md).
 
-## first conversation
+## input and navigation
 
-write a prompt and press `ctrl+s`. `enter` inserts a newline. `esc` enters normal mode; `i` returns to insert mode. `ctrl+e` opens the draft in your editor. save and exit to return the edited text to wraith. it is still a draft until you send it.
+write a prompt and press `ctrl+s`. enter inserts a newline. escape enters normal mode; `i` returns to insert mode. normal-mode `:w` sends the draft. `ctrl+e` opens the prompt in your editor; save and exit to return the edited draft without sending it.
 
-press `tab` to focus the transcript. move with `j/k`, `gg/G`, or `ctrl+u/ctrl+d`. search with `/`, repeat with `n/N`, and select messages with `[/]`. `e` edits the selected assistant response; the original is archived before the edit is saved. `i` returns to the prompt.
+in insert mode, up/down browse submitted prompts and slash commands from the current directory. returning below the newest entry restores your draft and cursor. when typing a new slash command, arrows select completion candidates instead. enter chooses a completion immediately; no send step is required. argument-taking commands leave room for their argument. tab completes a command name.
 
-enter commands either as `/command` in the prompt followed by `ctrl+s`, or press `:` in normal mode and finish the command with `enter`. `/help` opens the reference.
+`/settings.appearance` opens a category directly. subcommands appear in completion only after an exact command name and a dot, such as `/settings.`. settings and model pickers support `/` filtering, arrows or `j/k`, and one enter to select the highlighted result. `?` explains the selected setting.
+
+press tab to focus the conversation. its themed cursor supports motions, visual selection, yanks and search. `/` searches the focused buffer: draft text when the prompt is in normal mode, or saved prompts and replies when the conversation is focused. matches are highlighted, the cursor moves onto the result, and `n`/`N` selects the next/previous match.
+
+`ctrl+e` on a user message asks to fork before editing. accepting retains the earlier turns in a new session and puts that message back in the draft. newer messages disappear from the fork; the original conversation remains saved. editing an assistant response archives its original text first.
+
+## keys
+
+| area | defaults |
+| --- | --- |
+| prompt modes | `esc`, `i`, `a`, `I`, `A`, `o`, `O`, `v`, `V` |
+| movement | `h j k l`, arrows, `w b e`, `W B E`, `0 ^ $`, `gg G`, `{ }`, `%`, `f F t T` |
+| editing | `d c y` with motions, `dd cc yy`, `diw ciw yiw`, `daw caw yaw`, `x X s S D C`, `r`, `J`, `~` |
+| yanks | `Y` whole line; `ye` to word end; `yf,` through comma; `yf(` through opening parenthesis |
+| find operators | `df(`, `dfe`, `de`, and corresponding change/yank operators |
+| undo and register | `u`, `ctrl+r`, `p`, `P` |
+| search | `/`, enter, `n`, `N` |
+| counts | prefixes such as `10j`, `100k`, `2ye` |
+| message selection | `[` and `]` |
+| thinking | `za` or click its header |
+| blocks | `<leader>b`, `/blocks`, or enter on a command under the cursor |
+| leader menu | space; configurable nested sequences with hints |
+| shell panes | `alt+e` centered scratch shell; `alt+s` right shell; `ctrl+\` returns focus |
+| terminal copy mode | triple escape; vim motions, visual selection and search; `i` returns live input |
+| output sharing | `ctrl+g` in tracked output or terminal copy mode; hidden when auto sharing is enabled |
+| quit | `q` in normal mode, or `ctrl+q` globally |
+
+visual selection in prose copies the selected text. touching a command block selects and copies the entire command, without its frame or markdown fence. yanks populate the prompt register and call the configured clipboard helper. the default is `wl-copy`; use `xclip -selection clipboard` on X11 or an empty array for internal-register-only copies.
+
+this is a modal editor, not a complete embedded Neovim instance. macros, plugins, arbitrary text objects and dot-repeat belong in the external editor. `[`, `]` and `za` are conversation actions rather than a claim to implement every Vim command.
 
 ## commands
 
-| command | behavior |
+| commands | purpose |
 | --- | --- |
-| `/model`, `/models` | choose from installed ollama models with `j/k` and `enter` |
-| `/think [auto\|off\|on\|low\|medium\|high]` | select supported native model thinking; no argument opens the picker |
-| `/thinking` | show or hide reasoning returned by the model |
-| `/settings` | open settings; `e` edits the complete config |
-| `/set key value` | validate and save a setting, including nested keys |
-| `/theme [name]` | choose phosphor, tokyo, ember, ice or mono |
-| `/context` | show estimated usage, measured prompt tokens, facts and pins |
-| `/compact` | archive and compact older conversation turns |
-| `/cancel` | cancel generation or compaction |
-| `/instructions`, `/memory` | edit instructions shared by every chat |
-| `/remember text` | append a persistent instruction |
-| `/pin text` | retain an exact fact in this chat |
-| `/pins`, `/unpin number` | inspect or remove pinned facts |
-| `/blocks` | select a fenced code block for external editing |
-| `/edit`, `/edit-response` | edit the draft or selected assistant response |
-| `/new` | start a saved conversation using the current model |
-| `/chats`, `/sessions` | choose a saved conversation |
-| `/resume id` | load a specific conversation |
-| `/archives` | choose an original transcript to restore as a new chat |
-| `/restore filename` | fork a named archive into a new chat |
-| `/export [path]` | write the active context, facts and pins as markdown |
-| `/retry` | retry the last failed or interrupted request |
-| `/terminal-restart 1\|2` | restart the scratch or side shell |
-| `/quit` | exit and close child shells; `ctrl+q` also works during generation |
+| `/providers`, `/provider name` | select a backend |
+| `/models`, `/model [id]` | choose or directly set a model |
+| `/think [value]`, `/thinking` | native effort controls and reasoning visibility |
+| `/settings[.category]`, `/set key value`, `/theme [name]` | configure behavior and appearance |
+| `/context`, `/compact`, `/cancel` | inspect, compact or cancel model work |
+| `/instructions`, `/memory`, `/remember text` | persistent preferences across chats |
+| `/pin text`, `/pins`, `/unpin number` | exact per-chat facts; `e` edits and `d` removes in the pins picker |
+| `/blocks`, `/history` | code actions and saved command output |
+| `/edit`, `/edit-response` | editor handoff or user-message fork |
+| `/clear`, `/new` | create a clean conversation while keeping the original |
+| `/resume [id]`, `/chats`, `/sessions` | resume from the current directory |
+| `/archives`, `/restore filename` | recover an archived source into a new chat |
+| `/export [path]`, `/retry` | export markdown or retry interrupted generation |
+| `/terminal-restart 1\|2`, `/quit` | restart a shell or exit |
 
-switching models retains the conversation and resets thinking to `auto`. selection is saved in the chat. use `/set model name` to change the configuration default as well. capabilities come from ollama; a model with boolean thinking does not acquire low/medium/high levels through a prompt trick. see [ollama's native thinking protocol](https://docs.ollama.com/capabilities/thinking).
+## sessions and launch arguments
 
-## editing commands
-
-1. open `/blocks` and choose a block.
-2. edit it in neovim, or your configured editor.
-3. save and exit. wraith saves the snippet and opens the scratch terminal with a staged interpreter command.
-4. press `enter` to insert that command into the shell input. review the shell input, then press `enter` again to execute it.
-
-saving alone never executes the block. `e` reopens the staged file; `esc` dismisses the staged command. quitting the editor without saving leaves the block unstaged. a save of unchanged contents still counts as a save. if a saved edit fails validation or persistence, wraith retains its temporary file and shows its path.
-
-shell blocks run through bash, `zsh` blocks through zsh, python through python3, javascript through node, ruby through ruby, and go through `go run`. other languages are saved without an interpreter command. interpreters must be installed separately. snippets remain in the data directory for inspection.
-
-## vim bindings
-
-| area | bindings |
-| --- | --- |
-| prompt modes | `esc`, `i`, `a`, `I`, `A`, `o`, `O`, `v`, `V` |
-| movement | `h j k l`, arrows, `w b e`, `W B E`, `0 ^ $`, `gg G`, `%`, `f F t T` |
-| edits | `d c y` with motions, `dd cc yy`, `diw ciw yiw`, `daw caw yaw`, `x X s S D C`, `r`, `J`, `~` |
-| history and registers | `u`, `ctrl+r`, `p`, `P` |
-| search | `/`, `enter`, `n`, `N` |
-| counts | numeric prefixes for motions and common operators |
-| menus | `j k`, arrows, `gg/G`, home/end, page up/down, `enter`, `esc` |
-
-this is a modal prompt editor, not an embedded neovim instance. macros, plugins, ex commands, dot-repeat and the complete vim grammar belong in the external editor. undo records buffer changes, including individual inserted characters. `ctrl+e` gives you your full neovim configuration.
-
-## command-line options
-
-`wraith` resumes the most recently saved conversation. use `--new` for a new one, `--session id` for a specific chat, `--model name` to override its model, and `--theme name` for a temporary theme override.
-
-`wraith models`, `wraith sessions`, `wraith config`, and `wraith doctor` inspect the installation. `wraith export id` writes markdown to stdout. flags precede positional subcommands:
+plain `wraith` opens a new conversation. `wraith a prompt to prepare` places positional text in the input without sending it. `--new` is not supported because new sessions are the default.
 
 ```sh
-wraith --data-dir /tmp/wraith-review sessions
-wraith export 0123456789abcdef01234567 > conversation.md
-wraith --demo
-wraith --snapshot --width 110 --height 32
+wraith --resume
+wraith --resume SESSION_ID
+wraith --provider openai --model MODEL_ID
+wraith --theme rose-pine
+wraith models
+wraith sessions
+wraith doctor
+wraith config
+wraith export SESSION_ID > chat.md
 ```
 
-`--demo` and `--snapshot` use a sample conversation without model requests or saved changes. `--config-dir`, `--data-dir`, and `--cache-dir` isolate a workspace. one interactive writer may own each data directory at a time.
+both `/resume` and `--resume` open a searchable picker when no id is supplied. sessions belong to their original working directory; symlink aliases resolve to the same directory. a different-directory id reports the original path and opens a fresh chat. an invalid id reports `invalid session id` and opens a fresh chat. old sessions without recorded directories remain exportable but cannot be silently assigned to a directory.
+
+flags precede prompt text or subcommands. `--config-dir`, `--data-dir` and `--cache-dir` provide isolated storage. one interactive writer owns each data directory. `--demo` and `--snapshot` use sample content without model calls or saved changes.

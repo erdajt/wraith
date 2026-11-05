@@ -1,12 +1,29 @@
 package ui
 
-import ()
-
-func helpItems() []item {
-	entries := [][2]string{{"/models · /model", "choose an installed ollama model"}, {"/think [auto|off|on|low|medium|high]", "only native supported values are accepted"}, {"/thinking", "toggle reasoning display"}, {"/settings · /set key value", "edit defaults, bindings and terminal settings"}, {"/theme [name]", "phosphor, tokyo, ember, ice, mono"}, {"/context", "estimated usage and last measured prompt"}, {"/compact", "archive, extract, audit and compact"}, {"/instructions · /memory", "edit persistent user instructions"}, {"/remember text", "append an instruction for every chat"}, {"/pin text · /pins · /unpin number", "preserve exact facts in this chat"}, {"/blocks", "choose a fenced block to edit and stage"}, {"/edit · /edit-response", "edit the prompt or selected response"}, {"/new · /chats · /resume id", "create and switch saved conversations"}, {"/archives · /restore name", "fork an archived original into a new chat"}, {"/export [path]", "export active context as markdown"}, {"/retry · /cancel", "retry an interrupted request or cancel work"}, {"/terminal-restart 1|2", "restart the overlay or split shell"}, {"ctrl+s · ctrl+e · tab", "send, external editor, switch focus"}, {"alt+e · alt+s · ctrl+\\", "overlay, right split, return focus to chat"}, {"chat: j k gg G ctrl+u ctrl+d / n N", "scroll and search responses"}, {"chat: [ ] e b", "select messages, edit response, open blocks"}, {"prompt: esc i a o v V d c y p u", "modal editing; ctrl+e opens full neovim"}, {"ctrl+q · /quit", "save and exit; closes child shells"}}
-	items := make([]item, 0, len(entries))
-	for _, e := range entries {
-		items = append(items, item{e[0], "", e[1]})
+func (a *App) helpItems() []item {
+	items := make([]item, 0, len(commandSpecs)+16)
+	for _, command := range commandSpecs {
+		items = append(items, item{Label: "/" + command.Name, Detail: command.Description})
+	}
+	entries := [][2]string{
+		{a.Config.Keys["send"] + " · :w", "send the prompt"},
+		{a.Config.Keys["editor"], "edit the focused prompt or message; user-message edits fork"},
+		{a.Config.Keys["focus"], "switch prompt and conversation focus"},
+		{a.Config.Leader, "open command binding hints"},
+		{"/settings.appearance", "open categories directly; ? explains settings"},
+		{"insert: up/down", "recall submitted input and restore the draft"},
+		{"normal: / n N", "search the focused buffer and highlight matches"},
+		{"h j k l · w b e · 0 ^ $ · { }", "cursor motions; numeric prefixes repeat"},
+		{"v V · y Y · ye · yf,", "visual selection and clipboard yanks"},
+		{"chat: [ ] · enter", "select a message or open its command"},
+		{a.Config.Keys["thinking_toggle"], "expand or collapse selected thinking"},
+		{a.Config.Keys["terminal_overlay"] + " · " + a.Config.Keys["terminal_split"], "scratch shell and side shell"},
+		{"terminal: esc esc esc", "vim copy mode; i returns to live input"},
+		{a.Config.Keys["output_share"], "share output explicitly when automatic sharing is off"},
+		{"normal: q · " + a.Config.Keys["quit"], "save and exit; closes child shells"},
+	}
+	for _, entry := range entries {
+		items = append(items, item{Label: entry[0], Detail: entry[1]})
 	}
 	return items
 }
