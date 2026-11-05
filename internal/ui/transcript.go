@@ -62,12 +62,16 @@ func (a *App) transcript(w int) []rendered {
 				arrow = "▾"
 			}
 			start := len(out)
-			add(ink(p.Muted, arrow+" thinking · "+a.Config.Keys["thinking_toggle"]+" or click to toggle"), i)
+			for _, line := range strings.Split(ansi.Hardwrap(arrow+" thinking · "+a.Config.Keys["thinking_toggle"]+" or click to toggle", w, true), "\n") {
+				add(ink(p.Muted, line), i)
+			}
 			for j := start; j < len(out); j++ {
 				out[j].Thinking = true
 			}
 			if expanded {
-				add(ink(p.Muted, clean(m.Thinking)), i)
+				for _, line := range strings.Split(ansi.Hardwrap(clean(m.Thinking), w, true), "\n") {
+					add(ink(p.Muted, line), i)
+				}
 			}
 		}
 
