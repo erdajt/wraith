@@ -61,5 +61,6 @@ func fit(s string, w int) string {
 	return s + strings.Repeat(" ", max(0, w-ansi.StringWidth(s)))
 }
 func base(p palette, s string, w int) string {
-	return "\x1b[" + color(p.FG, false) + ";" + color(p.BG, true) + "m" + fit(s, w) + reset
+	style := "\x1b[0;" + color(p.FG, false) + ";" + color(p.BG, true) + "m"
+	return style + strings.ReplaceAll(fit(s, w), reset, style) + reset
 }
