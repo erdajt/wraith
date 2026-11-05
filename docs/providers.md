@@ -66,3 +66,5 @@ streamed text and exposed reasoning appear in the same conversation UI as Ollama
 - [codex configuration](https://learn.chatgpt.com/docs/config-file/config-reference)
 - [claude code programmatic usage](https://code.claude.com/docs/en/headless)
 - [claude code cli options](https://code.claude.com/docs/en/cli-reference)
+
+for compatible APIs, `reasoning_effort` mode maps `off` to `none` and `on` to `medium`; explicit strings pass through. `thinking` mode sends an enabled/disabled object and includes `reasoning_effort` when a graded value is selected. advertise only values supported by the selected model. [deepseek thinking configuration](https://api-docs.deepseek.com/guides/thinking_mode/)

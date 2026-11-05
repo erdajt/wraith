@@ -92,3 +92,20 @@ func TestCompatibleEndMarkerRequiresFinishedChoice(t *testing.T) {
 		t.Fatal("empty incomplete stream accepted")
 	}
 }
+
+func TestThinkingModeKeepsSelectedEffort(t *testing.T) {
+	a := API{Config: config.Provider{BaseURL: "https://provider.invalid", ThinkingMode: "thinking"}, HTTP: &http.Client{Transport: transport(func(r *http.Request) (*http.Response, error) {
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		mode, _ := body["thinking"].(map[string]any)
+		if mode["type"] != "enabled" || body["reasoning_effort"] != "high" {
+			t.Fatal("thinking dropped selected effort")
+		}
+		return response("data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"), nil
+	})}}
+	if _, err := a.OpenAI(context.Background(), ollama.Request{Think: "high"}, nil); err != nil {
+		t.Fatal(err)
+	}
+}

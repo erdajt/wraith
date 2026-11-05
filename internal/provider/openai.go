@@ -42,6 +42,9 @@ func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.R
 			mode = "disabled"
 		}
 		body["thinking"] = map[string]string{"type": mode}
+		if effort, ok := req.Think.(string); ok {
+			body["reasoning_effort"] = effort
+		}
 	}
 	for key, value := range a.Config.Extra {
 		body[key] = value
