@@ -42,3 +42,16 @@ func TestExecutionPolicyIsIsolatedFromCompaction(t *testing.T) {
 		t.Fatal("execution policy not budgeted")
 	}
 }
+
+func TestContextBudgetCannotOverflowWithLargeCapacities(t *testing.T) {
+	c := config.Default()
+	c.Context = int(^uint(0) >> 1)
+	c.Predict = c.Context
+	if Fits(session.Session{}, c, "") == nil {
+		t.Fatal("overflow allowed an impossible output reservation")
+	}
+	c.Predict = 2048
+	if err := Fits(session.Session{}, c, ""); err != nil {
+		t.Fatal(err)
+	}
+}

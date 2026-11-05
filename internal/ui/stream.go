@@ -84,6 +84,11 @@ func (a *App) startChat() tea.Cmd {
 	}
 	if err = contextual.Fits(a.Session, a.Config, a.Instructions); err != nil {
 		a.notice = err.Error()
+		a.pendingAgent = true
+		if a.Config.Compact.Mode == "auto" {
+			return a.startCompact()
+		}
+		a.popup = &menu{Kind: "overflow", Title: "compact before continuing?", Items: []item{{"yes", "yes", "archive and compact"}, {"no", "no", "keep context without sending"}}}
 		return nil
 	}
 	timeout, _ := time.ParseDuration(a.Config.Timeout)

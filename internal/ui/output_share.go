@@ -6,7 +6,6 @@ import (
 	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/runner"
 	"github.com/erdajt/wraith/internal/session"
 )
@@ -50,13 +49,5 @@ func (a *App) shareRun(r runner.Record) tea.Cmd {
 
 func (a *App) continueEvidence() tea.Cmd {
 	a.popup = nil
-	if err := contextual.Fits(a.Session, a.Config, a.Instructions); err != nil {
-		a.pendingAgent = true
-		if a.Config.Compact.Mode == "auto" {
-			return a.startCompact()
-		}
-		a.popup = &menu{Kind: "overflow", Title: "compact before continuing with shared output?", Items: []item{{"yes", "yes", "archive and compact"}, {"no", "no", "keep evidence for the next prompt"}}}
-		return nil
-	}
 	return a.startChat()
 }
