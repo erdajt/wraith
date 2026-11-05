@@ -1,14 +1,24 @@
 package ui
 
 import (
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func (a *App) key(k tea.KeyMsg) tea.Cmd {
+	if k.Type == tea.KeyRunes && len(k.Runes) > 1 && !k.Paste && !k.Alt && (a.focus == "chat" || a.Prompt.Mode == "normal") {
+		var commands []tea.Cmd
+		for _, r := range k.Runes {
+			if cmd := a.key(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}}); cmd != nil {
+				commands = append(commands, cmd)
+			}
+		}
+		return tea.Sequence(commands...)
+	}
 	key := k.String()
-	if key == a.Config.Keys["quit"] {
+	if key == a.Config.Keys["quit"] || (key == "q" && a.popup == nil && !a.commandMode && !a.searchMode && (a.focus == "chat" || (a.focus == "prompt" && a.Prompt.Mode == "normal"))) {
 		if a.busy && !a.compacting && (a.partial.Content != "" || a.partial.Thinking != "") {
 			a.partial.Interrupted = true
 			a.Session.Messages = append(a.Session.Messages, a.partial)
@@ -79,6 +89,8 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		return cmd
 	}
 	if key == a.Config.Keys["focus"] {
+		a.chatCount = ""
+		a.chatG = false
 		if a.focus == "chat" {
 			a.focus = "prompt"
 		} else {
@@ -98,6 +110,18 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 	if a.focus == "chat" {
+		if len(key) == 1 && key[0] >= '0' && key[0] <= '9' {
+			if len(a.chatCount) < 6 {
+				a.chatCount += key
+			}
+			return nil
+		}
+		count, _ := strconv.Atoi(a.chatCount)
+		count = max(1, count)
+		a.chatCount = ""
+		if key != "g" {
+			a.chatG = false
+		}
 		limit := max(0, len(a.transcript(max(10, a.mainWidth()-5)))-a.bodyHeight())
 		if a.follow {
 			a.offset = limit
@@ -106,24 +130,24 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		defer func() { a.offset = min(a.offset, limit) }()
 		switch key {
 		case "j", "down":
-			a.offset++
+			a.offset += count
 			a.follow = false
 		case "k", "up":
-			a.offset = max(0, a.offset-1)
+			a.offset = max(0, a.offset-count)
 			a.follow = false
 		case "ctrl+d", "pgdown":
-			a.offset += max(1, a.bodyHeight()/2)
+			a.offset += count * max(1, a.bodyHeight()/2)
 			a.follow = false
 		case "ctrl+u", "pgup":
-			a.offset = max(0, a.offset-max(1, a.bodyHeight()/2))
+			a.offset = max(0, a.offset-count*max(1, a.bodyHeight()/2))
 			a.follow = false
 		case "g":
-			if a.phase == "g" {
+			if a.chatG {
 				a.offset = 0
 				a.follow = false
-				a.phase = ""
+				a.chatG = false
 			} else {
-				a.phase = "g"
+				a.chatG = true
 			}
 		case "G":
 			a.follow = true

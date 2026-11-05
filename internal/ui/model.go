@@ -74,6 +74,8 @@ type App struct {
 	follow                  bool
 	popup                   *menu
 	command, search         string
+	chatCount               string
+	chatG                   bool
 	completionQuery         string
 	completionIndex         int
 	commandMode, searchMode bool
