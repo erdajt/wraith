@@ -2,11 +2,12 @@ package ui
 
 import (
 	"encoding/json"
+	"path/filepath"
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/ollama"
-	"path/filepath"
-	"strings"
 )
 
 func (a *App) set(key, value string) tea.Cmd {

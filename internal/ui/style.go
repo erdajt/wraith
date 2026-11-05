@@ -2,10 +2,11 @@ package ui
 
 import (
 	"fmt"
-	"github.com/charmbracelet/x/ansi"
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 type palette struct{ BG, FG, Muted, Accent, Second, Border, Warn string }

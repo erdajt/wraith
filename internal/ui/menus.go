@@ -2,10 +2,11 @@ package ui
 
 import (
 	"fmt"
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/editor"
 	"github.com/erdajt/wraith/internal/ollama"
-	"strings"
 )
 
 func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {

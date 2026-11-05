@@ -2,11 +2,12 @@ package ui
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/session"
-	"strings"
-	"time"
 )
 
 func (a *App) resume(id string) tea.Cmd {

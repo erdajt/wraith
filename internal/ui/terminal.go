@@ -2,11 +2,12 @@ package ui
 
 import (
 	"fmt"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/erdajt/wraith/internal/terminal"
 	"os"
 	"path/filepath"
 	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/erdajt/wraith/internal/terminal"
 )
 
 func (a *App) toggleTerminal(index int) tea.Cmd {

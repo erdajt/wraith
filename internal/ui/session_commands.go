@@ -1,15 +1,16 @@
 package ui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/erdajt/wraith/internal/fsutil"
-	"github.com/erdajt/wraith/internal/session"
-	"github.com/erdajt/wraith/internal/vim"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/erdajt/wraith/internal/fsutil"
+	"github.com/erdajt/wraith/internal/session"
+	"github.com/erdajt/wraith/internal/vim"
 )
 
 func (a *App) sessionCommand(name, arg string) tea.Cmd {

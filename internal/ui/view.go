@@ -2,9 +2,10 @@ package ui
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/charmbracelet/x/ansi"
 	"github.com/erdajt/wraith/internal/contextual"
-	"strings"
 )
 
 func (a *App) View() string {

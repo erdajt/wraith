@@ -2,11 +2,12 @@ package ui
 
 import (
 	"fmt"
+	"strings"
+	"unicode"
+
 	"github.com/charmbracelet/x/ansi"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/mattn/go-runewidth"
-	"strings"
-	"unicode"
 )
 
 type rendered struct {

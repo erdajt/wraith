@@ -3,13 +3,14 @@ package ui
 import (
 	"context"
 	"fmt"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/erdajt/wraith/internal/contextual"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/erdajt/wraith/internal/contextual"
 )
 
 func (a *App) modelCommand(name, arg string) tea.Cmd {
