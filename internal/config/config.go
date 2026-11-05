@@ -20,6 +20,7 @@ import (
 const DefaultModel = "hf.co/filvyb/Qwen3.5-9B-heretic-v2-GGUF:Q5_K_M"
 
 type Execution struct {
+	AutoShare     bool   `json:"auto_share" yaml:"auto_share"`
 	Mode          string `json:"mode" yaml:"mode"`
 	MaxSteps      int    `json:"max_steps" yaml:"max_steps"`
 	OutputContext int    `json:"output_context" yaml:"output_context"`
@@ -83,7 +84,7 @@ func Default() Config {
 		Editor: []string{"nvim"}, Shell: []string{"zsh", "-i"}, KeepAlive: "2m", Timeout: "10m",
 		Terminal: Terminal{Background: "inherit", Foreground: "inherit", OverlayWidth: 0.7, OverlayHeight: 0.6, SplitWidth: 0.4, Scrollback: 5000},
 		Compact:  Compact{Mode: "ask", Threshold: 0.9, KeepTurns: 2, Budget: 1536},
-		Keys:     map[string]string{"setting_help": "?", "pin_edit": "e", "pin_remove": "d", "thinking_toggle": "za", "send": "ctrl+s", "editor": "ctrl+e", "focus": "tab", "cancel": "ctrl+c", "quit": "ctrl+q", "terminal_overlay": "alt+e", "terminal_split": "alt+s", "terminal_unfocus": "ctrl+\\"}, Animations: true}
+		Keys:     map[string]string{"output_share": "ctrl+g", "setting_help": "?", "pin_edit": "e", "pin_remove": "d", "thinking_toggle": "za", "send": "ctrl+s", "editor": "ctrl+e", "focus": "tab", "cancel": "ctrl+c", "quit": "ctrl+q", "terminal_overlay": "alt+e", "terminal_split": "alt+s", "terminal_unfocus": "ctrl+\\"}, Animations: true}
 }
 
 func Locations() (Paths, error) {

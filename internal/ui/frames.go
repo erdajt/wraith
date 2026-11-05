@@ -14,6 +14,9 @@ func (a *App) menuFrame() []string {
 	height := min(a.height-8, 18)
 	if m.Reader != nil {
 		content := []string{bold(p.Accent, clean(m.Title)), ink(p.Muted, m.Reader.Buffer.Status()+" · / search · v select · y yank · r refresh · q close")}
+		if !a.Config.Execution.AutoShare {
+			content[0] += ink(p.Second, " · "+a.Config.Keys["output_share"]+" share to agent")
+		}
 		content = append(content, m.Reader.lines(w-2, height-3, p)...)
 		return frame(content, w, p, false, "", "")
 	}

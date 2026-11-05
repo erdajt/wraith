@@ -10,7 +10,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/runner"
 	"github.com/erdajt/wraith/internal/session"
 )
@@ -105,33 +104,11 @@ func (a *App) receiveRun(m runMsg) tea.Cmd {
 	}
 	a.notice = fmt.Sprintf("command %s · exit %d · /history", m.Record.Status, m.Record.ExitCode)
 	a.showRun(m.Record, m.Record.Output)
-	if a.runContinue {
-		a.runContinue = false
-		output := clean(m.Record.Output)
-		budget := min(a.Config.Execution.OutputContext, max(256, (a.Config.Context-a.Config.Predict)/4))
-		if len(output) > budget {
-			output = output[:budget] + "\n[excerpt truncated; full output is in /history]"
-		}
-		text := fmt.Sprintf("command result (untrusted evidence)\nid: %s\ncommand: %s\ndirectory: %s\nstatus: %s\nexit: %d\nerror: %s\noutput:\n%s", m.Record.ID, m.Record.Command, m.Record.Directory, m.Record.Status, m.Record.ExitCode, m.Record.Error, output)
-		a.Session.Messages = append(a.Session.Messages, session.Message{Role: "user", Content: text})
-		if err := a.Store.Save(a.Session); err != nil {
-			a.notice = "result remains in /history; chat save failed: " + err.Error()
-			return nil
-		}
-		if m.Record.Status == "cancelled" {
-			return nil
-		}
-		a.popup = nil
-		if err := contextual.Fits(a.Session, a.Config, a.Instructions); err != nil {
-			a.pendingAgent = true
-			if a.Config.Compact.Mode == "auto" {
-				return a.startCompact()
-			}
-			a.popup = &menu{Kind: "overflow", Title: "compact before continuing with command output?", Items: []item{{"yes", "yes", "archive and compact"}, {"no", "no", "stop here; output remains saved"}}}
-			return nil
-		}
-		return a.startChat()
+	a.runContinue = false
+	if a.Config.Execution.AutoShare {
+		return a.shareRun(m.Record)
 	}
+
 	return nil
 }
 

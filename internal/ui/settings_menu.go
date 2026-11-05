@@ -23,7 +23,7 @@ func (a *App) settingsMenu() tea.Cmd {
 func (a *App) settingsCategory(category string) {
 	groups := map[string][]string{
 		"model":      {"model", "thinking", "context", "predict", "threads", "auto_start"},
-		"execution":  {"execution.mode", "execution.max_steps", "execution.output_context"},
+		"execution":  {"execution.mode", "execution.auto_share", "execution.max_steps", "execution.output_context"},
 		"context":    {"compact.mode", "compact.threshold", "compact.keep_turns", "compact.budget"},
 		"appearance": {"theme", "appearance.background", "appearance.thinking", "appearance.mouse", "animations", "themes"},
 		"terminals":  {"terminal.overlay_width", "terminal.overlay_height", "terminal.split_width", "terminal.background", "terminal.foreground", "terminal.scrollback", "terminal.directory", "shell"},

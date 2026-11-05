@@ -4,6 +4,9 @@ import tea "github.com/charmbracelet/bubbletea"
 
 func (a *App) readerKey(k tea.KeyMsg) tea.Cmd {
 	m := a.popup
+	if k.String() == a.Config.Keys["output_share"] && !a.Config.Execution.AutoShare {
+		return a.shareRun(m.Record)
+	}
 	if k.String() == "r" && m.Reader.Buffer.Pending == "" && m.Reader.Buffer.Mode == "normal" {
 		m.Reader.Frozen = false
 		a.showRun(m.Record, m.Record.Output)

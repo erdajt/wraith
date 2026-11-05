@@ -12,6 +12,7 @@ import (
 
 func TestAgentApprovesRunsAndContinuesWithEvidence(t *testing.T) {
 	a := fixture(t)
+	a.Config.Execution.AutoShare = true
 	calls := 0
 	a.Client.HTTP.Transport = transport(func(r *http.Request) (*http.Response, error) {
 		var req ollama.Request

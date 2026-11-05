@@ -9,14 +9,14 @@ import (
 func TestSettingsHelpReturnsToSelection(t *testing.T) {
 	a := fixture(t)
 	a.settingsCategory("execution")
-	a.popup.Index = 1
+	a.popup.Index = 2
 	previous := a.popup
 	a.key(key("?"))
 	if a.popup.Kind != "setting-help" || !strings.Contains(a.View(), "Maximum approved") {
 		t.Fatal("detailed help missing")
 	}
 	a.key(tea.KeyMsg{Type: tea.KeyEsc})
-	if a.popup != previous || a.popup.Index != 1 {
+	if a.popup != previous || a.popup.Index != 2 {
 		t.Fatal("help lost selection")
 	}
 	a.Config.Keys["setting_help"] = "K"
