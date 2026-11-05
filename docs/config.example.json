@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "host": "http://127.0.0.1:11434",
+  "model": "hf.co/filvyb/Qwen3.5-9B-heretic-v2-GGUF:Q5_K_M",
+  "context": 8192,
+  "predict": 2048,
+  "threads": 6,
+  "temperature": 0.3,
+  "thinking": "auto",
+  "theme": "phosphor",
+  "editor": [
+    "nvim"
+  ],
+  "terminal": {
+    "background": "inherit",
+    "foreground": "inherit",
+    "overlay_width": 0.7,
+    "overlay_height": 0.6,
+    "split_width": 0.4,
+    "scrollback": 5000,
+    "directory": ""
+  },
+  "shell": [
+    "zsh",
+    "-i"
+  ],
+  "keep_alive": "2m",
+  "timeout": "10m",
+  "compact": {
+    "mode": "ask",
+    "threshold": 0.9,
+    "keep_turns": 2,
+    "budget": 1536
+  },
+  "keys": {
+    "cancel": "ctrl+c",
+    "editor": "ctrl+e",
+    "focus": "tab",
+    "quit": "ctrl+q",
+    "send": "ctrl+s",
+    "terminal_overlay": "alt+e",
+    "terminal_split": "alt+s",
+    "terminal_unfocus": "ctrl+\\"
+  },
+  "animations": true
+}
