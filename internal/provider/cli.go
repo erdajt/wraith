@@ -47,6 +47,9 @@ func CLI(ctx context.Context, cfg config.Provider, req ollama.Request, emit func
 	argv := append([]string(nil), cfg.Command...)
 	if cfg.Kind == "codex-cli" {
 		argv = append(argv, "exec", "--json", "--ephemeral", "--skip-git-repo-check", "--ignore-user-config", "--sandbox", "read-only", "--disable", "shell_tool", "-c", "web_search=\"disabled\"", "-c", "apps._default.enabled=false", "-c", "developer_instructions="+strconv.Quote(instructions))
+		if req.Options.Context > 0 {
+			argv = append(argv, "-c", "model_context_window="+strconv.Itoa(req.Options.Context))
+		}
 		if req.Model != "" && req.Model != "default" {
 			argv = append(argv, "--model", req.Model)
 		}

@@ -24,6 +24,10 @@ func (a *App) menuFrame() []string {
 		return frame(content, w, p, false, "", "")
 	}
 	content := []string{bold(p.Accent, clean(m.Title)), ink(p.Muted, "j/k move · / search · enter select · esc close"), ""}
+	if m.Kind == "context-input" {
+		content[1] = ink(p.Muted, "enter saves · ctrl+u clears · esc normal/cancel")
+		content[2] = ink(p.Second, "positive integer or auto · "+clean(a.Config.Provider+" / "+a.Session.Model))
+	}
 	if m.Kind == "settings" || m.Kind == "value" {
 		content[1] = ink(p.Muted, "j/k move · / search · "+a.Config.Keys["setting_help"]+" explain · enter select")
 	}

@@ -87,7 +87,7 @@ printf '%s\n' '{"type":"turn.completed"}' '{"type":"result","result":"ok"}'
 			if err := os.WriteFile(script, []byte(source), 0700); err != nil {
 				t.Fatal(err)
 			}
-			req := ollama.Request{Model: "chosen-model", Think: "high", Messages: []session.Message{{Role: "system", Content: "custom instructions"}, {Role: "user", Content: "literal $(no execution)"}}}
+			req := ollama.Request{Model: "chosen-model", Think: "high", Options: ollama.Options{Context: 1000000}, Messages: []session.Message{{Role: "system", Content: "custom instructions"}, {Role: "user", Content: "literal $(no execution)"}}}
 			if _, err := CLI(context.Background(), config.Provider{Kind: kind, Command: []string{script, dir}}, req, nil); err != nil {
 				t.Fatal(err)
 			}
@@ -118,7 +118,7 @@ printf '%s\n' '{"type":"turn.completed"}' '{"type":"result","result":"ok"}'
 			if kind == "codex-cli" {
 				pair("--sandbox", "read-only")
 				pair("--disable", "shell_tool")
-				for _, arg := range []string{"--ignore-user-config", "--ephemeral", "--json", `developer_instructions="custom instructions"`, `model_reasoning_effort="high"`, `web_search="disabled"`, "apps._default.enabled=false"} {
+				for _, arg := range []string{"--ignore-user-config", "--ephemeral", "--json", `developer_instructions="custom instructions"`, `model_reasoning_effort="high"`, "model_context_window=1000000", `web_search="disabled"`, "apps._default.enabled=false"} {
 					if !slices.Contains(args, arg) {
 						t.Fatalf("missing %s", arg)
 					}

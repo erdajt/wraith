@@ -11,7 +11,7 @@ import (
 func (a *App) openContextInput() {
 	b := vim.New()
 	b.Set(strconv.Itoa(a.contextLimit()))
-	a.popup = &menu{Kind: "context-input", Title: "context capacity · enter saves · esc normal/cancel · ctrl+u clears", Input: b}
+	a.popup = &menu{Kind: "context-input", Title: "context capacity", Input: b}
 }
 
 func (a *App) contextInput(k tea.KeyMsg) tea.Cmd {
