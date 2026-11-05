@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
+	"time"
 )
 
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -13,7 +14,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.resizePanes()
 	case tick:
 		a.frame++
-		return a, a.ticker()
+		if a.Config.Animations {
+			return a, a.ticker()
+		}
+		return a, tea.Tick(time.Second, func(t time.Time) tea.Msg { return tick(t) })
 	case infoMsg:
 		if m.Model == a.Session.Model {
 			a.Info = m.Info
