@@ -98,3 +98,28 @@ func TestCountedMenuNavigationAndSelectedBlocks(t *testing.T) {
 		t.Fatal("block did not offer edit or run")
 	}
 }
+
+func TestConversationParagraphIndentAndWordMotions(t *testing.T) {
+	a := fixture(t)
+	a.focus = "chat"
+	a.follow = false
+	a.Session.Messages = []session.Message{{Role: "assistant", Content: "   alpha beta\n\nsecond paragraph"}}
+	a.chatCursor = 1
+	a.chatColumn = 8
+	a.key(key("^"))
+	if a.chatColumn != 3 {
+		t.Fatalf("indent motion: %d", a.chatColumn)
+	}
+	a.key(key("w"))
+	if a.chatColumn != 9 {
+		t.Fatalf("word motion: %d", a.chatColumn)
+	}
+	a.key(key("b"))
+	if a.chatColumn != 3 {
+		t.Fatal("b opened blocks instead of moving")
+	}
+	a.key(key("}"))
+	if a.chatCursor != 2 {
+		t.Fatalf("paragraph motion: %d", a.chatCursor)
+	}
+}

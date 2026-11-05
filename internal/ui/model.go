@@ -66,55 +66,57 @@ type terminalMsg struct {
 }
 
 type App struct {
-	chatCursor, chatColumn  int
-	visualMode              string
-	visualRow, visualColumn int
-	helpReturn              *menu
-	thinkingExpanded        map[string]bool
-	agentSteps              int
-	pendingAgent            bool
-	selectedBlock           editor.Block
-	proposal                *proposal
-	executing, runContinue  bool
-	activeRun               runner.Record
-	runPreview              string
-	workers                 sync.WaitGroup
-	Config                  config.Config
-	Paths                   config.Paths
-	Store                   store.Store
-	Session                 session.Session
-	Client                  *ollama.Client
-	Info                    ollama.Info
-	Instructions            string
-	Prompt                  *vim.Buffer
-	width, height           int
-	focus                   string
-	offset, selected        int
-	follow                  bool
-	popup                   *menu
-	command, search         string
-	chatCount               string
-	chatG                   bool
-	completionQuery         string
-	completionIndex         int
-	commandMode, searchMode bool
-	panes                   [2]*pane
-	busy, compacting        bool
-	partial                 session.Message
-	cancel                  context.CancelFunc
-	events                  chan tea.Msg
-	done                    chan struct{}
-	once                    sync.Once
-	notice                  string
-	frame                   int
-	phase                   string
-	loadCancel              context.CancelFunc
-	loadSerial              uint64
-	loading                 bool
-	connected               bool
-	demo                    bool
-	showThinking            bool
-	pendingPrompt           string
+	chatMotionPending, chatMotionCount string
+	chatZ                              bool
+	chatCursor, chatColumn             int
+	visualMode                         string
+	visualRow, visualColumn            int
+	helpReturn                         *menu
+	thinkingExpanded                   map[string]bool
+	agentSteps                         int
+	pendingAgent                       bool
+	selectedBlock                      editor.Block
+	proposal                           *proposal
+	executing, runContinue             bool
+	activeRun                          runner.Record
+	runPreview                         string
+	workers                            sync.WaitGroup
+	Config                             config.Config
+	Paths                              config.Paths
+	Store                              store.Store
+	Session                            session.Session
+	Client                             *ollama.Client
+	Info                               ollama.Info
+	Instructions                       string
+	Prompt                             *vim.Buffer
+	width, height                      int
+	focus                              string
+	offset, selected                   int
+	follow                             bool
+	popup                              *menu
+	command, search                    string
+	chatCount                          string
+	chatG                              bool
+	completionQuery                    string
+	completionIndex                    int
+	commandMode, searchMode            bool
+	panes                              [2]*pane
+	busy, compacting                   bool
+	partial                            session.Message
+	cancel                             context.CancelFunc
+	events                             chan tea.Msg
+	done                               chan struct{}
+	once                               sync.Once
+	notice                             string
+	frame                              int
+	phase                              string
+	loadCancel                         context.CancelFunc
+	loadSerial                         uint64
+	loading                            bool
+	connected                          bool
+	demo                               bool
+	showThinking                       bool
+	pendingPrompt                      string
 }
 
 func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, error) {

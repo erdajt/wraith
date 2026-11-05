@@ -16,7 +16,7 @@ func TestThinkingExpandsWithVimKeyAndMouse(t *testing.T) {
 	if strings.Contains(a.View(), "visible reasoning") {
 		t.Fatal("thinking should start collapsed")
 	}
-	a.key(key("t"))
+	a.key(key("za"))
 	if !strings.Contains(a.View(), "visible reasoning") {
 		t.Fatal("vim toggle did not expand")
 	}

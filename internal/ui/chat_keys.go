@@ -35,6 +35,21 @@ func (a *App) revealCursor(count int) {
 
 func (a *App) chatKey(k tea.KeyMsg) tea.Cmd {
 	key := k.String()
+	if a.chatMotionPending != "" {
+		a.moveChatText(key, 1)
+		return nil
+	}
+	if a.chatZ {
+		a.chatZ = false
+		if key == "a" {
+			a.toggleThinking(a.selected)
+			return nil
+		}
+	}
+	if key == "z" && a.Config.Keys["thinking_toggle"] == "za" {
+		a.chatZ = true
+		return nil
+	}
 	if key == a.Config.Keys["thinking_toggle"] {
 		a.toggleThinking(a.selected)
 		return nil
@@ -115,10 +130,9 @@ func (a *App) chatKey(k tea.KeyMsg) tea.Cmd {
 	case "N":
 		a.findNext(true)
 		return nil
-	case "e":
-		return a.editResponse()
-	case "b":
-		return a.runCommand("blocks")
+	case "^", "{", "}", "w", "W", "b", "B", "e", "E", "f", "F", "t", "T", "%":
+		a.moveChatText(key, count)
+		return nil
 	case "enter":
 		if len(lines) > 0 && lines[a.chatCursor].Block >= 0 {
 			return a.editCursorBlock(lines[a.chatCursor])

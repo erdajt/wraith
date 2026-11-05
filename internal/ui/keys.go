@@ -107,6 +107,9 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 	if key == a.Config.Keys["editor"] {
+		if a.focus == "chat" {
+			return a.editResponse()
+		}
 		return a.edit("prompt", "", "", -1)
 	}
 	if key == a.Config.Keys["send"] {

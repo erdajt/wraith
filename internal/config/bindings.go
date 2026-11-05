@@ -7,7 +7,7 @@ import (
 )
 
 func DefaultBindings() map[string]string {
-	return map[string]string{"v": "thinking", "b": "blocks", "m": "models", "s": "settings", "e": "edit", "h": "help", "c c": "compact", "c n": "clear", "c s": "sessions", "c a": "archives", "i": "instructions", "p": "pins", "t": "think", "r": "history"}
+	return map[string]string{"v": "thinking", "b": "blocks", "m": "models", "s": "settings", "e": "edit", "h": "help", "c e": "edit-response", "c c": "compact", "c n": "clear", "c s": "sessions", "c a": "archives", "i": "instructions", "p": "pins", "t": "think", "r": "history"}
 }
 
 func (c Config) validateBindings() error {

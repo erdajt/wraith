@@ -42,6 +42,10 @@ func (b *Buffer) motion(key string, n int) {
 
 	for range n {
 		switch key {
+		case "}":
+			b.paragraph(1)
+		case "{":
+			b.paragraph(-1)
 		case "h", "left":
 			b.Pos = max(b.lineStart(b.Pos), b.Pos-1)
 		case "l", "right":
