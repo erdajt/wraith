@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -93,7 +94,7 @@ func Load(path string) (Config, error) {
 		return c, fmt.Errorf("config: %w", err)
 	}
 	var extra any
-	if d.Decode(&extra) == nil {
+	if d.Decode(&extra) != io.EOF {
 		return c, errors.New("config has trailing data")
 	}
 	return c, c.Validate()

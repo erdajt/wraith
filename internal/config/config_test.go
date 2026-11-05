@@ -59,3 +59,15 @@ func TestUnknownConfigFieldsFail(t *testing.T) {
 		t.Fatal("accepted misspelled field")
 	}
 }
+
+func TestRejectMalformedTrailingData(t *testing.T) {
+	for _, suffix := range []string{"false", "{", "garbage"} {
+		path := filepath.Join(t.TempDir(), "config.json")
+		if err := os.WriteFile(path, []byte(`{"version":1}`+suffix), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := Load(path); err == nil {
+			t.Fatalf("accepted trailing %q", suffix)
+		}
+	}
+}

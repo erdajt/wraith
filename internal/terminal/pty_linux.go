@@ -65,13 +65,14 @@ func Start(argv []string, dir string, w, h int) (*PTY, error) {
 		f.Close()
 		return nil, err
 	}
-	go func() { _ = cmd.Wait(); close(p.waited); _ = f.Close() }()
+	go func() { _ = cmd.Wait(); close(p.waited) }()
 	go p.read()
 	return p, nil
 }
 
 func (p *PTY) read() {
 	defer close(p.Events)
+	defer p.file.Close()
 	buf := make([]byte, 8192)
 	for {
 		n, err := p.file.Read(buf)
