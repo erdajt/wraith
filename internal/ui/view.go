@@ -55,7 +55,7 @@ func (a *App) View() string {
 		rows[3+y] = base(p, "  "+content, mainW) + base(p, "", w-mainW)
 	}
 	if len(a.Session.Messages) == 0 && !a.busy {
-		welcome := []string{bold(p.Accent, "W R A I T H"), ink(p.Muted, "local intelligence · deliberate control"), "", ink(p.FG, "write a prompt, or bring your own evidence."), ink(p.Muted, "ctrl+s send     ctrl+e neovim     /models switch"), ink(p.Muted, "alt+e scratch shell     alt+s side shell"), "", ink(p.Second, "/remember preferences     /pin exact facts")}
+		welcome := []string{bold(p.Accent, "W R A I T H"), ink(p.Muted, "local intelligence · deliberate control"), "", ink(p.FG, "write a prompt, or bring your own evidence."), ink(p.Muted, a.Config.Keys["send"]+" send     "+a.Config.Keys["editor"]+" editor     /models switch"), ink(p.Muted, a.Config.Keys["terminal_overlay"]+" scratch shell     "+a.Config.Keys["terminal_split"]+" side shell"), "", ink(p.Second, "/remember preferences     /pin exact facts")}
 		y := 3 + max(0, (bodyH-len(welcome))/2)
 		for _, line := range welcome {
 			if y >= 3+bodyH {
@@ -84,10 +84,10 @@ func (a *App) View() string {
 	status := clean(a.notice)
 	if a.busy {
 		frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
-		status = frames[a.frame%len(frames)] + " " + a.phase + " · ctrl+c cancels"
+		status = frames[a.frame%len(frames)] + " " + a.phase + " · " + a.Config.Keys["cancel"] + " cancels"
 	}
 	rows[a.height-3] = base(p, "  "+ink(p.Accent, ansi.Truncate(status, w-4, "…")), w)
-	footer := "  ctrl+s send  ·  tab focus  ·  : commands  ·  /help  ·  ctrl+q quit"
+	footer := "  " + a.Config.Keys["send"] + " send  ·  " + a.Config.Keys["focus"] + " focus  ·  : commands  ·  /help  ·  " + a.Config.Keys["quit"] + " quit"
 	if a.commandMode {
 		footer = "  :" + clean(a.command) + "▏"
 	} else if a.searchMode {

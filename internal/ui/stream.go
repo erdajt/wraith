@@ -77,7 +77,7 @@ func (a *App) startChat() tea.Cmd {
 	a.follow = true
 	a.partial = session.Message{Role: "assistant"}
 	a.phase = "connecting"
-	req := ollama.Request{Model: a.Session.Model, Messages: contextual.Messages(a.Session, a.Instructions), Think: think, KeepAlive: a.Config.KeepAlive, Options: ollama.Options{Context: a.Config.Context, Predict: a.Config.Predict, Temperature: a.Config.Temperature, Threads: 6}}
+	req := ollama.Request{Model: a.Session.Model, Messages: contextual.Messages(a.Session, a.Instructions), Think: think, KeepAlive: a.Config.KeepAlive, Options: ollama.Options{Context: a.Config.Context, Predict: a.Config.Predict, Temperature: a.Config.Temperature, Threads: a.Config.Threads}}
 	client := a.Client
 	go func() {
 		defer cancel()
