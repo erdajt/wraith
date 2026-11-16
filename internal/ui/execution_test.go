@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/editor"
+	"github.com/erdajt/wraith/internal/session"
 )
 
 func TestBlockNeedsApprovalAndSavesOutput(t *testing.T) {
@@ -146,5 +148,31 @@ func TestBlockEditorReceivesResolvedSourceWithoutExecuting(t *testing.T) {
 				t.Fatal("opening editor executed code")
 			}
 		})
+	}
+}
+
+func TestManualRunContinuesExistingConversation(t *testing.T) {
+	a := fixture(t)
+	a.generation = session.ID()
+	calls := 0
+	a.Client.HTTP.Transport = transport(func(*http.Request) (*http.Response, error) {
+		calls++
+		return response(`{"done":true,"message":{"role":"assistant","content":"observed"}}`), nil
+	})
+	a.approve(proposal{Command: "printf result", Source: "block"})
+	a.runApproved()
+	drain(t, a)
+	if calls != 1 {
+		t.Fatalf("continuations: %d", calls)
+	}
+}
+
+func TestManualApprovalCannotCrossTurns(t *testing.T) {
+	a := fixture(t)
+	a.approve(proposal{Command: "printf stale", Source: "block"})
+	a.generation = session.ID()
+	a.runApproved()
+	if a.executing || len(a.jobs.Snapshot()) != 0 {
+		t.Fatal("stale manual approval executed")
 	}
 }

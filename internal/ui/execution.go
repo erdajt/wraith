@@ -68,7 +68,7 @@ func (a *App) runApproved() tea.Cmd {
 		a.notice = err.Error()
 		return nil
 	}
-	if p.launch.Session != a.Session.ID || p.Continue && p.launch.Generation != a.generation {
+	if p.launch.Session != a.Session.ID || p.launch.Generation != a.generation {
 		a.notice = "command approval belongs to an earlier conversation or turn"
 		a.proposal = nil
 		return nil
@@ -229,7 +229,7 @@ func (a *App) prepareProposal(p *proposal) error {
 		return err
 	}
 	p.Resolved, p.Variables = resolved, a.Variables
-	if p.Continue && a.generation == "" {
+	if a.generation == "" {
 		a.generation = session.ID()
 	}
 	p.timeout, err = time.ParseDuration(a.Config.Execution.CommandTimeout)
@@ -243,9 +243,7 @@ func (a *App) prepareProposal(p *proposal) error {
 		Agent:       a.Config.Execution.Mode == "agent", ShareOutput: a.Config.Execution.Mode == "agent" || a.Config.Execution.AutoShare,
 		Background: p.Background, CaptureLimit: a.Config.Execution.CaptureBytes, TailLimit: a.Config.Execution.TailBytes,
 	}
-	if p.Continue {
-		p.launch.Generation = a.generation
-	}
+	p.launch.Generation = a.generation
 	p.prepared = true
 	return nil
 }
