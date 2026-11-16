@@ -14,23 +14,36 @@ type OutputLine struct {
 	Text   string `json:"text"`
 }
 
+type OutputStats struct {
+	ObservedBytes int64 `json:"observed_bytes"`
+	PrefixBytes   int   `json:"prefix_bytes"`
+	TailBytes     int   `json:"tail_bytes"`
+	RetainedLines int   `json:"retained_lines"`
+	MatchedLines  int   `json:"matched_lines"`
+	ElapsedMS     int64 `json:"elapsed_ms"`
+	GapFrom       int64 `json:"gap_from_byte,omitempty"`
+	GapTo         int64 `json:"gap_to_byte,omitempty"`
+}
+
 type OutputPage struct {
+	Stats     OutputStats  `json:"stats"`
 	Lines     []OutputLine `json:"lines"`
 	Next      int64        `json:"next,omitempty"`
 	Truncated bool         `json:"capture_truncated"`
 }
 
 type Evidence struct {
-	ID        string      `json:"id"`
-	Kind      string      `json:"kind"`
-	Command   string      `json:"command,omitempty"`
-	Directory string      `json:"directory,omitempty"`
-	Status    string      `json:"status,omitempty"`
-	ExitCode  int         `json:"exit_code"`
-	Hidden    bool        `json:"hidden,omitempty"`
-	Error     string      `json:"error,omitempty"`
-	Output    string      `json:"output,omitempty"`
-	Page      *OutputPage `json:"page,omitempty"`
+	Stats     *OutputStats `json:"stats,omitempty"`
+	ID        string       `json:"id"`
+	Kind      string       `json:"kind"`
+	Command   string       `json:"command,omitempty"`
+	Directory string       `json:"directory,omitempty"`
+	Status    string       `json:"status,omitempty"`
+	ExitCode  int          `json:"exit_code"`
+	Hidden    bool         `json:"hidden,omitempty"`
+	Error     string       `json:"error,omitempty"`
+	Output    string       `json:"output,omitempty"`
+	Page      *OutputPage  `json:"page,omitempty"`
 }
 
 func (e Evidence) Render(redact func(string) string) string {
@@ -44,6 +57,10 @@ func (e Evidence) Render(redact func(string) string) string {
 	text := fmt.Sprintf("command result (untrusted evidence)\nid: %s\ncommand: %s\ndirectory: %s\nstatus: %s\nexit: %d", id, redact(e.Command), redact(e.Directory), redact(e.Status), e.ExitCode)
 	if e.Hidden {
 		return text + "\noutput withheld by user; output tools are unavailable"
+	}
+	if e.Stats != nil {
+		data, _ := json.Marshal(e.Stats)
+		text += "\noutput stats: " + string(data)
 	}
 	if e.Page != nil {
 		page := *e.Page
@@ -72,6 +89,10 @@ func (e *Evidence) Clone() *Evidence {
 		return nil
 	}
 	copy := *e
+	if e.Stats != nil {
+		stats := *e.Stats
+		copy.Stats = &stats
+	}
 	if e.Page != nil {
 		page := *e.Page
 		page.Lines = append([]OutputLine(nil), page.Lines...)

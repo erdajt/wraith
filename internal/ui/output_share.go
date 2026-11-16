@@ -75,6 +75,7 @@ func (a *App) commandEvidence(r runner.Record) session.Evidence {
 		evidence.Error = "output unavailable"
 		return evidence
 	}
+	evidence.Stats = &page.Stats
 	output := ""
 	for _, line := range page.Lines {
 		output += line.Text + "\n"

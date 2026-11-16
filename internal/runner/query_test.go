@@ -72,3 +72,22 @@ func TestOutputQueryBoundsRegexAndOversizedLines(t *testing.T) {
 		}
 	}
 }
+
+func TestOutputQueryReportsCoverageAndCaseInsensitiveMatches(t *testing.T) {
+	t.Parallel()
+	start := time.Now()
+	record := Record{ShareOutput: true, Output: "HEAD\n", Tail: "partial\nFinal ERROR\n", TailOffset: 100, TailLine: 20, Observed: 120, Truncated: true, Started: start, Finished: start.Add(3 * time.Second)}
+	for _, regex := range []bool{false, true} {
+		page, err := ReadOutput(record, Query{Pattern: "error", IgnoreCase: true, Regex: regex}, variables.Snapshot{})
+		if err != nil || len(page.Lines) != 1 || page.Lines[0].Number != 21 {
+			t.Fatalf("missing match: %+v %v", page, err)
+		}
+		stats := page.Stats
+		if stats.ObservedBytes != 120 || stats.PrefixBytes != 5 || stats.RetainedLines != 2 || stats.MatchedLines != 1 || stats.ElapsedMS != 3000 || stats.GapFrom != 5 || stats.GapTo != 100 {
+			t.Fatalf("coverage: %+v", stats)
+		}
+	}
+	if _, err := ReadOutput(record, Query{Pattern: strings.Repeat("x", 4097)}, variables.Snapshot{}); err == nil {
+		t.Fatal("unbounded pattern accepted")
+	}
+}
