@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/erdajt/wraith/internal/runner"
 )
@@ -41,5 +42,19 @@ func TestAutomaticSharingHidesManualAction(t *testing.T) {
 	a.showRun(runner.Record{ID: "record", ShareOutput: true, Finished: time.Now()}, "output")
 	if strings.Contains(a.View(), "share to agent") {
 		t.Fatal("automatic sharing still advertises manual action")
+	}
+}
+
+func TestCompletionEvidenceReservesActualTail(t *testing.T) {
+	for _, prefix := range []string{"prefix text", "前置出力"} {
+		t.Run(prefix, func(t *testing.T) {
+			a := fixture(t)
+			a.Config.Execution.OutputContext = 512
+			r := runner.Record{ShareOutput: true, Output: strings.Repeat(prefix+"\n", 40), Tail: "partial\n" + strings.Repeat("earlier tail\n", 30) + "final-error\n", TailOffset: 10000, TailLine: 1000, Truncated: true, Finished: time.Now()}
+			e := a.commandEvidence(r)
+			if !strings.Contains(e.Output, "final-error") || !strings.Contains(e.Output, "capture gap") || len(e.Output) > 512 || !utf8.ValidString(e.Output) {
+				t.Fatalf("invalid completion excerpt: %q", e.Output)
+			}
+		})
 	}
 }

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"slices"
+	"strings"
 	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -79,12 +80,23 @@ func (a *App) commandEvidence(r runner.Record) session.Evidence {
 		output += line.Text + "\n"
 	}
 	if r.Truncated && r.TailOffset > 0 {
-		tail, err := runner.ReadOutput(r, runner.Query{From: r.TailLine, Limit: 20}, a.Variables)
+		tail, err := runner.ReadOutput(r, runner.Query{From: max(r.TailLine+1, r.TailLine+int64(strings.Count(r.Tail, "\n"))-19), Limit: 20}, a.Variables)
 		if err == nil {
-			output += "[capture gap; retained tail]\n"
+			recent := ""
 			for _, line := range tail.Lines {
-				output += line.Text + "\n"
+				recent += line.Text + "\n"
 			}
+			gap := "\n[capture gap; retained tail]\n"
+			budget := min(a.Config.Execution.OutputContext, max(256, (a.contextLimit()-a.Config.Predict)/4)) - len(gap)
+			headLimit := min(len(output), budget/2)
+			for headLimit > 0 && headLimit < len(output) && !utf8.RuneStart(output[headLimit]) {
+				headLimit--
+			}
+			tailStart := max(0, len(recent)-(budget-headLimit))
+			for tailStart < len(recent) && !utf8.RuneStart(recent[tailStart]) {
+				tailStart++
+			}
+			output = output[:headLimit] + gap + recent[tailStart:]
 		}
 	}
 	evidence.Error, evidence.Output = a.Variables.Redact(r.Error), a.outputExcerpt(output)
