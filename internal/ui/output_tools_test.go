@@ -133,3 +133,23 @@ func TestFailedPollSaveDoesNotAdvanceCursor(t *testing.T) {
 		t.Fatal("failed save consumed output")
 	}
 }
+
+func TestPollSkipsOversizedLineWithoutStalling(t *testing.T) {
+	a := fixture(t)
+	a.Config.Execution.OutputContext = 512
+	a.agentStopped = false
+	r := runner.Record{ID: session.ID(), Session: a.Session.ID, ShareOutput: true, Output: strings.Repeat("x", 1024) + "\nnext\n", Finished: time.Now()}
+	if err := a.history().Save(r); err != nil {
+		t.Fatal(err)
+	}
+	a.Client.HTTP.Transport = transport(func(*http.Request) (*http.Response, error) {
+		return response(`{"done":true,"message":{"role":"assistant","content":"observed"}}`), nil
+	})
+	a.pendingTool = &contextual.ToolRequest{Tool: "poll", ID: r.ID}
+	a.runPendingTool()
+	drain(t, a)
+	page := a.Session.Messages[0].Evidence.Page
+	if a.pollNext[r.ID] != 3 || len(page.Lines) != 2 || !page.Truncated || !strings.Contains(page.Lines[0].Text, "exceeds") || page.Lines[1].Text != "next" {
+		t.Fatalf("poll failed to advance: %+v, cursor %d", page, a.pollNext[r.ID])
+	}
+}

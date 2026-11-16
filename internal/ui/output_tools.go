@@ -54,9 +54,15 @@ func (a *App) runPendingTool() tea.Cmd {
 				size := 0
 				budget := min(a.Config.Execution.OutputContext, max(256, (a.contextLimit()-a.Config.Predict)/4))
 				for i, line := range page.Lines {
+					if len(line.Text)+40 > budget {
+						page.Lines[i].Text = "[line exceeds output budget; inspect local history]"
+						line = page.Lines[i]
+						page.Truncated = true
+					}
 					size += len(line.Text) + 40
 					if size > budget {
 						page.Next = line.Number
+						page.Truncated = true
 						page.Lines = page.Lines[:i]
 						break
 					}
