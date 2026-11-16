@@ -53,8 +53,8 @@ func TestManagerCancellationIsScopedToOriginatingTurn(t *testing.T) {
 	t.Cleanup(m.Close)
 	original, other := session.ID(), session.ID()
 	for _, record := range []Record{
-		{ID: original, Session: "first", Generation: "turn", Shell: "/bin/sh", Command: "sleep 30"},
-		{ID: other, Session: "second", Generation: "turn", Shell: "/bin/sh", Command: "sleep 30"},
+		{ID: original, Session: "first", Generation: "turn", AgentRequested: true, Shell: "/bin/sh", Command: "sleep 30"},
+		{ID: other, Session: "second", Generation: "turn", AgentRequested: true, Shell: "/bin/sh", Command: "sleep 30"},
 	} {
 		if err := m.Start(t.Context(), record, time.Minute); err != nil {
 			t.Fatal(err)
@@ -132,5 +132,29 @@ func TestSilentJobReportsRunningBeforeExit(t *testing.T) {
 		case <-deadline.C:
 			t.Fatal("silent job never entered running state")
 		}
+	}
+}
+
+func TestTurnCancellationPreservesManualJobs(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name   string
+		record Record
+		want   bool
+	}{
+		{"owned", Record{Session: "chat", Generation: "turn", AgentRequested: true}, true},
+		{"manual", Record{Session: "chat", Generation: "turn"}, false},
+		{"other session", Record{Session: "other", Generation: "turn", AgentRequested: true}, false},
+		{"other turn", Record{Session: "chat", Generation: "other", AgentRequested: true}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cancelled := false
+			m := NewManager(History{}, 1)
+			m.jobs["job"] = &jobState{Job: Job{Record: tc.record}, cancel: func() { cancelled = true }}
+			m.CancelTurn("chat", "turn")
+			if cancelled != tc.want {
+				t.Fatalf("cancelled = %v, want %v", cancelled, tc.want)
+			}
+		})
 	}
 }

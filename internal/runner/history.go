@@ -20,19 +20,20 @@ const MaxOutputLimit = 256 << 20
 var validID = regexp.MustCompile(`^[a-f0-9]{24}$`)
 
 type Record struct {
-	CaptureLimit int      `json:"capture_limit,omitempty"`
-	TailLimit    int      `json:"tail_limit,omitempty"`
-	Agent        bool     `json:"agent,omitempty"`
-	Captured     int      `json:"captured,omitempty"`
-	Generation   string   `json:"generation,omitempty"`
-	Background   bool     `json:"background,omitempty"`
-	ShareOutput  bool     `json:"share_output,omitempty"`
-	OutputHidden bool     `json:"output_hidden,omitempty"`
-	Environment  []string `json:"-"`
-	Tail         string   `json:"tail,omitempty"`
-	Observed     int64    `json:"observed,omitempty"`
-	TailOffset   int64    `json:"tail_offset,omitempty"`
-	TailLine     int64    `json:"tail_line,omitempty"`
+	CaptureLimit   int      `json:"capture_limit,omitempty"`
+	TailLimit      int      `json:"tail_limit,omitempty"`
+	AgentRequested bool     `json:"agent_requested,omitempty"`
+	Agent          bool     `json:"agent,omitempty"`
+	Captured       int      `json:"captured,omitempty"`
+	Generation     string   `json:"generation,omitempty"`
+	Background     bool     `json:"background,omitempty"`
+	ShareOutput    bool     `json:"share_output,omitempty"`
+	OutputHidden   bool     `json:"output_hidden,omitempty"`
+	Environment    []string `json:"-"`
+	Tail           string   `json:"tail,omitempty"`
+	Observed       int64    `json:"observed,omitempty"`
+	TailOffset     int64    `json:"tail_offset,omitempty"`
+	TailLine       int64    `json:"tail_line,omitempty"`
 
 	ID        string    `json:"id"`
 	Session   string    `json:"session"`

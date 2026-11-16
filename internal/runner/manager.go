@@ -128,7 +128,7 @@ func (m *Manager) CancelTurn(session, generation string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for _, job := range m.jobs {
-		if job.Record.Session == session && job.Record.Generation == generation && job.cancel != nil {
+		if job.Record.AgentRequested && job.Record.Session == session && job.Record.Generation == generation && job.cancel != nil {
 			job.cancel()
 		}
 	}

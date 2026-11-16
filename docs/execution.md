@@ -15,7 +15,7 @@ choose with `j/k` or arrows and enter:
 - **edit** opens the resolved command in your configured editor. save and exit to execute the edited command once. exiting without saving runs nothing. invalid edits remain available for recovery.
 - **view full command** opens a scrollable preview with the reason.
 - **ask assistant to modify** sends an inline revision. an empty revision field prepares a `modify:` draft in the main prompt, without sending it.
-- **reject** stops the requesting agent turn and cancels its tracked jobs. rejecting a manually selected block does not cancel unrelated work. `ctrl+c` and `/cancel` invalidate pending approvals, including full previews and modification dialogs; an interrupted scratch shell still receives its own `ctrl+c`.
+- **reject** stops the requesting agent turn and cancels jobs requested by that agent turn. manually launched background jobs keep running even when their output is shared with the agent. rejecting a manually selected block does not cancel unrelated work. `ctrl+c` and `/cancel` invalidate pending approvals, including full previews and modification dialogs; an interrupted scratch shell still receives its own `ctrl+c`.
 
 approval freezes the session, turn, directory, shell, timeout, private bindings and sharing policy. later setting changes cannot change that launch. an approval from a replaced session or turn cannot execute.
 

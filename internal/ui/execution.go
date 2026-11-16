@@ -244,6 +244,7 @@ func (a *App) prepareProposal(p *proposal) error {
 		Background: p.Background, CaptureLimit: a.Config.Execution.CaptureBytes, TailLimit: a.Config.Execution.TailBytes,
 	}
 	p.launch.Generation = a.generation
+	p.launch.AgentRequested = p.Continue
 	p.prepared = true
 	return nil
 }

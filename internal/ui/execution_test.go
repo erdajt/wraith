@@ -176,3 +176,19 @@ func TestManualApprovalCannotCrossTurns(t *testing.T) {
 		t.Fatal("stale manual approval executed")
 	}
 }
+
+func TestPreparedJobsSeparateCancellationOwnershipFromContinuation(t *testing.T) {
+	for _, requested := range []bool{false, true} {
+		a := fixture(t)
+		p := proposal{Command: "printf result", Continue: requested, Background: true}
+		if err := a.prepareProposal(&p); err != nil {
+			t.Fatal(err)
+		}
+		if p.launch.AgentRequested != requested {
+			t.Fatal("manual launch inherited agent cancellation ownership")
+		}
+		if p.launch.Generation == "" || p.launch.Generation != a.generation {
+			t.Fatal("manual job lost continuation generation")
+		}
+	}
+}
