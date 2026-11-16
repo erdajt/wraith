@@ -91,6 +91,7 @@ func TestContextHasNoApplicationCeiling(t *testing.T) {
 
 func TestExecutionLimitsValidateAndSurvivePartialConfig(t *testing.T) {
 	for _, input := range []string{
+		`{"execution":{"capture_bytes":65535}}`, `{"execution":{"capture_bytes":268435457}}`, `{"execution":{"tail_bytes":4095}}`, `{"execution":{"capture_bytes":65536,"tail_bytes":1048576}}`,
 		`{"execution":{"max_jobs":0}}`, `{"execution":{"max_jobs":33}}`,
 		`{"execution":{"max_reads":0}}`, `{"execution":{"max_reads":257}}`,
 		`{"execution":{"command_timeout":"0s"}}`, `{"execution":{"command_timeout":"never"}}`,

@@ -20,6 +20,8 @@ import (
 const DefaultModel = "hf.co/filvyb/Qwen3.5-9B-heretic-v2-GGUF:Q5_K_M"
 
 type Execution struct {
+	CaptureBytes   int    `json:"capture_bytes" yaml:"capture_bytes"`
+	TailBytes      int    `json:"tail_bytes" yaml:"tail_bytes"`
 	MaxJobs        int    `json:"max_jobs" yaml:"max_jobs"`
 	MaxReads       int    `json:"max_reads" yaml:"max_reads"`
 	CommandTimeout string `json:"command_timeout" yaml:"command_timeout"`
@@ -84,7 +86,7 @@ type Terminal struct {
 type Paths struct{ Config, Data, Cache string }
 
 func Default() Config {
-	return Config{Provider: "ollama", Providers: DefaultProviders(), Clipboard: []string{"wl-copy"}, Appearance: Appearance{Background: "theme", Mouse: true}, Execution: Execution{MaxJobs: 4, MaxReads: 16, CommandTimeout: "10m", Mode: "agent", MaxSteps: 8, OutputContext: 8192}, Leader: "space", Bindings: DefaultBindings(), AutoStart: true, Version: 1, Host: "http://127.0.0.1:11434", Model: DefaultModel,
+	return Config{Provider: "ollama", Providers: DefaultProviders(), Clipboard: []string{"wl-copy"}, Appearance: Appearance{Background: "theme", Mouse: true}, Execution: Execution{CaptureBytes: 8 << 20, TailBytes: 64 << 10, MaxJobs: 4, MaxReads: 16, CommandTimeout: "10m", Mode: "agent", MaxSteps: 8, OutputContext: 8192}, Leader: "space", Bindings: DefaultBindings(), AutoStart: true, Version: 1, Host: "http://127.0.0.1:11434", Model: DefaultModel,
 		Context: 8192, Predict: 2048, Threads: 6, Temperature: 0.3, Thinking: "auto", Theme: "phosphor",
 		Editor: []string{"nvim"}, Shell: []string{"zsh", "-i"}, KeepAlive: "2m", Timeout: "10m",
 		Terminal: Terminal{Background: "inherit", Foreground: "inherit", OverlayWidth: 0.7, OverlayHeight: 0.6, SplitWidth: 0.4, Scrollback: 5000},
@@ -176,6 +178,9 @@ func (c Config) Validate() error {
 	}
 	if !slices.Contains([]string{"agent", "blocks"}, c.Execution.Mode) || c.Execution.MaxSteps < 1 || c.Execution.MaxSteps > 100 || c.Execution.OutputContext < 256 || c.Execution.OutputContext > 65536 {
 		return errors.New("execution requires agent or blocks mode, 1-100 steps and 256-65536 output bytes")
+	}
+	if c.Execution.CaptureBytes < 64<<10 || c.Execution.CaptureBytes > 256<<20 || c.Execution.TailBytes < 4<<10 || c.Execution.TailBytes > 1<<20 || c.Execution.TailBytes > c.Execution.CaptureBytes {
+		return errors.New("capture bytes must be 64 kib–256 mib; tail bytes must be 4 kib–1 mib and within capture size")
 	}
 	duration, err := time.ParseDuration(c.Execution.CommandTimeout)
 	if err != nil || duration <= 0 || c.Execution.MaxJobs < 1 || c.Execution.MaxJobs > 32 || c.Execution.MaxReads < 1 || c.Execution.MaxReads > 256 {

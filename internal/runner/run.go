@@ -17,6 +17,7 @@ import (
 const TailLimit = 64 << 10
 
 type capture struct {
+	limit, tailLimit   int
 	sink               io.Writer
 	mu                 sync.Mutex
 	tail               string
@@ -29,7 +30,14 @@ type capture struct {
 func (c *capture) Write(p []byte) (int, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	n := min(len(p), OutputLimit-c.text.Len())
+	limit, tailLimit := c.limit, c.tailLimit
+	if limit == 0 {
+		limit = OutputLimit
+	}
+	if tailLimit == 0 {
+		tailLimit = TailLimit
+	}
+	n := min(len(p), limit-c.text.Len())
 	if n < len(p) {
 		c.truncated = true
 	}
@@ -43,8 +51,8 @@ func (c *capture) Write(p []byte) (int, error) {
 	}
 	c.observed += int64(len(p))
 	c.tail += string(p)
-	if len(c.tail) > TailLimit {
-		removed := len(c.tail) - TailLimit
+	if len(c.tail) > tailLimit {
+		removed := len(c.tail) - tailLimit
 		c.tailLine += int64(strings.Count(c.tail[:removed], "\n"))
 		c.tail = c.tail[removed:]
 	}
@@ -66,6 +74,15 @@ func (h History) prepare(r Record) (Record, *liveRun, error) {
 			return r, nil, err
 		}
 		return r, nil, errors.New("command id already exists in history")
+	}
+	if r.CaptureLimit == 0 {
+		r.CaptureLimit = OutputLimit
+	}
+	if r.TailLimit == 0 {
+		r.TailLimit = TailLimit
+	}
+	if err := r.validateLimits(); err != nil {
+		return r, nil, err
 	}
 	r.Started, r.Status, r.ExitCode = time.Now().UTC(), "starting", -1
 	live, err := h.openLive(r)
@@ -108,7 +125,7 @@ func (h History) execute(ctx context.Context, r Record, live *liveRun, emit func
 		return err
 	}
 	cmd.WaitDelay = time.Second
-	output := &capture{emit: emit, sink: live.prefix}
+	output := &capture{emit: emit, sink: live.prefix, limit: r.CaptureLimit, tailLimit: r.TailLimit}
 	writer := &journalWriter{output: output, live: live, record: r}
 	cmd.Stdout, cmd.Stderr = writer, writer
 	stop := make(chan struct{})
@@ -193,4 +210,21 @@ func (w *journalWriter) Write(p []byte) (int, error) {
 		}
 	}
 	return n, nil
+}
+
+func (r Record) validateLimits() error {
+	captureLimit, tailLimit := r.CaptureLimit, r.TailLimit
+	if captureLimit == 0 {
+		captureLimit = OutputLimit
+	}
+	if tailLimit == 0 {
+		tailLimit = TailLimit
+	}
+	if captureLimit < 64<<10 || captureLimit > MaxOutputLimit || tailLimit < 4<<10 || tailLimit > 1<<20 || tailLimit > captureLimit {
+		return errors.New("invalid command capture limits")
+	}
+	if len(r.Output) > captureLimit || r.Captured < 0 || r.Captured > captureLimit || len(r.Tail) > tailLimit {
+		return errors.New("command output exceeds capture limits")
+	}
+	return nil
 }

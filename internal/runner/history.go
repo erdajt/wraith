@@ -15,10 +15,13 @@ import (
 )
 
 const OutputLimit = 8 << 20
+const MaxOutputLimit = 256 << 20
 
 var validID = regexp.MustCompile(`^[a-f0-9]{24}$`)
 
 type Record struct {
+	CaptureLimit int      `json:"capture_limit,omitempty"`
+	TailLimit    int      `json:"tail_limit,omitempty"`
 	Agent        bool     `json:"agent,omitempty"`
 	Captured     int      `json:"captured,omitempty"`
 	Generation   string   `json:"generation,omitempty"`
@@ -77,11 +80,11 @@ func (h History) Load(id string) (Record, error) {
 		return r, err
 	}
 	defer z.Close()
-	b, err := io.ReadAll(io.LimitReader(z, OutputLimit*6+1<<20+1))
+	b, err := io.ReadAll(io.LimitReader(z, MaxOutputLimit*6+8<<20+1))
 	if err != nil {
 		return r, err
 	}
-	if len(b) > OutputLimit*6+1<<20 {
+	if len(b) > MaxOutputLimit*6+8<<20 {
 		return r, errors.New("command history exceeds decompression limit")
 	}
 	if err = json.Unmarshal(b, &r); err != nil {
@@ -90,7 +93,7 @@ func (h History) Load(id string) (Record, error) {
 	if r.ID != id {
 		return r, errors.New("command id does not match file")
 	}
-	return r, nil
+	return r, r.validateLimits()
 }
 
 func (h History) List() ([]Record, error) {

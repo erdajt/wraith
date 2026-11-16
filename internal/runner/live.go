@@ -141,7 +141,7 @@ func (h History) recoverRun(directory, id string) (*Record, error) {
 	if saved, err := h.Load(id); err == nil && !saved.Finished.IsZero() {
 		return nil, os.RemoveAll(directory)
 	}
-	data, err := fsutil.ReadLimit(filepath.Join(directory, "record.json"), 1<<20)
+	data, err := fsutil.ReadLimit(filepath.Join(directory, "record.json"), 8<<20)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, os.RemoveAll(directory)
 	}
@@ -149,10 +149,14 @@ func (h History) recoverRun(directory, id string) (*Record, error) {
 		return nil, err
 	}
 	var record Record
-	if err = json.Unmarshal(data, &record); err != nil || record.ID != id || record.Captured < 0 || record.Captured > OutputLimit || len(record.Tail) > TailLimit {
+	if err = json.Unmarshal(data, &record); err != nil || record.ID != id || record.validateLimits() != nil {
 		return nil, fmt.Errorf("invalid recovery record for command %s", id)
 	}
-	prefix, err := fsutil.ReadLimit(filepath.Join(directory, "prefix"), OutputLimit)
+	limit := record.CaptureLimit
+	if limit == 0 {
+		limit = OutputLimit
+	}
+	prefix, err := fsutil.ReadLimit(filepath.Join(directory, "prefix"), int64(limit))
 	if err != nil {
 		return nil, err
 	}

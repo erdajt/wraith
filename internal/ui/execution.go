@@ -72,7 +72,7 @@ func (a *App) runApproved() tea.Cmd {
 	}
 
 	a.proposal = nil
-	record := runner.Record{ID: session.ID(), Session: a.Session.ID, Command: p.Resolved, Environment: p.Environment, ShareOutput: !p.HideOutput && (a.Config.Execution.Mode == "agent" && p.Continue || a.Config.Execution.AutoShare), OutputHidden: p.HideOutput, Background: p.Background, Directory: a.runDirectory(), Shell: a.Config.Shell[0], Source: p.Source, Agent: p.Continue && a.Config.Execution.Mode == "agent", Generation: a.generation}
+	record := runner.Record{CaptureLimit: a.Config.Execution.CaptureBytes, TailLimit: a.Config.Execution.TailBytes, ID: session.ID(), Session: a.Session.ID, Command: p.Resolved, Environment: p.Environment, ShareOutput: !p.HideOutput && (a.Config.Execution.Mode == "agent" && p.Continue || a.Config.Execution.AutoShare), OutputHidden: p.HideOutput, Background: p.Background, Directory: a.runDirectory(), Shell: a.Config.Shell[0], Source: p.Source, Agent: p.Continue && a.Config.Execution.Mode == "agent", Generation: a.generation}
 	if !p.Continue {
 		record.Generation = ""
 	}
@@ -171,7 +171,7 @@ func (a *App) deliverRuns() tea.Cmd {
 func (a *App) showRun(r runner.Record, output string) {
 	text := fmt.Sprintf("$ %s\n\ndirectory: %s\nstatus: %s · exit: %d\n%s\n\n%s", r.Command, r.Directory, r.Status, r.ExitCode, r.Error, output)
 	if r.Truncated {
-		text += "\n[output truncated at 8 mib]"
+		text += "\n[capture limit reached; retained tail follows]\n" + r.Tail
 	}
 	previous := a.popup
 	a.showText("run-output", "command output", text)

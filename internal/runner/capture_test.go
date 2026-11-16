@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"github.com/erdajt/wraith/internal/session"
 	"strings"
 	"testing"
 )
@@ -33,5 +34,21 @@ func TestCommandEnvironmentIsExplicitAndCapturedOutputIsDurable(t *testing.T) {
 	saved, err := h.Load(r.ID)
 	if err != nil || saved.Tail != r.Output || saved.Observed != int64(len(r.Output)) || len(saved.Environment) != 0 {
 		t.Fatalf("capture metadata not persisted correctly: %+v %v", saved, err)
+	}
+}
+
+func TestConfiguredCaptureRetainsPrefixAndActualTail(t *testing.T) {
+	t.Parallel()
+	h := History{Root: t.TempDir()}
+	record, err := h.Run(t.Context(), Record{ID: session.ID(), Shell: "/bin/sh", Command: "head -c 100000 /dev/zero; printf final-evidence", CaptureLimit: 64 << 10, TailLimit: 4 << 10}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(record.Output) != 64<<10 || len(record.Tail) != 4<<10 || !record.Truncated || !strings.HasSuffix(record.Tail, "final-evidence") {
+		t.Fatalf("capture sizes: %d %d %t", len(record.Output), len(record.Tail), record.Truncated)
+	}
+	saved, err := h.Load(record.ID)
+	if err != nil || saved.CaptureLimit != record.CaptureLimit || saved.Tail != record.Tail {
+		t.Fatalf("configured capture lost: %v", err)
 	}
 }

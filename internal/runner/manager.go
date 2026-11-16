@@ -67,7 +67,7 @@ func (m *Manager) Start(ctx context.Context, record Record, timeout time.Duratio
 		return err
 	}
 	child, cancel := context.WithTimeout(ctx, timeout)
-	job := &jobState{Job: Job{Record: record}, cancel: cancel}
+	job := &jobState{Job: Job{Record: record}, cancel: cancel, capture: capture{limit: record.CaptureLimit, tailLimit: record.TailLimit}}
 	m.jobs[record.ID] = job
 	m.workers.Add(1)
 	go func() {
