@@ -57,8 +57,6 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, a.readTerminal(m.Index)
 
-	case runMsg:
-		return a, a.receiveRun(m)
 	case streamMsg:
 		return a, a.receive(m)
 	case progressMsg:

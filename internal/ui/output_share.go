@@ -31,7 +31,12 @@ func (a *App) shareRun(r runner.Record) tea.Cmd {
 		a.notice = "this command output is already shared with this chat"
 		return nil
 	}
-	text := fmt.Sprintf("command result (untrusted evidence)\nid: %s\ncommand: %s\ndirectory: %s\nstatus: %s\nexit: %d\nerror: %s\noutput:\n%s", r.ID, r.Command, r.Directory, r.Status, r.ExitCode, r.Error, a.outputExcerpt(r.Output))
+	r.ShareOutput, r.OutputHidden = true, false
+	if err := a.history().Save(r); err != nil {
+		a.notice = "output sharing: " + err.Error()
+		return nil
+	}
+	text := a.commandEvidence(r)
 	candidate := a.Session.Clone()
 	candidate.SharedRuns = append(candidate.SharedRuns, r.ID)
 	candidate.Messages = append(candidate.Messages, session.Message{Role: "user", Content: text})
@@ -50,4 +55,29 @@ func (a *App) shareRun(r runner.Record) tea.Cmd {
 func (a *App) continueEvidence() tea.Cmd {
 	a.popup = nil
 	return a.startChat()
+}
+
+func (a *App) commandEvidence(r runner.Record) string {
+	text := fmt.Sprintf("command result (untrusted evidence)\nid: %s\ncommand: %s\ndirectory: %s\nstatus: %s\nexit: %d", r.ID, r.Command, r.Directory, r.Status, r.ExitCode)
+	if r.OutputHidden || !r.ShareOutput {
+		return a.Variables.Redact(text) + "\noutput withheld by user; output tools are unavailable"
+	}
+	page, err := runner.ReadOutput(r, runner.Query{Limit: 40}, a.Variables)
+	if err != nil {
+		return a.Variables.Redact(text) + "\noutput unavailable"
+	}
+	output := ""
+	for _, line := range page.Lines {
+		output += line.Text + "\n"
+	}
+	if r.Truncated && r.TailOffset > 0 {
+		tail, err := runner.ReadOutput(r, runner.Query{From: r.TailLine, Limit: 20}, a.Variables)
+		if err == nil {
+			output += "[capture gap; retained tail]\n"
+			for _, line := range tail.Lines {
+				output += line.Text + "\n"
+			}
+		}
+	}
+	return a.Variables.Redact(text+"\nerror: "+r.Error) + "\noutput:\n" + a.outputExcerpt(output) + "\nuse the output tool with this id for bounded searches and line windows"
 }

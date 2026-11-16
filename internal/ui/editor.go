@@ -65,6 +65,7 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 		a.notice = err.Error()
 		return nil
 	}
+	a.editing = true
 	return tea.ExecProcess(cmd, func(err error) tea.Msg { return editedMsg{kind, language, f, index, err} })
 }
 
@@ -83,6 +84,7 @@ func (a *App) editResponse() tea.Cmd {
 }
 
 func (a *App) finishEdit(m editedMsg) tea.Cmd {
+	a.editing = false
 	text, saved, err := m.File.Result(m.Err)
 	applied := false
 	defer func() {

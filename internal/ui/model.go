@@ -88,6 +88,11 @@ type App struct {
 	streamSerial uint64
 	jobs         *runner.Manager
 
+	pendingRuns  map[string]runner.Record
+	generation   string
+	agentStopped bool
+	editing      bool
+
 	inputHistory                       []string
 	inputIndex, inputDraftPosition     int
 	inputDraft                         string
@@ -180,6 +185,7 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 			a.inputHistory = entries
 		}
 	}
+	a.pendingRuns = map[string]runner.Record{}
 	a.jobs = runner.NewManager(a.history(), 4)
 	if !demo {
 		if recovered, e := a.history().Recover(); e != nil {

@@ -19,6 +19,7 @@ const OutputLimit = 8 << 20
 var validID = regexp.MustCompile(`^[a-f0-9]{24}$`)
 
 type Record struct {
+	Agent        bool     `json:"agent,omitempty"`
 	Captured     int      `json:"captured,omitempty"`
 	Generation   string   `json:"generation,omitempty"`
 	Background   bool     `json:"background,omitempty"`

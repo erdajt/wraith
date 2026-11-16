@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -15,10 +16,6 @@ import (
 	"github.com/erdajt/wraith/internal/variables"
 )
 
-type runMsg struct {
-	Record runner.Record
-	Err    error
-}
 type proposal struct {
 	Command, Language, Text, Source, Reason string
 	Continue, Background, HideOutput        bool
@@ -67,16 +64,20 @@ func (a *App) runApproved() tea.Cmd {
 		a.notice = err.Error()
 		return nil
 	}
-	if p.Continue {
-		a.agentSteps++
+	if p.Continue && a.generation == "" {
+		a.generation = session.ID()
 	}
+
 	a.proposal = nil
-	record := runner.Record{ID: session.ID(), Session: a.Session.ID, Command: p.Resolved, Environment: p.Environment, ShareOutput: !p.HideOutput && (a.Config.Execution.Mode == "agent" && p.Continue || a.Config.Execution.AutoShare), OutputHidden: p.HideOutput, Background: p.Background, Directory: a.runDirectory(), Shell: a.Config.Shell[0], Source: p.Source}
+	record := runner.Record{ID: session.ID(), Session: a.Session.ID, Command: p.Resolved, Environment: p.Environment, ShareOutput: !p.HideOutput && (a.Config.Execution.Mode == "agent" && p.Continue || a.Config.Execution.AutoShare), OutputHidden: p.HideOutput, Background: p.Background, Directory: a.runDirectory(), Shell: a.Config.Shell[0], Source: p.Source, Agent: p.Continue && a.Config.Execution.Mode == "agent", Generation: a.generation}
 	timeout, _ := time.ParseDuration(a.Config.Timeout)
 	if err := a.jobs.Start(context.Background(), record, timeout); err != nil {
 		a.proposal = &p
 		a.notice = "command launch: " + err.Error()
 		return nil
+	}
+	if p.Continue {
+		a.agentSteps++
 	}
 	a.cancel = func() { a.jobs.Cancel(record.ID) }
 	a.busy, a.executing = true, true
@@ -93,43 +94,72 @@ func (a *App) syncJobs() tea.Cmd {
 	}
 	select {
 	case <-a.jobs.Updates:
-	default:
-		return nil
-	}
-	for _, job := range a.jobs.Snapshot() {
-		r := job.Record
-		if a.popup != nil && a.popup.Kind == "run-output" && a.popup.Record.ID == r.ID {
-			a.showRun(r, r.Output)
-		}
-		if r.ID == a.activeRun.ID && a.executing {
-			a.activeRun = r
+		for _, job := range a.jobs.Snapshot() {
+			r := job.Record
+			if a.popup != nil && a.popup.Kind == "run-output" && a.popup.Record.ID == r.ID {
+				a.showRun(r, r.Output)
+			}
+			if r.ID == a.activeRun.ID && a.executing {
+				a.activeRun = r
+				if !r.Finished.IsZero() {
+					a.busy, a.executing, a.cancel = false, false, nil
+					a.notice = fmt.Sprintf("command %s · exit %d · /history", r.Status, r.ExitCode)
+				}
+			}
 			if !r.Finished.IsZero() {
-				cmd := a.receiveRun(runMsg{Record: r, Err: job.Err})
+				if job.Err != nil {
+					a.notice = "command history: " + job.Err.Error()
+					continue
+				}
+				a.pendingRuns[r.ID] = r
 				a.jobs.Forget(r.ID)
-				return cmd
 			}
 		}
+	default:
 	}
-	return nil
+	return a.deliverRuns()
 }
 
-func (a *App) receiveRun(m runMsg) tea.Cmd {
-
-	a.busy = false
-	a.executing = false
-	a.cancel = nil
-	a.activeRun = m.Record
-	if m.Err != nil {
-		a.notice = "command history: " + m.Err.Error()
-		a.showRun(m.Record, m.Record.Output)
+func (a *App) deliverRuns() tea.Cmd {
+	if a.busy || a.loading || a.editing || a.Prompt.String() != "" || a.visualMode != "" || a.focus == "terminal0" || a.focus == "terminal1" {
 		return nil
 	}
-	a.notice = fmt.Sprintf("command %s · exit %d · /history", m.Record.Status, m.Record.ExitCode)
-	a.showRun(m.Record, m.Record.Output)
-	if m.Record.ShareOutput && !m.Record.OutputHidden {
-		return a.shareRun(m.Record)
+	if a.popup != nil && (a.popup.Kind != "run-output" || a.popup.Reader != nil && a.popup.Reader.Frozen) {
+		return nil
 	}
-
+	candidate := a.Session.Clone()
+	continueAgent := false
+	for id, r := range a.pendingRuns {
+		if r.Session != candidate.ID {
+			continue
+		}
+		if slices.Contains(candidate.DeliveredRuns, id) {
+			delete(a.pendingRuns, id)
+			continue
+		}
+		candidate.DeliveredRuns = append(candidate.DeliveredRuns, id)
+		if r.Agent || r.ShareOutput && !r.OutputHidden {
+			candidate.Messages = append(candidate.Messages, session.Message{Role: "user", Content: a.commandEvidence(r)})
+			if r.ShareOutput && !r.OutputHidden {
+				candidate.SharedRuns = append(candidate.SharedRuns, id)
+			}
+			continueAgent = continueAgent || r.Generation == a.generation && !a.agentStopped && r.Status != "cancelled"
+		}
+	}
+	if len(candidate.DeliveredRuns) == len(a.Session.DeliveredRuns) {
+		return nil
+	}
+	if err := a.Store.Save(candidate); err != nil {
+		a.notice = "command evidence pending: " + err.Error()
+		return nil
+	}
+	a.Session = candidate
+	for _, id := range candidate.DeliveredRuns {
+		delete(a.pendingRuns, id)
+	}
+	if continueAgent {
+		return a.continueEvidence()
+	}
 	return nil
 }
 

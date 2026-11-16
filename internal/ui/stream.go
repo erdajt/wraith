@@ -61,6 +61,7 @@ func (a *App) submit() tea.Cmd {
 	a.rememberInput(text)
 	a.Prompt = vim.New()
 	a.agentSteps = 0
+	a.generation, a.agentStopped = session.ID(), false
 	a.proposal = nil
 	a.Session = probe
 	if a.Session.Title == "untitled" {
