@@ -29,7 +29,7 @@ func (a *App) transcript(w int) []rendered {
 	}
 	if a.Session.Summary != "" {
 		add(ink(p.Second, "◌ compacted memory · /archives restores originals"), -1)
-		add(ink(p.Muted, clean(a.Session.Summary)), -1)
+		add(a.expandStyled(ink(p.Muted, clean(a.Session.Summary))), -1)
 		add("", -1)
 	}
 	messages := append([]session.Message(nil), a.Session.Messages...)
@@ -70,13 +70,13 @@ func (a *App) transcript(w int) []rendered {
 				out[j].Thinking = true
 			}
 			if expanded {
-				for _, line := range strings.Split(ansi.Hardwrap(clean(m.Thinking), w, true), "\n") {
+				for _, line := range strings.Split(ansi.Hardwrap(a.expandStyled(clean(m.Thinking)), w, true), "\n") {
 					add(ink(p.Muted, line), i)
 				}
 			}
 		}
 
-		lines, nextBlock := markdown.Render(clean(contextual.DisplayContent(m.Content)), w, p, block)
+		lines, nextBlock := markdown.Render(clean(contextual.DisplayContent(m.Content)), w, p, block, a.expandStyled)
 		block = nextBlock
 		for _, line := range lines {
 			start := len(out)

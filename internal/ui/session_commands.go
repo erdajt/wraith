@@ -80,7 +80,11 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 			home, _ := os.UserHomeDir()
 			arg = filepath.Join(home, arg[2:])
 		}
-		b := Export(a.Session)
+		if err := a.refreshVariables(); err != nil {
+			a.notice = err.Error()
+			return nil
+		}
+		b := a.Variables.Redact(Export(a.Session))
 		if err := fsutil.Bytes(arg, []byte(b)); err != nil {
 			a.notice = err.Error()
 		} else {

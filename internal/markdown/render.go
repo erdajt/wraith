@@ -18,11 +18,18 @@ type Row struct {
 	Block int
 }
 
-func Render(source string, width int, p config.Palette, block int) ([]Row, int) {
+func Render(source string, width int, p config.Palette, block int, transforms ...func(string) string) ([]Row, int) {
 	width = max(4, width)
 	var out []Row
 	active, localBlock := -1, 0
+	transform := func(text string) string {
+		for _, apply := range transforms {
+			text = apply(text)
+		}
+		return text
+	}
 	add := func(s string) {
+		s = transform(s)
 		for _, line := range strings.Split(ansi.Hardwrap(s, width, true), "\n") {
 			out = append(out, Row{Text: line, Block: active})
 		}
@@ -57,7 +64,7 @@ func Render(source string, width int, p config.Palette, block int) ([]Row, int) 
 		}
 
 		if i+1 < len(lines) && tableSeparator(lines[i+1]) && strings.Contains(line, "|") {
-			table, consumed := renderTable(lines[i:], width, p)
+			table, consumed := renderTable(lines[i:], width, p, transform)
 			for _, row := range table {
 				add(row)
 			}

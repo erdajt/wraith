@@ -15,7 +15,7 @@ func cells(line string) []string {
 	return parts
 }
 
-func renderTable(lines []string, width int, p config.Palette) ([]string, int) {
+func renderTable(lines []string, width int, p config.Palette, transform func(string) string) ([]string, int) {
 	rows := [][]string{cells(lines[0])}
 	consumed := 2
 	for consumed < len(lines) && strings.Contains(lines[consumed], "|") && strings.TrimSpace(lines[consumed]) != "" {
@@ -29,7 +29,7 @@ func renderTable(lines []string, width int, p config.Palette) ([]string, int) {
 	widths := make([]int, len(rows[0]))
 	for _, row := range rows {
 		for i, cell := range row {
-			widths[i] = max(widths[i], ansi.StringWidth(inline(cell, p, "", 0)))
+			widths[i] = max(widths[i], ansi.StringWidth(transform(inline(cell, p, "", 0))))
 		}
 	}
 	total := 1
@@ -40,7 +40,7 @@ func renderTable(lines []string, width int, p config.Palette) ([]string, int) {
 	if total > width {
 		for _, row := range rows[1:] {
 			for i, cell := range row {
-				out = append(out, strings.Split(ansi.Wrap(inline(rows[0][i], p, ";1", 0)+paint(p.Border, ": ")+inline(cell, p, "", 0), width, ""), "\n")...)
+				out = append(out, strings.Split(ansi.Wrap(transform(inline(rows[0][i], p, ";1", 0)+paint(p.Border, ": ")+inline(cell, p, "", 0)), width, ""), "\n")...)
 			}
 			out = append(out, "")
 		}
@@ -65,7 +65,7 @@ func renderTable(lines []string, width int, p config.Palette) ([]string, int) {
 			if n == 0 {
 				flag = ";1"
 			}
-			rendered := inline(cell, p, flag, 0)
+			rendered := transform(inline(cell, p, flag, 0))
 			line.WriteString(" " + rendered + strings.Repeat(" ", widths[i]-ansi.StringWidth(rendered)+1) + paint(p.Border, "│"))
 		}
 		out = append(out, line.String())
