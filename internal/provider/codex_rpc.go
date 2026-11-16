@@ -18,14 +18,14 @@ func codexCatalog(ctx context.Context, profile config.Provider) ([]codexModel, e
 	if models, err := codexCache(); err == nil {
 		return models, nil
 	}
-	models, err := codexRPC(ctx, profile.Command)
+	models, err := codexRPC(ctx, profile.Command, profile.Environment)
 	if err != nil {
 		return nil, fmt.Errorf("codex model discovery: %w; run codex to refresh its catalog or configure the provider models list", err)
 	}
 	return models, nil
 }
 
-func codexRPC(ctx context.Context, command []string) ([]codexModel, error) {
+func codexRPC(ctx context.Context, command, environment []string) ([]codexModel, error) {
 	if len(command) == 0 {
 		return nil, errors.New("cli command is empty")
 	}
@@ -33,6 +33,7 @@ func codexRPC(ctx context.Context, command []string) ([]codexModel, error) {
 	defer cancel()
 	argv := append(append([]string(nil), command[1:]...), "app-server", "--listen", "stdio://")
 	cmd := exec.CommandContext(ctx, command[0], argv...)
+	cmd.Env = environment
 	cmd.Stderr = io.Discard
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }

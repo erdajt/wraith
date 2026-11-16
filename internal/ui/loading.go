@@ -14,6 +14,10 @@ func (a *App) probe() tea.Cmd {
 	if a.demo {
 		return nil
 	}
+	if err := a.refreshVariables(); err != nil {
+		a.notice = err.Error()
+		return nil
+	}
 	if a.loadCancel != nil {
 		a.loadCancel()
 	}

@@ -34,7 +34,7 @@ cat >/dev/null
 	if err := os.WriteFile(script, []byte(source), 0700); err != nil {
 		t.Fatal(err)
 	}
-	models, err := codexRPC(context.Background(), []string{script, dir})
+	models, err := codexRPC(t.Context(), []string{script, dir}, nil)
 	if err != nil || len(models) != 2 || models[0].Name != "first" || models[1].Name != "second" || models[0].Efforts[0] != "high" {
 		t.Fatalf("models: %+v, %v", models, err)
 	}
@@ -73,7 +73,7 @@ func TestCodexRPCStopsAnUnresponsiveChild(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
-	if _, err := codexRPC(ctx, []string{script}); !errors.Is(err, context.DeadlineExceeded) {
+	if _, err := codexRPC(ctx, []string{script}, nil); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("cancellation: %v", err)
 	}
 }

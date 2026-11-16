@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/erdajt/wraith/internal/config"
+	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/variables"
 )
@@ -30,6 +31,11 @@ func New(c config.Config) *Client {
 func (c *Client) api() *API { return &API{Config: c.Profile, HTTP: c.HTTP} }
 
 func (c *Client) Models(ctx context.Context) ([]ollama.Model, error) {
+	private, _, err := c.privateRequest(ollama.Request{})
+	if err != nil {
+		return nil, err
+	}
+	c = private
 	if c.Profile.Kind == "ollama" {
 		return c.Client.Models(ctx)
 	}
@@ -59,6 +65,11 @@ func (c *Client) Models(ctx context.Context) ([]ollama.Model, error) {
 }
 
 func (c *Client) Show(ctx context.Context, model string) (ollama.Info, error) {
+	private, _, privacyErr := c.privateRequest(ollama.Request{Model: model})
+	if privacyErr != nil {
+		return ollama.Info{}, privacyErr
+	}
+	c = private
 	if c.Profile.Kind == "ollama" {
 		return c.Client.Show(ctx, model)
 	}
@@ -108,6 +119,9 @@ func (c *Client) Chat(ctx context.Context, request ollama.Request, emit func(oll
 		return ollama.Response{}, err
 	}
 	c, request = private, sanitized
+	if request.Options.Context > 0 && contextual.Estimate(request.Messages)+request.Options.Predict+128 > request.Options.Context {
+		return ollama.Response{}, fmt.Errorf("redacted request exceeds context budget; compact, shorten private metadata or increase context")
+	}
 	switch c.Profile.Kind {
 	case "ollama":
 		return c.Client.Chat(ctx, request, emit)

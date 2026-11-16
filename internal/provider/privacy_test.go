@@ -98,3 +98,17 @@ func TestInventoryNamesRemainStructuralAtProviderBoundary(t *testing.T) {
 		t.Fatalf("unexpected compaction inventory: %v", err)
 	}
 }
+
+func TestRedactionGrowthCannotOverflowProviderContext(t *testing.T) {
+	t.Parallel()
+	client := New(config.Default())
+	client.Variables = variables.NewSnapshot([]variables.Entry{{Name: "VERY_LONG_PRIVATE_VARIABLE_NAME", Value: "x"}}, nil)
+	client.HTTP.Transport = transport(func(r *http.Request) (*http.Response, error) {
+		t.Fatal("oversized redacted request dispatched")
+		return nil, nil
+	})
+	_, err := client.Chat(t.Context(), ollama.Request{Messages: []session.Message{{Role: "user", Content: strings.Repeat("x ", 50)}}, Options: ollama.Options{Context: 512, Predict: 64}}, nil)
+	if err == nil || !strings.Contains(err.Error(), "context budget") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

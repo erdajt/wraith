@@ -86,7 +86,7 @@ func TestRepairDoesNotRetryTransportFailuresOrOverflow(t *testing.T) {
 			}
 			return response("{\"message\":{\"content\":\"wraith::MISSING \"}}\n{\"done\":true}\n"), nil
 		})
-		_, err := client.ChatWithRepair(t.Context(), ollama.Request{Options: ollama.Options{Context: 128, Predict: 64}}, nil)
+		_, err := client.ChatWithRepair(t.Context(), ollama.Request{Options: ollama.Options{Context: 240, Predict: 64}}, nil)
 		if err == nil || calls != 1 {
 			t.Fatalf("unexpected retry: calls=%d err=%v", calls, err)
 		}
