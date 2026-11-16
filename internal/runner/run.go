@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os/exec"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -12,6 +13,7 @@ import (
 const TailLimit = 64 << 10
 
 type capture struct {
+	mu                 sync.Mutex
 	tail               string
 	observed, tailLine int64
 	text               strings.Builder
@@ -20,6 +22,8 @@ type capture struct {
 }
 
 func (c *capture) Write(p []byte) (int, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	n := min(len(p), OutputLimit-c.text.Len())
 	if n < len(p) {
 		c.truncated = true
@@ -67,6 +71,7 @@ func (h History) Run(ctx context.Context, r Record, emit func(string)) (Record, 
 	err := cmd.Run()
 	r.Finished = time.Now().UTC()
 	r.Output = output.text.String()
+	r.Captured = len(r.Output)
 	r.Tail, r.Observed = output.tail, output.observed
 	r.TailOffset, r.TailLine = output.observed-int64(len(output.tail)), output.tailLine+1
 	r.Truncated = output.truncated
