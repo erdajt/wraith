@@ -99,7 +99,7 @@ func (a *App) runApproved() tea.Cmd {
 		a.busy, a.executing, a.cancel = false, false, nil
 		if record.Agent {
 			candidate := a.Session.Clone()
-			candidate.Messages = append(candidate.Messages, session.Message{Role: "user", Content: a.Variables.Redact(fmt.Sprintf("approved background command started\nid: %s\ncommand: %s\noutput shared: %t\npoll by id or wait for its completion notification; next_poll_ms: 1000", record.ID, record.Command, record.ShareOutput))})
+			candidate.Messages = append(candidate.Messages, session.Evidence{ID: record.ID, Kind: "started", Command: a.Variables.Redact(record.Command), Hidden: !record.ShareOutput}.Message())
 			if err := a.Store.Save(candidate); err != nil {
 				a.notice = "job started; receipt save failed: " + err.Error()
 				return nil
@@ -268,7 +268,7 @@ func (a *App) pendingEvidence() (session.Session, bool) {
 		}
 		candidate.DeliveredRuns = append(candidate.DeliveredRuns, id)
 		if !slices.Contains(candidate.SharedRuns, id) && (r.Agent || r.ShareOutput && !r.OutputHidden) {
-			candidate.Messages = append(candidate.Messages, session.Message{Role: "user", Content: a.commandEvidence(r)})
+			candidate.Messages = append(candidate.Messages, a.commandEvidence(r).Message())
 			if r.ShareOutput && !r.OutputHidden {
 				candidate.SharedRuns = append(candidate.SharedRuns, id)
 			}

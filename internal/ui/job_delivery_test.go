@@ -108,3 +108,29 @@ func TestReconciliationPersistsEvidenceWithoutRestartingAgent(t *testing.T) {
 		t.Fatal("reconciliation lost or duplicated output")
 	}
 }
+
+func TestCommandEvidenceKeepsTrustedIdAcrossProviderDispatch(t *testing.T) {
+	a := fixture(t)
+	a.environmentCommand("set TOKEN=ab", false)
+	a.environmentCommand("set FIELD=line", false)
+	a.popup = nil
+	r := runner.Record{ID: strings.Repeat("ab", 12), Session: a.Session.ID, ShareOutput: true, Agent: true, Output: "ab line\n", Finished: time.Now()}
+	a.pendingRuns[r.ID] = r
+	a.agentStopped = false
+	a.Client.HTTP.Transport = transport(func(req *http.Request) (*http.Response, error) {
+		var body ollama.Request
+		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+			t.Error(err)
+		}
+		text := body.Messages[len(body.Messages)-1].Content
+		if !strings.Contains(text, r.ID) || strings.Contains(text, "ab line") || !strings.Contains(text, "wraith::TOKEN wraith::FIELD") {
+			t.Errorf("evidence corrupted: %s", text)
+		}
+		return response(`{"done":true,"message":{"role":"assistant","content":"done"}}`), nil
+	})
+	a.deliverRuns()
+	drain(t, a)
+	if a.Session.Messages[0].Evidence == nil {
+		t.Fatal("evidence metadata missing")
+	}
+}

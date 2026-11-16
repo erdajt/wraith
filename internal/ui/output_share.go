@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"slices"
 	"unicode/utf8"
 
@@ -36,13 +35,13 @@ func (a *App) shareRun(r runner.Record) tea.Cmd {
 		a.notice = "output sharing: " + err.Error()
 		return nil
 	}
-	text := a.commandEvidence(r)
+	evidence := a.commandEvidence(r)
 	candidate := a.Session.Clone()
 	candidate.SharedRuns = append(candidate.SharedRuns, r.ID)
 	if !slices.Contains(candidate.DeliveredRuns, r.ID) {
 		candidate.DeliveredRuns = append(candidate.DeliveredRuns, r.ID)
 	}
-	candidate.Messages = append(candidate.Messages, session.Message{Role: "user", Content: text})
+	candidate.Messages = append(candidate.Messages, evidence.Message())
 	if err := a.Store.Save(candidate); err != nil {
 		a.notice = "output remains in /history; chat save failed: " + err.Error()
 		return nil
@@ -61,14 +60,15 @@ func (a *App) continueEvidence() tea.Cmd {
 	return a.startChat()
 }
 
-func (a *App) commandEvidence(r runner.Record) string {
-	text := fmt.Sprintf("command result (untrusted evidence)\nid: %s\ncommand: %s\ndirectory: %s\nstatus: %s\nexit: %d", r.ID, r.Command, r.Directory, r.Status, r.ExitCode)
-	if r.OutputHidden || !r.ShareOutput {
-		return a.Variables.Redact(text) + "\noutput withheld by user; output tools are unavailable"
+func (a *App) commandEvidence(r runner.Record) session.Evidence {
+	evidence := session.Evidence{ID: r.ID, Kind: "result", Command: a.Variables.Redact(r.Command), Directory: a.Variables.Redact(r.Directory), Status: r.Status, ExitCode: r.ExitCode, Hidden: r.OutputHidden || !r.ShareOutput}
+	if evidence.Hidden {
+		return evidence
 	}
 	page, err := runner.ReadOutput(r, runner.Query{Limit: 40}, a.Variables)
 	if err != nil {
-		return a.Variables.Redact(text) + "\noutput unavailable"
+		evidence.Error = "output unavailable"
+		return evidence
 	}
 	output := ""
 	for _, line := range page.Lines {
@@ -83,5 +83,6 @@ func (a *App) commandEvidence(r runner.Record) string {
 			}
 		}
 	}
-	return a.Variables.Redact(text+"\nerror: "+r.Error) + "\noutput:\n" + a.outputExcerpt(output) + "\nuse the output tool with this id for bounded searches and line windows"
+	evidence.Error, evidence.Output = a.Variables.Redact(r.Error), a.outputExcerpt(output)
+	return evidence
 }

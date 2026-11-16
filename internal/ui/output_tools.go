@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"encoding/json"
-	"fmt"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -37,6 +35,7 @@ func (a *App) runPendingTool() tea.Cmd {
 	nextLine := a.pollNext[request.ID]
 	r, err := a.jobRecord(request.ID)
 	text := "output tool denied: command is not in this session"
+	var evidence *session.Evidence
 	if err == nil && r.Session == a.Session.ID {
 		if !r.ShareOutput || r.OutputHidden {
 			text = "output tool denied: output withheld by user"
@@ -69,13 +68,16 @@ func (a *App) runPendingTool() tea.Cmd {
 						nextLine = page.Lines[len(page.Lines)-1].Number + 1
 					}
 				}
-				data, _ := json.Marshal(page)
-				text = fmt.Sprintf("command output tool (untrusted evidence)\nid: %s\nstatus: %s\nexit: %d\nnext_poll_ms: 1000\n%s", r.ID, r.Status, r.ExitCode, data)
+				evidence = &session.Evidence{ID: r.ID, Kind: "output", Status: r.Status, ExitCode: r.ExitCode, Page: &page}
 			}
 		}
 	}
 	candidate := a.Session.Clone()
-	candidate.Messages = append(candidate.Messages, session.Message{Role: "user", Content: a.Variables.Redact(text)})
+	message := session.Message{Role: "user", Content: a.Variables.Redact(text)}
+	if evidence != nil {
+		message = evidence.Message()
+	}
+	candidate.Messages = append(candidate.Messages, message)
 	if err := a.Store.Save(candidate); err != nil {
 		a.notice = "output tool result not saved: " + err.Error()
 		a.pendingTool, a.agentStopped = nil, true
