@@ -34,7 +34,7 @@ names match `[A-Z_][A-Z0-9_]*`, at most 64 bytes. each scope allows 128 bindings
 
 ## commands and model requests
 
-approved shell commands resolve markers as literal arguments, assignments or supported redirection words. the shell parser rejects unsafe locations such as an executable name, heredoc or ambiguous expansion. metacharacters inside a value cannot become new shell syntax. approval freezes the resolved command and bindings; editing sees plain command text, and saving authorizes that edited command.
+approved shell commands resolve markers as literal arguments, assignments or supported redirection words. the shell parser rejects unsafe locations such as an executable name, heredoc or ambiguous expansion. metacharacters inside a value cannot become new shell syntax. copying a shell block resolves private arguments with shell quoting while the stored conversation keeps markers. approval freezes the resolved command and bindings; editing sees plain command text, and saving authorizes that edited command.
 
 new scratch shells and approved tracked jobs receive active bindings in their environment. existing scratch shells retain their original environment until restarted. non-shell source blocks resolve references for editor review rather than guessing the source language's quoting rules.
 

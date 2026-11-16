@@ -3,6 +3,7 @@ package ui
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/erdajt/wraith/internal/editor"
@@ -108,5 +109,23 @@ func TestVisualProseKeepsPartialSelection(t *testing.T) {
 	a.key(key("v4ly"))
 	if string(a.Prompt.Register) != "alpha" {
 		t.Fatalf("prose selection: %q", a.Prompt.Register)
+	}
+}
+
+func TestCommandYankResolvesPrivateArgumentsAsLiterals(t *testing.T) {
+	a := fixture(t)
+	a.Config.Clipboard = nil
+	a.environmentCommand("set TARGET='lab.example; printf unexpected'", false)
+	a.popup = nil
+	a.focus = "chat"
+	a.Session.Messages = []session.Message{{Role: "assistant", Content: "```sh\nprintf '%s' wraith::TARGET\n```"}}
+	a.chatCursor, a.chatColumn = 2, 3
+	a.key(key("vly"))
+	want := "printf '%s' 'lab.example; printf unexpected'"
+	if string(a.Prompt.Register) != want {
+		t.Fatalf("copied command: %q", a.Prompt.Register)
+	}
+	if !strings.Contains(a.Session.Messages[0].Content, "wraith::TARGET") {
+		t.Fatal("copy changed model context")
 	}
 }

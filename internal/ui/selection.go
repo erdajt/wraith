@@ -35,7 +35,16 @@ func (a *App) selectedText() string {
 			if !seen[id] {
 				blocks := editor.Blocks(a.messageAt(entry.Message))
 				if entry.Block < len(blocks) {
-					out = append(out, strings.TrimRight(blocks[entry.Block].Text, "\n"))
+					block := blocks[entry.Block]
+					text := strings.TrimRight(block.Text, "\n")
+					if editor.Extension(block.Language) == ".sh" {
+						if resolved, err := a.Variables.Shell(text); err == nil {
+							text = resolved
+						}
+					} else {
+						text, _ = a.Variables.Expand(text)
+					}
+					out = append(out, text)
 				}
 				seen[id] = true
 			}
