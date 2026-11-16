@@ -49,3 +49,23 @@ func TestJobsPickerFiltersSessionButHistoryRetainsCommands(t *testing.T) {
 		t.Fatal("history lost commands")
 	}
 }
+
+func TestOutputReaderShowsActualTailAndPreservesFrozenSelection(t *testing.T) {
+	a := fixture(t)
+	r := runner.Record{ID: session.ID(), Output: "old prefix", Tail: "distinctive final line", TailOffset: 100000, Truncated: true, Finished: time.Now(), Status: "completed"}
+	a.showRun(r, r.Output)
+	if !strings.Contains(a.popup.Reader.Buffer.String(), "distinctive final line") || !strings.Contains(a.popup.Reader.Buffer.String(), "byte 100000") {
+		t.Fatal("retained tail missing from history")
+	}
+	original := a.popup.Reader.Buffer.String()
+	a.popup.Reader.Frozen = true
+	r.Tail = "later output"
+	a.showRun(r, r.Output)
+	if a.popup.Reader.Buffer.String() != original {
+		t.Fatal("live update overwrote selected output")
+	}
+	a.readerKey(key("r"))
+	if !strings.Contains(a.popup.Reader.Buffer.String(), "later output") {
+		t.Fatal("refresh did not reveal latest tail")
+	}
+}

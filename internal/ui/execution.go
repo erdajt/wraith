@@ -171,19 +171,27 @@ func (a *App) deliverRuns() tea.Cmd {
 }
 
 func (a *App) showRun(r runner.Record, output string) {
-	text := fmt.Sprintf("$ %s\n\ndirectory: %s\nstatus: %s · exit: %d\n%s\n\n%s", r.Command, r.Directory, r.Status, r.ExitCode, r.Error, output)
-	if r.Truncated {
-		text += "\n[capture limit reached; retained tail follows]\n" + r.Tail
-	}
 	previous := a.popup
-	a.showText("run-output", "command output", text)
-	a.popup.Record = r
-	a.popup.Reader = newReader(clean(text))
+	if previous != nil && previous.Reader != nil && previous.Record.ID == r.ID && previous.Reader.Frozen {
+		previous.Record = r
+		return
+	}
+	note := ""
+	if r.Finished.IsZero() && r.TailOffset > 0 {
+		output = r.Tail
+		note = fmt.Sprintf("[live tail from byte %d; captured prefix is retained in history]\n", r.TailOffset)
+	}
+	text := fmt.Sprintf("$ %s\n\ndirectory: %s\nstatus: %s · exit: %d\n%s\n\n%s%s", r.Command, r.Directory, r.Status, r.ExitCode, r.Error, note, output)
+	if r.Truncated && !r.Finished.IsZero() {
+		text += fmt.Sprintf("\n[retained prefix ends at byte %d; recent tail starts at byte %d]\n%s", len(r.Output), r.TailOffset, r.Tail)
+	}
+	text = clean(text)
+	a.popup = &menu{Kind: "run-output", Title: "command output", Record: r}
 	if previous != nil && previous.Reader != nil && previous.Record.ID == r.ID {
 		a.popup.Reader = previous.Reader
-		if !previous.Reader.Frozen {
-			a.popup.Reader.Buffer.Text = []rune(clean(text))
-		}
+		a.popup.Reader.Buffer.Text = []rune(text)
+	} else {
+		a.popup.Reader = newReader(text)
 	}
 }
 
