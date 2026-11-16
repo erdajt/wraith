@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -35,6 +36,12 @@ func compactAttempt(ctx context.Context, client Chatter, s session.Session, c co
 	}
 	before := Used(s, instructions)
 	candidate := s.Clone()
+	ids := s.RunIDs()
+	candidate.RunReferences = nil
+	for id := range ids {
+		candidate.RunReferences = append(candidate.RunReferences, id)
+	}
+	slices.Sort(candidate.RunReferences)
 	candidate.Messages = append([]session.Message(nil), s.Messages[cut:]...)
 	room := c.Context - c.Compact.Budget
 	overhead := Estimate([]session.Message{{Content: compactPrompt + auditPrompt}}) + 512
@@ -44,6 +51,9 @@ func compactAttempt(ctx context.Context, client Chatter, s session.Session, c co
 	chunkBytes := min(room-overhead, 64<<20) * 3 / 2
 	chunks := Fragments(s.Messages[:cut], chunkBytes)
 	facts := append([]string(nil), s.Facts...)
+	for _, id := range candidate.RunReferences {
+		facts = append(facts, "tracked command id: "+id)
+	}
 	if s.Summary != "" {
 		facts = append(facts, "previous working state: "+s.Summary)
 	}
@@ -56,7 +66,7 @@ func compactAttempt(ctx context.Context, client Chatter, s session.Session, c co
 			progress(fmt.Sprintf("extracting fragment %d/%d", i+1, len(chunks)))
 		}
 		var memory Memory
-		if err := extract(ctx, client, c, think, compactPrompt, chunk, &memory); err != nil {
+		if err := extract(ctx, client, c, think, compactPrompt, chunk, ids, &memory); err != nil {
 			return s, fmt.Errorf("fragment %d: %w", i+1, err)
 		}
 		if strings.TrimSpace(memory.Summary) == "" || len(memory.Facts) == 0 {
@@ -78,7 +88,7 @@ func compactAttempt(ctx context.Context, client Chatter, s session.Session, c co
 		var audit struct {
 			Missing []string `json:"missing"`
 		}
-		if err := extract(ctx, client, c, think, auditPrompt, auditInput, &audit); err != nil {
+		if err := extract(ctx, client, c, think, auditPrompt, auditInput, ids, &audit); err != nil {
 			return s, fmt.Errorf("audit %d: %w", i+1, err)
 		}
 		if audit.Missing == nil {
@@ -105,12 +115,12 @@ func compactAttempt(ctx context.Context, client Chatter, s session.Session, c co
 	return candidate, nil
 }
 
-func extract(ctx context.Context, client Chatter, c config.Config, think any, system, input string, out any) error {
+func extract(ctx context.Context, client Chatter, c config.Config, think any, system, input string, ids map[string]bool, out any) error {
 	task := "extract"
 	if strings.HasPrefix(system, AuditPrompt) {
 		task = "audit"
 	}
-	r, err := client.Chat(ctx, ollama.Request{CompactionTask: task, Model: c.Model, Messages: []session.Message{{Role: "system", Content: system}, {Role: "user", Content: input}}, Format: "json", Think: think, KeepAlive: c.KeepAlive, Options: ollama.Options{Context: c.Context, Predict: c.Compact.Budget, Temperature: 0.1}}, nil)
+	r, err := client.Chat(ctx, ollama.Request{RunIDs: ids, CompactionTask: task, Model: c.Model, Messages: []session.Message{{Role: "system", Content: system}, {Role: "user", Content: input}}, Format: "json", Think: think, KeepAlive: c.KeepAlive, Options: ollama.Options{Context: c.Context, Predict: c.Compact.Budget, Temperature: 0.1}}, nil)
 	if err != nil {
 		return err
 	}

@@ -22,6 +22,7 @@ type Options struct {
 	Threads     int     `json:"num_thread,omitempty"`
 }
 type Request struct {
+	RunIDs           map[string]bool   `json:"-"`
 	CompactionTask   string            `json:"-"`
 	ExecutionMode    string            `json:"-"`
 	PrivateInventory bool              `json:"-"`

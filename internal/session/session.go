@@ -25,6 +25,7 @@ type Usage struct {
 }
 
 type Session struct {
+	RunReferences []string  `json:"run_references,omitempty"`
 	DeliveredRuns []string  `json:"delivered_runs,omitempty"`
 	Provider      string    `json:"provider,omitempty"`
 	Directory     string    `json:"directory,omitempty"`
@@ -56,6 +57,7 @@ func New(model string) Session {
 }
 
 func (s Session) Clone() Session {
+	s.RunReferences = append([]string(nil), s.RunReferences...)
 	s.DeliveredRuns = append([]string(nil), s.DeliveredRuns...)
 	s.SharedRuns = append([]string(nil), s.SharedRuns...)
 	s.Messages = append([]Message(nil), s.Messages...)

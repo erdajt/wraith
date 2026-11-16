@@ -21,6 +21,11 @@ type StreamUpdate struct {
 func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emit func(StreamUpdate)) (ollama.Response, error) {
 	original := request
 	ids := session.EvidenceIDs(request.Messages)
+	for id, known := range request.RunIDs {
+		if known {
+			ids[id] = true
+		}
+	}
 	var last ollama.Response
 	for attempt := 0; attempt <= 3; attempt++ {
 		if err := ctx.Err(); err != nil {

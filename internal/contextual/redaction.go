@@ -2,9 +2,12 @@ package contextual
 
 import (
 	"encoding/json"
+	"regexp"
 	"sort"
 	"strings"
 )
+
+var runReference = regexp.MustCompile(`\bid: ([a-f0-9]{24})\b`)
 
 func RedactActions(content string, redact func(string) string, ids map[string]bool) string {
 	type replacement struct {
@@ -12,6 +15,12 @@ func RedactActions(content string, redact func(string) string, ids map[string]bo
 		text       string
 	}
 	var replacements []replacement
+	for _, span := range runReference.FindAllStringSubmatchIndex(content, -1) {
+		id := content[span[2]:span[3]]
+		if ids[id] {
+			replacements = append(replacements, replacement{span[2], span[3], id})
+		}
+	}
 	for _, marker := range []string{"wraith-run", "wraith-tool"} {
 		for _, section := range commandSections(content, marker) {
 			if !section.complete {
@@ -43,7 +52,12 @@ func RedactActions(content string, redact func(string) string, ids map[string]bo
 			replacements = append(replacements, replacement{section.start, section.end, text})
 		}
 	}
-	sort.Slice(replacements, func(i, j int) bool { return replacements[i].start < replacements[j].start })
+	sort.Slice(replacements, func(i, j int) bool {
+		if replacements[i].start == replacements[j].start {
+			return replacements[i].end > replacements[j].end
+		}
+		return replacements[i].start < replacements[j].start
+	})
 	var out strings.Builder
 	position := 0
 	for _, replacement := range replacements {

@@ -83,3 +83,15 @@ func (e *Evidence) Clone() *Evidence {
 func (e Evidence) Message() Message {
 	return Message{Role: "user", Content: e.Render(func(s string) string { return strings.ToValidUTF8(s, "�") }), Evidence: &e}
 }
+
+func (s Session) RunIDs() map[string]bool {
+	ids := EvidenceIDs(s.Messages)
+	for _, records := range [][]string{s.RunReferences, s.DeliveredRuns, s.SharedRuns} {
+		for _, id := range records {
+			if evidenceID.MatchString(id) {
+				ids[id] = true
+			}
+		}
+	}
+	return ids
+}

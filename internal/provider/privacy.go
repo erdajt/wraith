@@ -77,6 +77,11 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 		request.Messages[0].Content = strings.TrimPrefix(request.Messages[0].Content, compactPolicy)
 	}
 	ids := session.EvidenceIDs(request.Messages)
+	for id, known := range request.RunIDs {
+		if known {
+			ids[id] = true
+		}
+	}
 	for i := range request.Messages {
 		if evidence := request.Messages[i].Evidence; evidence != nil {
 			request.Messages[i].Content = evidence.Render(c.Variables.Redact)
