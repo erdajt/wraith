@@ -39,6 +39,13 @@ func (a *App) declineCommand() {
 }
 
 func (a *App) stopAgent() {
+	a.proposal = nil
+	if a.popup != nil {
+		switch a.popup.Kind {
+		case "approval", "command-preview", "modify-command":
+			a.popup = nil
+		}
+	}
 	a.streamStopped = true
 	a.pendingTool = nil
 	a.agentStopped = true

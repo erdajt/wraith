@@ -40,17 +40,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 	if key == a.Config.Keys["terminal_split"] {
 		return a.toggleTerminal(1)
 	}
-	if a.popup != nil {
-		return a.menuKey(k)
-	}
-	if strings.HasPrefix(a.focus, "terminal") {
-		return a.terminalKey(k)
-	}
-	if a.chatMotionPending == "" && a.Prompt.Pending == "" && !a.commandMode && !a.searchMode && (a.focus == "chat" || a.Prompt.Mode == "normal") && (key == a.Config.Leader || a.Config.Leader == "space" && key == " ") {
-		a.openLeader("")
-		return nil
-	}
-	if key == a.Config.Keys["cancel"] {
+	if key == a.Config.Keys["cancel"] && (a.popup != nil || !strings.HasPrefix(a.focus, "terminal")) {
 		a.stopAgent()
 		if a.cancel != nil && a.busy {
 			a.cancel()
@@ -62,6 +52,17 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		}
 		return nil
 	}
+	if a.popup != nil {
+		return a.menuKey(k)
+	}
+	if strings.HasPrefix(a.focus, "terminal") {
+		return a.terminalKey(k)
+	}
+	if a.chatMotionPending == "" && a.Prompt.Pending == "" && !a.commandMode && !a.searchMode && (a.focus == "chat" || a.Prompt.Mode == "normal") && (key == a.Config.Leader || a.Config.Leader == "space" && key == " ") {
+		a.openLeader("")
+		return nil
+	}
+
 	if a.commandMode || a.searchMode {
 		if key == "esc" {
 			a.commandMode = false
