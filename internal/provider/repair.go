@@ -59,6 +59,16 @@ func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emi
 			if rejected == nil {
 				command, decodeErr := contextual.RequestedCommand(result.Message.Content)
 				rejected = decodeErr
+				tool, toolErr := contextual.RequestedTool(result.Message.Content)
+				if rejected == nil {
+					rejected = toolErr
+				}
+				if command != nil && tool != nil {
+					rejected = errors.New("request one command or output tool per response")
+				}
+				if tool != nil && rejected == nil {
+					_, rejected = c.Variables.Validate(tool.Pattern, true)
+				}
 				if command != nil && rejected == nil {
 					_, rejected = c.Variables.Validate(command.Command+"\n"+command.Reason, true)
 				}

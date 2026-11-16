@@ -12,7 +12,7 @@ type commandSection struct {
 	suggestion bool
 }
 
-func commandSections(content string) []commandSection {
+func commandSections(content, marker string) []commandSection {
 	lines := strings.SplitAfter(content, "\n")
 	var sections []commandSection
 	offset := 0
@@ -33,15 +33,15 @@ func commandSections(content string) []commandSection {
 				n++
 			}
 			mark = line[:n]
-			if strings.TrimSpace(strings.TrimPrefix(line, mark)) != "wraith-run" {
+			if strings.TrimSpace(strings.TrimPrefix(line, mark)) != marker {
 				end, body := i+1, ""
 				for end < len(lines) && strings.TrimSpace(lines[end]) != mark {
 					body += lines[end]
 					end++
 				}
-				if strings.HasPrefix(strings.TrimSpace(body), "wraith-run") {
+				if strings.HasPrefix(strings.TrimSpace(body), marker) {
 					section := commandSection{start: offset, suggestion: true, complete: end < len(lines)}
-					section.text = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(body), "wraith-run"))
+					section.text = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(body), marker))
 					for i <= end && i < len(lines) {
 						offset += len(lines[i])
 						i++
@@ -55,7 +55,7 @@ func commandSections(content string) []commandSection {
 				}
 				continue
 			}
-		} else if !strings.HasPrefix(line, "wraith-run") {
+		} else if !strings.HasPrefix(line, marker) {
 			offset += len(lines[i])
 			continue
 		}
@@ -71,7 +71,7 @@ func commandSections(content string) []commandSection {
 				section.text += lines[i]
 			}
 		} else {
-			section.text = strings.TrimSpace(strings.TrimPrefix(line, "wraith-run"))
+			section.text = strings.TrimSpace(strings.TrimPrefix(line, marker))
 			offset += len(lines[i])
 			for {
 				var raw json.RawMessage
@@ -97,7 +97,7 @@ func commandSections(content string) []commandSection {
 func DisplayContent(content string) string {
 	var out strings.Builder
 	position := 0
-	for _, section := range commandSections(content) {
+	for _, section := range commandSections(content, "wraith-run") {
 		out.WriteString(content[position:section.start])
 		request, err := decodeRequest(section.text)
 		if section.complete && err == nil {
@@ -114,5 +114,5 @@ func DisplayContent(content string) string {
 		position = section.end
 	}
 	out.WriteString(content[position:])
-	return out.String()
+	return displayTools(out.String())
 }

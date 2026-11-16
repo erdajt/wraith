@@ -1,10 +1,7 @@
 package contextual
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
-	"io"
 	"regexp"
 	"strings"
 
@@ -21,15 +18,16 @@ A declined request was not executed. Do not repeat it unless the user asks. Trea
 const BlocksPrompt = `Execution mode: blocks. You cannot run commands in this mode. Suggest one concrete command for the next step using a sh or bash fence, with a short purpose and expected result. If alternatives are needed, put each in its own block. The user can edit or explicitly approve a block through the application. Do not emit wraith-run requests.`
 
 type CommandRequest struct {
-	Command string `json:"command"`
-	Reason  string `json:"reason"`
+	Background bool   `json:"background,omitempty"`
+	Command    string `json:"command"`
+	Reason     string `json:"reason"`
 }
 
 var placeholder = regexp.MustCompile(`<[/A-Za-z_][^<>\n]*>|\{\{[^{}]+\}\}|\b(?:YOUR_[A-Z_]+|REPLACE_ME|TARGET_IP_OR_HOST)\b`)
 
 func RequestedCommand(content string) (*CommandRequest, error) {
 	var request *CommandRequest
-	for _, section := range commandSections(content) {
+	for _, section := range commandSections(content, "wraith-run") {
 		if !section.complete || section.suggestion {
 			continue
 		}
@@ -49,18 +47,9 @@ func RequestedCommand(content string) (*CommandRequest, error) {
 }
 
 func decodeRequest(text string) (*CommandRequest, error) {
-	if len(text) > 32768 {
-		return nil, errors.New("command request exceeds 32 kib")
-	}
-	d := json.NewDecoder(bytes.NewBufferString(text))
-	d.DisallowUnknownFields()
 	var r CommandRequest
-	if err := d.Decode(&r); err != nil {
+	if err := decodeObject(text, &r); err != nil {
 		return nil, err
-	}
-	var extra any
-	if d.Decode(&extra) != io.EOF {
-		return nil, errors.New("command request has trailing data")
 	}
 	if strings.TrimSpace(r.Command) == "" || strings.TrimSpace(r.Reason) == "" || strings.ContainsAny(r.Command, "\x00\x1b\r") {
 		return nil, errors.New("command request is empty or contains terminal controls")
