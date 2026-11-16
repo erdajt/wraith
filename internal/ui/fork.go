@@ -33,6 +33,7 @@ func (a *App) forkPrompt() tea.Cmd {
 	branch.Created = time.Now().UTC()
 	branch.Messages = branch.Messages[:index]
 	branch.SharedRuns = nil
+	branch.DeliveredRuns = nil
 	branch.Usage = session.Usage{}
 	branch.Declines = 0
 	if err := a.Store.Save(branch); err != nil {
@@ -49,6 +50,7 @@ func (a *App) forkPrompt() tea.Cmd {
 	a.chatCursor = -1
 	a.visualMode = ""
 	a.agentSteps = 0
+	a.generation, a.agentStopped = "", true
 	a.proposal = nil
 	a.notice = "fork opened · edit the draft, then :w or ctrl+s sends · original is in /resume"
 	return nil

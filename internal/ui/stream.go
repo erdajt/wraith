@@ -185,7 +185,7 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 	if m.Err != nil {
 		return nil
 	}
-	if a.Config.Execution.Mode == "agent" {
+	{
 		request, err := contextual.RequestedCommand(m.Chunk.Message.Content)
 		if err != nil {
 			a.notice = "command request rejected: " + err.Error()
@@ -193,10 +193,11 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 		}
 		if request != nil {
 			if a.agentSteps >= a.Config.Execution.MaxSteps {
+				a.agentStopped = true
 				a.notice = "command step limit reached · send a prompt to continue"
 				return nil
 			}
-			a.proposal = &proposal{Command: request.Command, Reason: request.Reason, Text: request.Command, Language: "sh", Source: "model", Continue: true}
+			a.proposal = &proposal{Command: request.Command, Reason: request.Reason, Text: request.Command, Language: "sh", Source: "model", Continue: true, Background: request.Background}
 		}
 	}
 	switch contextual.Decision(a.Config.Compact.Mode, a.Session.Declines, contextual.NeedsCompact(a.Session, a.runtimeConfig(), a.chatInstructions())) {

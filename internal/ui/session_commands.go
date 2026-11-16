@@ -30,6 +30,7 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 		a.Session = s
 		a.proposal = nil
 		a.agentSteps = 0
+		a.generation, a.agentStopped = "", true
 		a.thinkingExpanded = map[string]bool{}
 		a.resetChatNavigation()
 		a.selected = 0

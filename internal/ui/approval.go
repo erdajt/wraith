@@ -29,9 +29,18 @@ func (a *App) approvalAction(action string) tea.Cmd {
 
 func (a *App) declineCommand() {
 	if a.proposal != nil && a.proposal.Continue {
+		a.stopAgent()
 		a.Session.Messages = append(a.Session.Messages, session.Message{Role: "user", Content: "the requested command was declined and was not executed. do not repeat it unless asked."})
 		a.persist("command declined")
 	}
 	a.proposal = nil
 	a.notice = "command declined"
+}
+
+func (a *App) stopAgent() {
+	a.agentStopped = true
+	a.pendingAgent = false
+	if a.jobs != nil {
+		a.jobs.CancelTurn(a.Session.ID, a.generation)
+	}
 }

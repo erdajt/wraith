@@ -35,6 +35,7 @@ func (a *App) resume(id string) tea.Cmd {
 	a.Session = s
 	a.resetChatNavigation()
 	a.agentSteps = 0
+	a.generation, a.agentStopped = "", true
 	a.pendingAgent = false
 	a.proposal = nil
 	a.Config.Model = s.Model

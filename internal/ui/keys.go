@@ -51,6 +51,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 	if key == a.Config.Keys["cancel"] {
+		a.stopAgent()
 		if a.cancel != nil && a.busy {
 			a.cancel()
 			a.notice = "cancelling…"

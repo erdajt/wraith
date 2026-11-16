@@ -81,6 +81,7 @@ func (a *App) modelCommand(name, arg string) tea.Cmd {
 	case "compact":
 		return a.startCompact()
 	case "cancel":
+		a.stopAgent()
 		if a.cancel != nil {
 			a.cancel()
 		}

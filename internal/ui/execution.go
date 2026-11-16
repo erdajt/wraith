@@ -40,6 +40,9 @@ func (a *App) approve(p proposal) tea.Cmd {
 	}
 	a.proposal = &p
 	a.popup = &menu{Kind: "approval", Title: "approve command · " + a.runDirectory(), Items: []item{{"run", "run", "execute and save output"}, {"run · hide output from agent", "run-hidden", "execute without sharing output"}, {"edit", "edit", "save to execute once"}, {"view full command", "view", "scroll before deciding"}, {"ask assistant to modify", "modify", "describe the change"}, {"reject", "cancel", "do not execute"}}}
+	if p.Background {
+		a.popup.Title = "approve background command · " + a.runDirectory()
+	}
 	return nil
 }
 
@@ -70,6 +73,9 @@ func (a *App) runApproved() tea.Cmd {
 
 	a.proposal = nil
 	record := runner.Record{ID: session.ID(), Session: a.Session.ID, Command: p.Resolved, Environment: p.Environment, ShareOutput: !p.HideOutput && (a.Config.Execution.Mode == "agent" && p.Continue || a.Config.Execution.AutoShare), OutputHidden: p.HideOutput, Background: p.Background, Directory: a.runDirectory(), Shell: a.Config.Shell[0], Source: p.Source, Agent: p.Continue && a.Config.Execution.Mode == "agent", Generation: a.generation}
+	if !p.Continue {
+		record.Generation = ""
+	}
 	timeout, _ := time.ParseDuration(a.Config.Timeout)
 	if err := a.jobs.Start(context.Background(), record, timeout); err != nil {
 		a.proposal = &p
@@ -85,6 +91,21 @@ func (a *App) runApproved() tea.Cmd {
 	record.Status = "starting"
 	a.activeRun = record
 	a.showRun(record, "")
+	if p.Background {
+		a.busy, a.executing, a.cancel = false, false, nil
+		if record.Agent {
+			candidate := a.Session.Clone()
+			candidate.Messages = append(candidate.Messages, session.Message{Role: "user", Content: a.Variables.Redact(fmt.Sprintf("approved background command started\nid: %s\ncommand: %s\noutput shared: %t\npoll by id or wait for its completion notification; next_poll_ms: 1000", record.ID, record.Command, record.ShareOutput))})
+			if err := a.Store.Save(candidate); err != nil {
+				a.notice = "job started; receipt save failed: " + err.Error()
+				return nil
+			}
+			a.Session = candidate
+			if a.Prompt.String() == "" {
+				return a.continueEvidence()
+			}
+		}
+	}
 	return nil
 }
 
