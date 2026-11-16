@@ -65,7 +65,7 @@ func TestSmallApprovalKeepsCommandAndSelectedActionVisible(t *testing.T) {
 			t.Fatalf("approval hid command, reason or action %d: %s", i, view)
 		}
 	}
-	a.proposal.Command = strings.Repeat("long command argument ", 20)
+	a.proposal.Resolved = strings.Repeat("long command argument ", 20)
 	a.popup.Index = len(a.popup.Items) - 1
 	view := ansi.Strip(strings.Join(a.menuFrame(), "\n"))
 	if !strings.Contains(view, "› reject") || !strings.Contains(view, "view full command") {

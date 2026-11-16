@@ -40,17 +40,20 @@ func (a *App) menuFrame() []string {
 
 	preview := ""
 	if (m.Kind == "approval" || m.Kind == "modify-command") && a.proposal != nil {
-		preview = a.proposal.Command
+		preview = a.proposal.Resolved
 		if a.proposal.Reason != "" {
-			preview += "\nreason: " + a.proposal.Reason
+			reason, _ := a.proposal.Variables.Expand(a.proposal.Reason)
+			preview += "\nreason: " + reason
 		}
+		preview = clean(preview)
+		preview = a.styleVariableSpans(preview, a.proposal.Variables.LiteralSpans(preview))
 	}
 	if m.Kind == "block-actions" {
-		preview = a.selectedBlock.Text
+		preview = a.expandStyled(clean(a.selectedBlock.Text))
 	}
 	if preview != "" {
 		limit := max(2, height-len(content)-min(len(m.Items), 5)-2)
-		lines := strings.Split(ansi.Hardwrap(a.expandStyled(clean(preview)), w-6, true), "\n")
+		lines := strings.Split(ansi.Hardwrap(preview, w-6, true), "\n")
 		for _, line := range lines[:min(len(lines), limit)] {
 			content = append(content, ink(p.Accent, line))
 		}

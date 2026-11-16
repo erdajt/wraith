@@ -49,3 +49,5 @@ text streams as it arrives. a marker split across chunks is buffered only until 
 corrective requests include the original task, a bounded rejected excerpt, the failure and the valid inventory. there are at most three retries after the initial attempt. exhausted responses remain visible as interrupted text with no automatic actions; unresolved commands can be edited manually. transport failures and cancellation are not retried as variable mistakes.
 
 superseded attempts are compressed under `~/.cache/wraith/repairs/archives/`, separate from accepted chat history. they are not automatically pruned. variables live under `~/.config/wraith/variables/`: `global.env`, `directories/<directory-hash>.env` and `state.json` for accepted/retained bindings. back up this directory together; a missing or corrupt journal stops outbound requests until repaired so forgotten values are not silently exposed.
+
+approvals display the frozen, shell-quoted command and its reason. changing a variable while approval is open does not change the displayed or executed binding.

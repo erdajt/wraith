@@ -1,9 +1,16 @@
 package ui
 
-import "github.com/charmbracelet/x/ansi"
+import (
+	"github.com/charmbracelet/x/ansi"
+	"github.com/erdajt/wraith/internal/variables"
+)
 
 func (a *App) expandStyled(text string) string {
 	expanded, spans := a.Variables.Expand(text)
+	return a.styleVariableSpans(expanded, spans)
+}
+
+func (a *App) styleVariableSpans(expanded string, spans []variables.Span) string {
 	runes := []rune(expanded)
 	for i := len(spans) - 1; i >= 0; i-- {
 		span := spans[i]
