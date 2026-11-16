@@ -193,22 +193,19 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 			a.notice = "command approval expired"
 			return nil
 		}
-		path, command, e := editor.Stage(filepath.Join(a.Paths.Data, "snippets"), m.Language, text)
+		if strings.TrimSpace(text) == "" || strings.ContainsAny(text, "\x00\x1b\r") {
+			a.notice = "edited command is empty or contains terminal controls"
+			return nil
+		}
+		command, e := a.proposal.Variables.Shell(text)
 		if e != nil {
 			a.notice = e.Error()
 			return nil
 		}
-		if command == "" {
-			a.notice = "saved " + path + "; no interpreter mapped"
-			applied = true
-			return nil
-		}
-		p := *a.proposal
-		p.Command = command
-		p.Text = text
-		p.Source += "-edited"
+		a.proposal.Command, a.proposal.Resolved, a.proposal.Text = text, command, text
+		a.proposal.Source += "-edited"
 		applied = true
-		return a.approve(p)
+		return a.runApproved()
 	case "block":
 		path, command, e := editor.Stage(filepath.Join(a.Paths.Data, "snippets"), m.Language, text)
 		if e != nil {

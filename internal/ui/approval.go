@@ -12,8 +12,11 @@ func (a *App) approvalAction(action string) tea.Cmd {
 	switch action {
 	case "run":
 		return a.runApproved()
+	case "run-hidden":
+		a.proposal.HideOutput = true
+		return a.runApproved()
 	case "edit":
-		return a.edit("run", a.proposal.Language, a.proposal.Text, -1)
+		return a.edit("run", "sh", a.proposal.Resolved, -1)
 	case "view":
 		a.showText("command-preview", "full command · esc returns to approval", a.proposal.Command+"\n\nreason: "+a.proposal.Reason)
 	case "modify":

@@ -47,7 +47,7 @@ func (a *App) menuFrame() []string {
 	}
 	if preview != "" {
 		limit := max(2, height-len(content)-min(len(m.Items), 5)-2)
-		lines := strings.Split(ansi.Hardwrap(clean(preview), w-6, true), "\n")
+		lines := strings.Split(ansi.Hardwrap(a.expandStyled(clean(preview)), w-6, true), "\n")
 		for _, line := range lines[:min(len(lines), limit)] {
 			content = append(content, ink(p.Accent, line))
 		}

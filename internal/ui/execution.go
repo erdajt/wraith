@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/erdajt/wraith/internal/runner"
 	"github.com/erdajt/wraith/internal/session"
+	"github.com/erdajt/wraith/internal/variables"
 )
 
 type runMsg struct {
@@ -22,7 +23,11 @@ type runMsg struct {
 }
 type proposal struct {
 	Command, Language, Text, Source, Reason string
-	Continue                                bool
+	Continue, Background, HideOutput        bool
+	Resolved                                string
+	Environment                             []string
+	Variables                               variables.Snapshot
+	prepared                                bool
 }
 
 func (a *App) history() runner.History {
@@ -34,8 +39,12 @@ func (a *App) approve(p proposal) tea.Cmd {
 		a.notice = "finish the current operation before running commands"
 		return nil
 	}
+	if err := a.prepareProposal(&p); err != nil {
+		a.notice = "command cannot run: " + err.Error()
+		return nil
+	}
 	a.proposal = &p
-	a.popup = &menu{Kind: "approval", Title: "approve command · " + a.runDirectory(), Items: []item{{"run", "run", "execute and save output"}, {"edit", "edit", "open in your editor"}, {"view full command", "view", "scroll before deciding"}, {"ask assistant to modify", "modify", "describe the change"}, {"reject", "cancel", "do not execute"}}}
+	a.popup = &menu{Kind: "approval", Title: "approve command · " + a.runDirectory(), Items: []item{{"run", "run", "execute and save output"}, {"run · hide output from agent", "run-hidden", "execute without sharing output"}, {"edit", "edit", "save to execute once"}, {"view full command", "view", "scroll before deciding"}, {"ask assistant to modify", "modify", "describe the change"}, {"reject", "cancel", "do not execute"}}}
 	return nil
 }
 
@@ -56,11 +65,15 @@ func (a *App) runApproved() tea.Cmd {
 		return nil
 	}
 	p := *a.proposal
+	if err := a.prepareProposal(&p); err != nil {
+		a.notice = err.Error()
+		return nil
+	}
 	if p.Continue {
 		a.agentSteps++
 	}
 	a.proposal = nil
-	record := runner.Record{ID: session.ID(), Session: a.Session.ID, Command: p.Command, Directory: a.runDirectory(), Shell: a.Config.Shell[0], Source: p.Source}
+	record := runner.Record{ID: session.ID(), Session: a.Session.ID, Command: p.Resolved, Environment: p.Environment, ShareOutput: !p.HideOutput && (a.Config.Execution.Mode == "agent" && p.Continue || a.Config.Execution.AutoShare), OutputHidden: p.HideOutput, Background: p.Background, Directory: a.runDirectory(), Shell: a.Config.Shell[0], Source: p.Source}
 	timeout, _ := time.ParseDuration(a.Config.Timeout)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	a.cancel = cancel
@@ -105,7 +118,7 @@ func (a *App) receiveRun(m runMsg) tea.Cmd {
 	a.notice = fmt.Sprintf("command %s · exit %d · /history", m.Record.Status, m.Record.ExitCode)
 	a.showRun(m.Record, m.Record.Output)
 	a.runContinue = false
-	if a.Config.Execution.AutoShare {
+	if m.Record.ShareOutput && !m.Record.OutputHidden {
 		return a.shareRun(m.Record)
 	}
 
@@ -148,5 +161,22 @@ func (a *App) openHistory() tea.Cmd {
 		items = append(items, item{Label: r.Command, Value: r.ID, Detail: fmt.Sprintf("%s · %s · exit %d", r.Started.Local().Format("jan 02 15:04"), r.Status, r.ExitCode)})
 	}
 	a.popup = &menu{Kind: "history", Title: "approved commands · enter opens saved output", Items: items}
+	return nil
+}
+
+func (a *App) prepareProposal(p *proposal) error {
+	if p.prepared {
+		return nil
+	}
+	if err := a.refreshVariables(); err != nil {
+		return err
+	}
+	resolved, err := a.Variables.Shell(p.Command)
+	if err != nil {
+		return err
+	}
+	p.Resolved, p.Variables = resolved, a.Variables
+	p.Environment = append(os.Environ(), a.Variables.Environment()...)
+	p.prepared = true
 	return nil
 }

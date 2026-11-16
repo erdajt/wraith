@@ -55,3 +55,46 @@ func TestPreviewReturnsToApprovalAndEscapeDoesNotExecute(t *testing.T) {
 		t.Fatal("declined command entered execution history")
 	}
 }
+
+func TestApprovalFreezesPrivateArgumentsAndEnvironment(t *testing.T) {
+	a := fixture(t)
+	a.environmentCommand("set TARGET=private.example", false)
+	a.approve(proposal{Command: `printf '%s|%s' wraith::TARGET "$TARGET"`, Language: "sh"})
+	if a.proposal == nil || !strings.Contains(a.View(), "private.example") {
+		t.Fatal("resolved preview missing")
+	}
+	a.environmentCommand("set TARGET=changed.example", false)
+	a.runApproved()
+	drain(t, a)
+	if a.activeRun.Output != "private.example|private.example" {
+		t.Fatalf("approval changed before execution: %q", a.activeRun.Output)
+	}
+}
+
+func TestSavedApprovalEditRunsWithoutSecondPrompt(t *testing.T) {
+	a := fixture(t)
+	a.approve(proposal{Command: "printf original", Language: "sh", Source: "model"})
+	f, err := editor.Prepare(a.Paths.Cache, ".sh", a.proposal.Resolved)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(f.Path, []byte("printf edited"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	a.finishEdit(editedMsg{Kind: "run", Language: "sh", File: f})
+	if !a.executing {
+		t.Fatalf("saved approval did not execute: %s", a.notice)
+	}
+	drain(t, a)
+	if a.activeRun.Output != "edited" || a.activeRun.Source != "model-edited" {
+		t.Fatalf("edit lost: %+v", a.activeRun)
+	}
+}
+
+func TestInvalidPrivateCommandNeverReachesApproval(t *testing.T) {
+	a := fixture(t)
+	a.approve(proposal{Command: "printf wraith::MISSING", Language: "sh"})
+	if a.proposal != nil || a.executing {
+		t.Fatal("invalid reference executable")
+	}
+}

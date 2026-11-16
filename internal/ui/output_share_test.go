@@ -10,6 +10,7 @@ import (
 
 func TestOutputStaysPrivateUntilExplicitSharing(t *testing.T) {
 	a := fixture(t)
+	a.Config.Execution.Mode = "blocks"
 	a.approve(proposal{Command: "printf private-evidence", Continue: true})
 	a.runApproved()
 	drain(t, a)
