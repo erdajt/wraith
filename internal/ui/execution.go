@@ -139,14 +139,14 @@ func (a *App) syncJobs() tea.Cmd {
 		}
 	default:
 	}
+	if a.pendingTool != nil {
+		return a.runPendingTool()
+	}
 	return a.deliverRuns()
 }
 
 func (a *App) deliverRuns() tea.Cmd {
-	if a.busy || a.loading || a.editing || a.Prompt.String() != "" || a.visualMode != "" || a.focus == "terminal0" || a.focus == "terminal1" {
-		return nil
-	}
-	if a.popup != nil && (a.popup.Kind != "run-output" || a.popup.Reader != nil && a.popup.Reader.Frozen) {
+	if !a.canContinue() {
 		return nil
 	}
 	candidate := a.Session.Clone()
@@ -239,4 +239,11 @@ func (a *App) prepareProposal(p *proposal) error {
 	p.Environment = append(os.Environ(), a.Variables.Environment()...)
 	p.prepared = true
 	return nil
+}
+
+func (a *App) canContinue() bool {
+	if a.busy || a.loading || a.editing || a.Prompt.String() != "" || a.visualMode != "" || a.focus == "terminal0" || a.focus == "terminal1" {
+		return false
+	}
+	return a.popup == nil || a.popup.Kind == "run-output" && (a.popup.Reader == nil || !a.popup.Reader.Frozen)
 }

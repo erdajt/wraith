@@ -60,6 +60,7 @@ func (a *App) submit() tea.Cmd {
 	}
 	a.rememberInput(text)
 	a.Prompt = vim.New()
+	a.agentReads, a.pendingTool = 0, nil
 	a.agentSteps = 0
 	a.generation, a.agentStopped = session.ID(), false
 	a.proposal = nil
@@ -185,6 +186,18 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 	if m.Err != nil {
 		return nil
 	}
+	if a.Config.Execution.Mode == "agent" {
+		tool, err := contextual.RequestedTool(m.Chunk.Message.Content)
+		if err != nil {
+			a.notice = "output request rejected: " + err.Error()
+			return nil
+		}
+		if tool != nil {
+			a.pendingTool = tool
+			return a.runPendingTool()
+		}
+	}
+
 	{
 		request, err := contextual.RequestedCommand(m.Chunk.Message.Content)
 		if err != nil {

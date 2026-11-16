@@ -49,7 +49,7 @@ func (a *App) forkPrompt() tea.Cmd {
 	a.selected = max(0, index-1)
 	a.chatCursor = -1
 	a.visualMode = ""
-	a.agentSteps = 0
+	a.agentSteps, a.agentReads, a.pendingTool = 0, 0, nil
 	a.generation, a.agentStopped = "", true
 	a.proposal = nil
 	a.notice = "fork opened · edit the draft, then :w or ctrl+s sends · original is in /resume"

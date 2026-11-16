@@ -38,6 +38,7 @@ func (a *App) declineCommand() {
 }
 
 func (a *App) stopAgent() {
+	a.pendingTool = nil
 	a.agentStopped = true
 	a.pendingAgent = false
 	if a.jobs != nil {

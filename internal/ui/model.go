@@ -10,6 +10,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/config"
+	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/editor"
 	"github.com/erdajt/wraith/internal/fsutil"
 	"github.com/erdajt/wraith/internal/ollama"
@@ -92,6 +93,10 @@ type App struct {
 	generation   string
 	agentStopped bool
 	editing      bool
+
+	pendingTool *contextual.ToolRequest
+	agentReads  int
+	lastPoll    map[string]time.Time
 
 	inputHistory                       []string
 	inputIndex, inputDraftPosition     int
@@ -186,6 +191,7 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 		}
 	}
 	a.pendingRuns = map[string]runner.Record{}
+	a.lastPoll = map[string]time.Time{}
 	a.jobs = runner.NewManager(a.history(), c.Execution.MaxJobs)
 	if !demo {
 		if recovered, e := a.history().Recover(); e != nil {
