@@ -38,7 +38,7 @@ func TestOutputStaysPrivateUntilExplicitSharing(t *testing.T) {
 func TestAutomaticSharingHidesManualAction(t *testing.T) {
 	a := fixture(t)
 	a.Config.Execution.AutoShare = true
-	a.showRun(runner.Record{ID: "record", Finished: time.Now()}, "output")
+	a.showRun(runner.Record{ID: "record", ShareOutput: true, Finished: time.Now()}, "output")
 	if strings.Contains(a.View(), "share to agent") {
 		t.Fatal("automatic sharing still advertises manual action")
 	}

@@ -42,6 +42,13 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 			return cmd
 		}
 	}
+	if (m.Kind == "jobs" || m.Kind == "history") && key == a.Config.Keys["job_cancel"] && m.Index >= 0 && m.Index < len(m.Items) {
+		a.cancelJob(m.Items[m.Index].Value)
+		return nil
+	}
+	if m.Kind == "jobs" && key == "r" {
+		return a.openJobs()
+	}
 	if len(key) == 1 && key[0] >= '0' && key[0] <= '9' {
 		if len(m.Count) < 6 {
 			m.Count += key
@@ -130,8 +137,8 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 			if choice.Value == "continue" {
 				return a.environmentCommand(pending, true)
 			}
-		case "history":
-			record, err := a.history().Load(choice.Value)
+		case "history", "jobs":
+			record, err := a.jobRecord(choice.Value)
 			if err != nil {
 				a.notice = err.Error()
 				return nil

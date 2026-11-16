@@ -11,7 +11,7 @@ func (a *App) runCommand(line string) tea.Cmd {
 	a.rememberInput("/" + line)
 	name, arg, _ := strings.Cut(line, " ")
 	arg = strings.TrimSpace(arg)
-	if a.busy && name != "help" && name != "context" && name != "cancel" {
+	if a.busy && name != "help" && name != "context" && name != "cancel" && name != "jobs" && name != "history" {
 		a.notice = "wait for the current operation or use /cancel"
 		return nil
 	}
@@ -41,6 +41,8 @@ func (a *App) runCommand(line string) tea.Cmd {
 			return a.selectProvider(arg)
 		}
 		return a.providerMenu()
+	case "jobs":
+		return a.openJobs()
 	case "history":
 		return a.openHistory()
 	case "model", "models", "think", "settings", "set", "theme", "context", "compact", "cancel", "thinking":

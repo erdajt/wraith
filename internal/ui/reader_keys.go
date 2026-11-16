@@ -4,7 +4,11 @@ import tea "github.com/charmbracelet/bubbletea"
 
 func (a *App) readerKey(k tea.KeyMsg) tea.Cmd {
 	m := a.popup
-	if k.String() == a.Config.Keys["output_share"] && !a.Config.Execution.AutoShare {
+	if k.String() == a.Config.Keys["job_cancel"] {
+		a.cancelJob(m.Record.ID)
+		return nil
+	}
+	if k.String() == a.Config.Keys["output_share"] && (!m.Record.ShareOutput || m.Record.OutputHidden) {
 		return a.shareRun(m.Record)
 	}
 	if k.String() == "r" && m.Reader.Buffer.Pending == "" && m.Reader.Buffer.Mode == "normal" {

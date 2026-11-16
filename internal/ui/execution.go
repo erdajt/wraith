@@ -211,7 +211,7 @@ func (a *App) showText(kind, title, text string) {
 }
 
 func (a *App) openHistory() tea.Cmd {
-	records, err := a.history().List()
+	records, err := a.jobList()
 	if err != nil {
 		a.notice = err.Error()
 		return nil

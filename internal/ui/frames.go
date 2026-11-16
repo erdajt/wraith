@@ -17,8 +17,11 @@ func (a *App) menuFrame() []string {
 	}
 	if m.Reader != nil {
 		content := []string{bold(p.Accent, clean(m.Title)), ink(p.Muted, m.Reader.Buffer.Status()+" · / search · v select · y yank · r refresh · q close")}
-		if !a.Config.Execution.AutoShare {
+		if !m.Record.ShareOutput || m.Record.OutputHidden {
 			content[0] += ink(p.Second, " · "+a.Config.Keys["output_share"]+" share to agent")
+		}
+		if m.Record.Finished.IsZero() {
+			content[0] += ink(p.Warn, " · "+a.Config.Keys["job_cancel"]+" cancel")
 		}
 		content = append(content, m.Reader.lines(w-2, height-3, p)...)
 		return frame(content, w, p, false, "", "")

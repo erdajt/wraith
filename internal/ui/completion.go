@@ -11,6 +11,7 @@ var commandSpecs = []commandSpec{
 	{"env", "manage private variables and descriptions", false},
 	{"provider", "switch the model backend", false},
 	{"providers", "choose a configured provider", false},
+	{"jobs", "inspect live session commands and cancel jobs", false},
 	{"history", "browse approved commands and saved output", false},
 	{"clear", "start a clean chat and retain saved history", false},
 	{"help", "show commands and key bindings", false},
