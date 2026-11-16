@@ -106,6 +106,11 @@ appearance:
     mouse: true
     thinking: false
 execution:
+    max_jobs: 4
+    max_reads: 16
+    command_timeout: 10m
+    capture_bytes: 8388608
+    tail_bytes: 65536
     auto_share: false
     mode: agent
     max_steps: 8
@@ -122,6 +127,7 @@ bindings:
     e: edit
     h: help
     i: instructions
+    j: jobs
     m: models
     p: pins
     r: history
@@ -159,6 +165,11 @@ compact:
     keep_turns: 2
     budget: 1536
 keys:
+    job_cancel: ctrl+x
+    env_new: n
+    env_edit: e
+    env_remove: d
+    env_scope: g
     cancel: ctrl+c
     editor: ctrl+e
     focus: tab

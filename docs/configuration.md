@@ -30,9 +30,13 @@ context accepts any positive integer representable by the binary. model architec
 | `thinking` | `auto` | native model default or supported effort value |
 | `threads` / `temperature` | `6` / `0.3` | Ollama inference options; API-specific options belong in provider `extra` |
 | `keep_alive` / `timeout` | `2m` / `10m` | Ollama idle retention and request/compaction deadline |
-| `execution.mode` | `agent` | request approval when execution is useful; `blocks` keeps text suggestions |
-| `execution.auto_share` | `false` | share completed tracked output automatically |
+| `execution.mode` | `agent` | request approval when execution is useful; `blocks` keeps approvals with optional sharing |
+| `execution.auto_share` | `false` | share blocks-mode output and scratch snapshots automatically |
 | `execution.max_steps` | `8` | approved model commands per user turn, 1–100 |
+| `execution.max_jobs` | `4` | concurrent tracked jobs, 1–32 |
+| `execution.max_reads` | `16` | output queries per user turn, 1–256 |
+| `execution.command_timeout` | `10m` | positive per-job duration, independent of model timeout |
+| `execution.capture_bytes` / `execution.tail_bytes` | `8388608` / `65536` | retained prefix and recent tail; [limits](execution.md#limits-and-recovery) |
 | `execution.output_context` | `8192` | maximum shared output bytes, 256–65536; further bounded by context |
 | `compact.mode` | `ask` | `ask`, `auto` or `manual` |
 | `compact.threshold` | `0.9` | compaction threshold, 0.5–0.95 |
@@ -72,13 +76,17 @@ keys:
 | --- | --- |
 | config: `config.yaml`, `instructions.md` | settings and global user preferences |
 | data: `sessions/`, `archives/` | compressed active sessions and immutable originals |
-| data: `commands/` | compressed tracked command metadata and output |
+| config: `variables/` | directory/global bindings and retained-value redaction journal |
+| data: `commands/` | compressed tracked command metadata/output and live recovery journals |
 | data: `input/` | bounded compressed prompt/command history per directory |
 | data: `snippets/`, `exports/` | edited source and markdown exports |
 | cache: `compaction/sessions/` | pre-compaction recovery snapshots |
+| cache: `repairs/archives/` | compressed superseded response attempts |
 | cache: `edits/` | editor buffers and retained invalid edits |
 | cache: `ollama.log` | locally started server logs |
 
 roots default to `~/.config/wraith`, `~/.local/share/wraith` and `~/.cache/wraith`. absolute XDG environment paths and CLI directory overrides are supported. new directories use 0700 and new files use 0600. gzip is compression, not encryption. archives and command records are not automatically deleted.
 
 Wraith does not reserve VRAM or control GPU offload. for Ollama, inspect `ollama ps` during generation and adjust model/context size to leave space for desktop work. cloud requests use the selected account and endpoint; CLI backends use their installed authentication.
+
+[private variables](private-variables.md) documents scoped bindings, comments, editor management and provider redaction. agent mode shares tracked evidence by default unless explicitly hidden; `execution.auto_share` controls blocks and scratch snapshots.
