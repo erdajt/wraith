@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/x/ansi"
+	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/store"
 	"github.com/erdajt/wraith/internal/variables"
@@ -108,5 +109,35 @@ func TestExportRedactsOriginalDirectoryAndRetiredValues(t *testing.T) {
 	out.Reset()
 	if err := run(args, &out); err == nil || out.Len() != 0 {
 		t.Fatal("export ignored missing redaction journal")
+	}
+}
+
+func TestDiscoveryCommandsLoadPrivacyBeforeProviderAccess(t *testing.T) {
+	root := t.TempDir()
+	directory, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := config.Default()
+	c.Provider = "openai"
+	profile := c.Providers[c.Provider]
+	profile.APIKey, profile.KeyEnv = "private.example", ""
+	c.Providers[c.Provider] = profile
+	if err := config.Save(filepath.Join(root, "config.yaml"), c); err != nil {
+		t.Fatal(err)
+	}
+	env := variables.Store{Root: filepath.Join(root, "variables")}
+	state, err := env.Load(directory, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.Save(directory, false, state.Revision, "TARGET=private.example"); err != nil {
+		t.Fatal(err)
+	}
+	for _, command := range []string{"models", "doctor"} {
+		err := run([]string{"--config-dir", root, command}, &bytes.Buffer{})
+		if err == nil || !strings.Contains(err.Error(), "private variable collides") {
+			t.Fatalf("%s bypassed privacy: %v", command, err)
+		}
 	}
 }
