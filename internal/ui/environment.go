@@ -119,7 +119,7 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 		scope = "global"
 	}
 	a.envGlobal = global
-	a.popup = &menu{Kind: "environment", Title: "private variables · " + scope + " · n/e editor · g scope · d remove", Items: items}
+	a.popup = &menu{Kind: "environment", Title: "private variables · " + scope + " · " + a.Config.Keys["env_new"] + "/" + a.Config.Keys["env_edit"] + " editor · " + a.Config.Keys["env_scope"] + " scope · " + a.Config.Keys["env_remove"] + " remove", Items: items}
 	return nil
 }
 

@@ -84,3 +84,19 @@ func TestDemoAssignmentsDoNotMutateBindings(t *testing.T) {
 		t.Fatalf("demo changed bindings: %v", err)
 	}
 }
+
+func TestVariablePickerUsesConfiguredBindings(t *testing.T) {
+	a := fixture(t)
+	a.Config.Keys["env_new"] = "a"
+	a.Config.Keys["env_edit"] = "o"
+	a.Config.Keys["env_scope"] = "s"
+	a.Config.Keys["env_remove"] = "x"
+	a.environmentCommand("set TARGET=local.example", false)
+	a.environmentCommand("", false)
+	if !strings.Contains(a.popup.Title, "a/o editor · s scope · x remove") {
+		t.Fatalf("stale binding hints: %s", a.popup.Title)
+	}
+	if _, handled := a.environmentKey(key("x")); !handled || len(a.popup.Items) != 0 {
+		t.Fatal("configured remove binding did not remove variable")
+	}
+}
