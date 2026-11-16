@@ -68,6 +68,7 @@ func (a *App) finishCompact(m compactMsg) tea.Cmd {
 	if m.Err != nil {
 		a.pendingPrompt = ""
 		a.pendingAgent = false
+		a.pendingTool, a.agentStopped = nil, true
 		a.notice = "compaction stopped: " + m.Err.Error()
 		return nil
 	}
@@ -75,6 +76,7 @@ func (a *App) finishCompact(m compactMsg) tea.Cmd {
 	if err := a.Store.Save(m.Session); err != nil {
 		a.pendingPrompt = ""
 		a.pendingAgent = false
+		a.pendingTool, a.agentStopped = nil, true
 		a.notice = "could not commit compacted context: " + err.Error()
 		return nil
 	}
@@ -91,6 +93,9 @@ func (a *App) finishCompact(m compactMsg) tea.Cmd {
 			return a.submit()
 		}
 		a.notice += " · draft changed during compaction; review before sending"
+	}
+	if a.pendingTool != nil {
+		return a.runPendingTool()
 	}
 	if a.pendingAgent {
 		a.pendingAgent = false

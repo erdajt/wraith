@@ -4,6 +4,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/runner"
 	"github.com/erdajt/wraith/internal/session"
 )
@@ -38,7 +39,11 @@ func (a *App) runPendingTool() tea.Cmd {
 			return nil
 		}
 	}
-	a.agentReads++
+	remaining := a.contextLimit() - a.Config.Predict - 128 - contextual.ChatUsed(a.Session, a.runtimeConfig(), a.chatInstructions())
+	budget := min(a.Config.Execution.OutputContext, max(0, remaining-256)*3)
+	if budget < 256 {
+		return a.deferOutputRead()
+	}
 	nextLine := a.pollNext[request.ID]
 	r, err := a.jobRecord(request.ID)
 	text := "output tool denied: command is not in this session"
@@ -50,7 +55,6 @@ func (a *App) runPendingTool() tea.Cmd {
 			text = "output tool: not ready; next_poll_ms: 1000"
 		} else {
 			if request.Tool == "poll" {
-				a.lastPoll[r.ID] = time.Now()
 				request.Limit = 20
 				request.From = max(1, nextLine)
 			}
@@ -59,7 +63,6 @@ func (a *App) runPendingTool() tea.Cmd {
 				text = "output tool rejected: " + queryErr.Error()
 			} else {
 				size := 0
-				budget := min(a.Config.Execution.OutputContext, max(256, (a.contextLimit()-a.Config.Predict)/4))
 				for i, line := range page.Lines {
 					if len(line.Text)+40 > budget {
 						page.Lines[i].Text = "[line exceeds output budget; inspect local history]"
@@ -91,15 +94,33 @@ func (a *App) runPendingTool() tea.Cmd {
 		message = evidence.Message()
 	}
 	candidate.Messages = append(candidate.Messages, message)
+	if contextual.Fits(candidate, a.runtimeConfig(), a.chatInstructions()) != nil {
+		return a.deferOutputRead()
+	}
 	if err := a.Store.Save(candidate); err != nil {
 		a.notice = "output tool result not saved: " + err.Error()
 		a.pendingTool, a.agentStopped = nil, true
 		return nil
 	}
 	a.pendingTool = nil
+	a.agentReads++
 	if request.Tool == "poll" {
 		a.pollNext[request.ID] = nextLine
+		a.lastPoll[request.ID] = time.Now()
 	}
 	a.Session = candidate
 	return a.continueEvidence()
+}
+
+func (a *App) deferOutputRead() tea.Cmd {
+	a.notice = "output read pending; compact context before adding evidence"
+	if a.Config.Compact.Mode == "auto" {
+		cmd := a.startCompact()
+		if !a.busy {
+			a.pendingTool, a.agentStopped = nil, true
+		}
+		return cmd
+	}
+	a.popup = &menu{Kind: "overflow", Title: "compact before reading command output?", Items: []item{{"yes", "yes", "archive and compact"}, {"no", "no", "pause without consuming output"}}}
+	return nil
 }

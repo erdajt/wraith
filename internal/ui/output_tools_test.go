@@ -181,3 +181,29 @@ func TestOutputToolsWaitForDurableFinalResult(t *testing.T) {
 		t.Fatalf("local inspection lost: %v", err)
 	}
 }
+
+func TestOutputReadDefersBeforeConsumingFullContext(t *testing.T) {
+	a := fixture(t)
+	a.agentStopped = false
+	a.Session.Messages = []session.Message{{Role: "user", Content: strings.Repeat("long context ", 3000)}}
+	id := session.ID()
+	a.pendingTool = &contextual.ToolRequest{Tool: "poll", ID: id}
+	a.runPendingTool()
+	if a.popup == nil || a.popup.Kind != "overflow" || a.pendingTool == nil || a.agentReads != 0 || a.pollNext[id] != 0 || len(a.Session.Messages) != 1 {
+		t.Fatal("read consumed context before compaction")
+	}
+	a.menuKey(key("n"))
+	if a.pendingTool != nil || a.agentReads != 0 || len(a.Session.Messages) != 1 {
+		t.Fatal("declined compaction consumed output")
+	}
+}
+
+func TestFailedToolCompactionDoesNotRetryEveryTick(t *testing.T) {
+	a := fixture(t)
+	a.agentStopped = false
+	a.pendingTool = &contextual.ToolRequest{Tool: "poll", ID: session.ID()}
+	a.finishCompact(compactMsg{Err: context.Canceled})
+	if a.pendingTool != nil || !a.agentStopped || a.agentReads != 0 {
+		t.Fatal("failed compaction retained automatic read")
+	}
+}
