@@ -61,9 +61,9 @@ func (m *Manager) Start(ctx context.Context, record Record, timeout time.Duratio
 	if timeout <= 0 {
 		return errors.New("command timeout must be positive")
 	}
-	record.Status, record.ExitCode, record.Started = "starting", -1, time.Now().UTC()
 	record.Environment = slices.Clone(record.Environment)
-	if err := m.history.Save(record); err != nil {
+	record, live, err := m.history.prepare(record)
+	if err != nil {
 		return err
 	}
 	child, cancel := context.WithTimeout(ctx, timeout)
@@ -73,16 +73,20 @@ func (m *Manager) Start(ctx context.Context, record Record, timeout time.Duratio
 	go func() {
 		defer m.workers.Done()
 		defer cancel()
-		result, err := m.history.Run(child, record, func(output string) {
+		result, err := m.history.execute(child, record, live, func(output string) {
 			m.mu.Lock()
 			_, _ = job.capture.Write([]byte(output))
-			job.Record.Status = "running"
 			job.Record.Output = job.capture.text.String()
 			job.Record.Tail = job.capture.tail
 			job.Record.Observed = job.capture.observed
 			job.Record.TailOffset = job.capture.observed - int64(len(job.capture.tail))
 			job.Record.TailLine = job.capture.tailLine + 1
 			job.Record.Truncated = job.capture.truncated
+			m.mu.Unlock()
+			m.notify()
+		}, func() {
+			m.mu.Lock()
+			job.Record.Status = "running"
 			m.mu.Unlock()
 			m.notify()
 		})

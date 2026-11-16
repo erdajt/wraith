@@ -22,7 +22,10 @@ func (h History) openLive(record Record) (*liveRun, error) {
 		return nil, errors.New("invalid command id")
 	}
 	directory := filepath.Join(h.Root, "live", record.ID)
-	if err := os.MkdirAll(directory, 0700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(directory), 0700); err != nil {
+		return nil, err
+	}
+	if err := os.Mkdir(directory, 0700); err != nil {
 		return nil, err
 	}
 	lock, err := os.OpenFile(filepath.Join(directory, "owner.lock"), os.O_CREATE|os.O_RDWR, 0600)
@@ -134,8 +137,12 @@ func (h History) recoverRun(directory, id string) (*Record, error) {
 		return nil, fmt.Errorf("incomplete recovery prefix for command %s", id)
 	}
 	record.Output = string(prefix[:record.Captured])
-	record.Status, record.ExitCode, record.Finished = "interrupted", -1, time.Now().UTC()
-	record.Error = "process ended without a final result; retained output may be incomplete"
+	if record.Finished.IsZero() {
+		record.Status, record.ExitCode, record.Finished = "interrupted", -1, time.Now().UTC()
+		record.Error = "process ended without a final result; retained output may be incomplete"
+	} else if record.Status != "completed" && record.Status != "failed" && record.Status != "cancelled" && record.Status != "timed_out" {
+		return nil, fmt.Errorf("invalid terminal recovery state for command %s", id)
+	}
 	if err = h.Save(record); err != nil {
 		return nil, err
 	}

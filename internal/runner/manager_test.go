@@ -111,3 +111,26 @@ func TestManagerRefusesLaunchWithoutDurableIntent(t *testing.T) {
 		t.Fatal("cancelled launch accepted")
 	}
 }
+
+func TestSilentJobReportsRunningBeforeExit(t *testing.T) {
+	t.Parallel()
+	m := NewManager(History{Root: t.TempDir()}, 1)
+	t.Cleanup(m.Close)
+	if err := m.Start(t.Context(), Record{ID: session.ID(), Shell: "/bin/sh", Command: "sleep 30"}, time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.NewTimer(5 * time.Second)
+	defer deadline.Stop()
+	for {
+		for _, job := range m.Snapshot() {
+			if job.Record.Status == "running" && job.Record.Output == "" {
+				return
+			}
+		}
+		select {
+		case <-m.Updates:
+		case <-deadline.C:
+			t.Fatal("silent job never entered running state")
+		}
+	}
+}

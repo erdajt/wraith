@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -53,20 +54,45 @@ func (c *capture) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (h History) Run(ctx context.Context, r Record, emit func(string)) (Record, error) {
+func (h History) prepare(r Record) (Record, *liveRun, error) {
 	if strings.TrimSpace(r.Command) == "" || strings.ContainsRune(r.Command, 0) {
-		return r, errors.New("command is empty or contains a null byte")
+		return r, nil, errors.New("command is empty or contains a null byte")
 	}
-	r.Started = time.Now().UTC()
-	r.Status = "running"
-	r.ExitCode = -1
-	if err := h.Save(r); err != nil {
-		return r, err
+	if !validID.MatchString(r.ID) {
+		return r, nil, errors.New("invalid command id")
 	}
+	if _, err := os.Stat(filepath.Join(h.Root, r.ID+".json.gz")); !errors.Is(err, os.ErrNotExist) {
+		if err != nil {
+			return r, nil, err
+		}
+		return r, nil, errors.New("command id already exists in history")
+	}
+	r.Started, r.Status, r.ExitCode = time.Now().UTC(), "starting", -1
 	live, err := h.openLive(r)
+	if err == nil {
+		err = h.Save(r)
+	}
+	if err != nil {
+		r.Finished, r.Status, r.Error = time.Now().UTC(), "failed", err.Error()
+		if live != nil {
+			_ = live.checkpoint(r, &capture{})
+			_ = h.Save(r)
+			live.close()
+		}
+		return r, nil, err
+	}
+	return r, live, nil
+}
+
+func (h History) Run(ctx context.Context, r Record, emit func(string)) (Record, error) {
+	r, live, err := h.prepare(r)
 	if err != nil {
 		return r, err
 	}
+	return h.execute(ctx, r, live, emit, nil)
+}
+
+func (h History) execute(ctx context.Context, r Record, live *liveRun, emit func(string), started func()) (Record, error) {
 	defer live.close()
 	child, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -104,7 +130,14 @@ func (h History) Run(ctx context.Context, r Record, emit func(string)) (Record, 
 			}
 		}
 	}()
-	err = cmd.Run()
+	err := cmd.Start()
+	if err == nil {
+		if started != nil {
+			started()
+		}
+		err = cmd.Wait()
+		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	}
 	close(stop)
 	checkpointErr := <-checkpointed
 	if checkpointErr != nil {

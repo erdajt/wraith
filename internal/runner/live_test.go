@@ -103,3 +103,58 @@ func TestRunningCommandCheckpointsOutputAndRemovesJournalAtCompletion(t *testing
 		t.Fatal("final command retained live journal")
 	}
 }
+
+func TestRecoveryPreservesTerminalCheckpointBeforeFinalSave(t *testing.T) {
+	t.Parallel()
+	h := History{Root: t.TempDir()}
+	record := Record{ID: session.ID(), Status: "failed", ExitCode: 7, Finished: time.Now().UTC(), Error: "exit status 7"}
+	live, err := h.openLive(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	live.close()
+	recovered, err := h.Recover()
+	if err != nil || len(recovered) != 1 {
+		t.Fatalf("recovery: %v %v", recovered, err)
+	}
+	if got := recovered[0]; got.Status != record.Status || got.ExitCode != 7 || !got.Finished.Equal(record.Finished) || got.Error != record.Error {
+		t.Fatalf("terminal checkpoint changed: %+v", got)
+	}
+}
+
+func TestSetupFailureCannotLeaveRunningIntent(t *testing.T) {
+	t.Parallel()
+	h := History{Root: t.TempDir()}
+	if err := os.WriteFile(filepath.Join(h.Root, "live"), nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	record, err := h.Run(t.Context(), Record{ID: session.ID(), Shell: "/bin/sh", Command: "true"}, nil)
+	if err == nil || record.Status != "failed" || record.Finished.IsZero() {
+		t.Fatalf("setup: %+v %v", record, err)
+	}
+	if _, err := h.Load(record.ID); !os.IsNotExist(err) {
+		t.Fatalf("orphan intent: %v", err)
+	}
+}
+
+func TestPreparationOwnsJournalBeforeSavingIntent(t *testing.T) {
+	t.Parallel()
+	h := History{Root: t.TempDir()}
+	record, live, err := h.prepare(Record{ID: session.ID(), Shell: "/bin/sh", Command: "true"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.Load(record.ID); err != nil {
+		live.close()
+		t.Fatal(err)
+	}
+	if recovered, err := h.Recover(); err != nil || len(recovered) != 0 {
+		live.close()
+		t.Fatalf("owner missing: %v", err)
+	}
+	live.close()
+	recovered, err := h.Recover()
+	if err != nil || len(recovered) != 1 || recovered[0].Status != "interrupted" {
+		t.Fatalf("orphan intent: %v %v", recovered, err)
+	}
+}
