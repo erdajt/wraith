@@ -19,6 +19,16 @@ const OutputLimit = 8 << 20
 var validID = regexp.MustCompile(`^[a-f0-9]{24}$`)
 
 type Record struct {
+	Generation   string   `json:"generation,omitempty"`
+	Background   bool     `json:"background,omitempty"`
+	ShareOutput  bool     `json:"share_output,omitempty"`
+	OutputHidden bool     `json:"output_hidden,omitempty"`
+	Environment  []string `json:"-"`
+	Tail         string   `json:"tail,omitempty"`
+	Observed     int64    `json:"observed,omitempty"`
+	TailOffset   int64    `json:"tail_offset,omitempty"`
+	TailLine     int64    `json:"tail_line,omitempty"`
+
 	ID        string    `json:"id"`
 	Session   string    `json:"session"`
 	Command   string    `json:"command"`
@@ -94,6 +104,7 @@ func (h History) List() ([]Record, error) {
 			return nil, err
 		}
 		r.Output = ""
+		r.Tail = ""
 		out = append(out, r)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Started.After(out[j].Started) })
