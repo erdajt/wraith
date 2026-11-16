@@ -124,3 +124,27 @@ func TestApprovalCannotRunAfterSessionChanges(t *testing.T) {
 		t.Fatal("stale approval executed")
 	}
 }
+
+func TestBlockEditorReceivesResolvedSourceWithoutExecuting(t *testing.T) {
+	for _, language := range []string{"sh", "python"} {
+		t.Run(language, func(t *testing.T) {
+			a := fixture(t)
+			a.environmentCommand("set TARGET=private.example", false)
+			cmd := a.edit("block", language, "printf wraith::TARGET", -1)
+			if cmd == nil || !a.editing {
+				t.Fatalf("editor did not open: %s", a.notice)
+			}
+			paths, err := filepath.Glob(filepath.Join(a.Paths.Cache, "edits", "*"))
+			if err != nil || len(paths) != 1 {
+				t.Fatalf("editor file missing: %v", err)
+			}
+			data, err := os.ReadFile(paths[0])
+			if err != nil || strings.Contains(string(data), "wraith::") || !strings.Contains(string(data), "private.example") {
+				t.Fatalf("unresolved editor text: %q %v", data, err)
+			}
+			if len(a.jobs.Snapshot()) != 0 {
+				t.Fatal("opening editor executed code")
+			}
+		})
+	}
+}

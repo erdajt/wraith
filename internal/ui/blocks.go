@@ -27,6 +27,10 @@ func (a *App) blockAction(action string) tea.Cmd {
 			a.notice = "command execution is disabled in demo mode"
 			return nil
 		}
+		if strings.Contains(b.Text, "wraith::") && editor.Extension(b.Language) != ".sh" {
+			a.notice = "review substituted source in your editor before staging"
+			return a.edit("block", b.Language, b.Text, -1)
+		}
 		path, command, err := editor.Stage(filepath.Join(a.Paths.Data, "snippets"), b.Language, b.Text)
 		if err != nil {
 			a.notice = err.Error()

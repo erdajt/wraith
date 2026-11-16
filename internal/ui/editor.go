@@ -53,6 +53,26 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 		text = a.messageAt(index)
 	case "block", "run":
 		ext = editor.Extension(language)
+		if kind == "block" {
+			if err := a.refreshVariables(); err != nil {
+				a.notice = err.Error()
+				return nil
+			}
+			if _, err := a.Variables.Validate(text, true); err != nil {
+				a.notice = err.Error()
+				return nil
+			}
+			if ext == ".sh" {
+				var err error
+				text, err = a.Variables.Shell(text)
+				if err != nil {
+					a.notice = err.Error()
+					return nil
+				}
+			} else {
+				text, _ = a.Variables.Expand(text)
+			}
+		}
 	}
 	f, err := editor.Prepare(filepath.Join(a.Paths.Cache, "edits"), ext, text)
 	if err != nil {
@@ -209,6 +229,21 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 		applied = true
 		return a.runApproved()
 	case "block":
+		if strings.Contains(text, "wraith::") {
+			if editor.Extension(m.Language) != ".sh" {
+				a.notice = "resolve private references in the source before saving"
+				return nil
+			}
+			if err := a.refreshVariables(); err != nil {
+				a.notice = err.Error()
+				return nil
+			}
+			text, err = a.Variables.Shell(text)
+			if err != nil {
+				a.notice = err.Error()
+				return nil
+			}
+		}
 		path, command, e := editor.Stage(filepath.Join(a.Paths.Data, "snippets"), m.Language, text)
 		if e != nil {
 			a.notice = e.Error()
