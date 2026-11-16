@@ -88,3 +88,29 @@ func TestContextHasNoApplicationCeiling(t *testing.T) {
 		}
 	}
 }
+
+func TestExecutionLimitsValidateAndSurvivePartialConfig(t *testing.T) {
+	for _, input := range []string{
+		`{"execution":{"max_jobs":0}}`, `{"execution":{"max_jobs":33}}`,
+		`{"execution":{"max_reads":0}}`, `{"execution":{"max_reads":257}}`,
+		`{"execution":{"command_timeout":"0s"}}`, `{"execution":{"command_timeout":"never"}}`,
+	} {
+		t.Run(input, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "config.json")
+			if err := os.WriteFile(path, []byte(input), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := Load(path); err == nil {
+				t.Fatal("invalid execution limits accepted")
+			}
+		})
+	}
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(path, []byte(`{"execution":{"mode":"blocks"}}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	c, err := Load(path)
+	if err != nil || c.Execution.MaxJobs != 4 || c.Execution.MaxReads != 16 || c.Execution.CommandTimeout != "10m" {
+		t.Fatalf("old config lost defaults: %+v %v", c.Execution, err)
+	}
+}

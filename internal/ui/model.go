@@ -186,7 +186,7 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 		}
 	}
 	a.pendingRuns = map[string]runner.Record{}
-	a.jobs = runner.NewManager(a.history(), 4)
+	a.jobs = runner.NewManager(a.history(), c.Execution.MaxJobs)
 	if !demo {
 		if recovered, e := a.history().Recover(); e != nil {
 			a.notice = "command recovery: " + e.Error()

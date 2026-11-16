@@ -76,7 +76,8 @@ func (a *App) runApproved() tea.Cmd {
 	if !p.Continue {
 		record.Generation = ""
 	}
-	timeout, _ := time.ParseDuration(a.Config.Timeout)
+	timeout, _ := time.ParseDuration(a.Config.Execution.CommandTimeout)
+	a.jobs.SetLimit(a.Config.Execution.MaxJobs)
 	if err := a.jobs.Start(context.Background(), record, timeout); err != nil {
 		a.proposal = &p
 		a.notice = "command launch: " + err.Error()

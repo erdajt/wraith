@@ -160,3 +160,9 @@ func (m *Manager) notify() {
 	default:
 	}
 }
+
+func (m *Manager) SetLimit(limit int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.maxJobs = max(1, limit)
+}
