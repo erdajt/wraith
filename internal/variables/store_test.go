@@ -114,3 +114,30 @@ func TestFirstAcceptedValueRemainsRedactedAcrossDirectories(t *testing.T) {
 		t.Fatal("accepted value disappeared from privacy snapshot")
 	}
 }
+
+func TestMalformedExternalEditCanBeRepairedWithoutLosingHistory(t *testing.T) {
+	t.Parallel()
+	store := Store{Root: t.TempDir()}
+	directory := t.TempDir()
+	initial, err := store.Load(directory, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = store.Save(directory, false, initial.Revision, "TARGET=private.example"); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(store.Path(directory, false), []byte("TARGET='broken"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = store.Load(directory, false); err == nil {
+		t.Fatal("malformed file became active")
+	}
+	edit, err := store.Edit(directory, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repaired, err := store.Save(directory, false, edit.Revision, "TARGET=other.example")
+	if err != nil || repaired.Snapshot.Redact("private.example") != "wraith::TARGET" {
+		t.Fatalf("repair lost history: %v", err)
+	}
+}

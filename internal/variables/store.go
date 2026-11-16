@@ -44,6 +44,21 @@ func (s Store) Save(directory string, global bool, revision, text string) (State
 	return s.transact(directory, global, revision, &text)
 }
 
+func (s Store) Edit(directory string, global bool) (State, error) {
+	if real, err := filepath.EvalSymlinks(directory); err == nil {
+		directory = real
+	}
+	if !filepath.IsAbs(directory) {
+		return State{}, errors.New("variable directory must be absolute")
+	}
+	text, err := fsutil.ReadLimit(s.Path(directory, global), FileLimit)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return State{}, err
+	}
+	hash := sha256.Sum256(text)
+	return State{Text: string(text), Revision: hex.EncodeToString(hash[:])}, nil
+}
+
 func (s Store) transact(directory string, global bool, revision string, replacement *string) (State, error) {
 	var state State
 	if real, err := filepath.EvalSymlinks(directory); err == nil {
@@ -86,7 +101,7 @@ func (s Store) transact(directory string, global bool, revision string, replacem
 			return state, err
 		}
 		entries, err := Parse(string(text))
-		if err != nil {
+		if err != nil && (scope != selected || replacement == nil) {
 			return state, err
 		}
 		if scope == selected {

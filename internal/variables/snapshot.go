@@ -53,15 +53,13 @@ func (s Snapshot) Redact(text string) string {
 	var out strings.Builder
 	start := 0
 	for _, span := range markerPattern.FindAllStringIndex(text, -1) {
-		out.WriteString(s.replacer.Replace(text[start:span[0]]))
 		suffix, _ := utf8.DecodeRuneInString(text[span[1]:])
 		complete := !unicode.IsLetter(suffix) && !unicode.IsDigit(suffix) && suffix != '_' && !strings.HasPrefix(text[span[1]:], "::")
 		if complete && s.markerNames[text[span[0]+8:span[1]]] {
+			out.WriteString(s.replacer.Replace(text[start:span[0]]))
 			out.WriteString(text[span[0]:span[1]])
-		} else {
-			out.WriteString(s.replacer.Replace(text[span[0]:span[1]]))
+			start = span[1]
 		}
-		start = span[1]
 	}
 	out.WriteString(s.replacer.Replace(text[start:]))
 	return out.String()

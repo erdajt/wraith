@@ -63,3 +63,11 @@ func TestMalformedKnownMarkerCannotShieldLiteral(t *testing.T) {
 		}
 	}
 }
+
+func TestRedactionKeepsMalformedRegionsContiguous(t *testing.T) {
+	t.Parallel()
+	s := NewSnapshot([]Entry{{Name: "TOKEN", Value: "TARGETsuffix"}}, nil)
+	if got := s.Redact("wraith::TARGETsuffix"); strings.Contains(got, "TARGETsuffix") {
+		t.Fatal("malformed reference hid a literal")
+	}
+}

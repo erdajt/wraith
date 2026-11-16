@@ -44,14 +44,19 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 		a.popup = &menu{Kind: "env-global", Title: "global variables apply in every directory", Items: []item{{"cancel", "cancel", "keep directory scope"}, {"continue", "continue", "names and descriptions become available in all chats"}}}
 		return nil
 	}
+	if arg == "edit" || arg == "new" {
+		state, err := a.variableStore().Edit(a.Directory, global)
+		if err != nil {
+			a.notice = err.Error()
+			return nil
+		}
+		a.envRevision, a.envGlobal = state.Revision, global
+		return a.edit("environment", "", state.Text, -1)
+	}
 	state, err := a.variableStore().Load(a.Directory, global)
 	if err != nil {
 		a.notice = err.Error()
 		return nil
-	}
-	if arg == "edit" || arg == "new" {
-		a.envRevision, a.envGlobal = state.Revision, global
-		return a.edit("environment", "", state.Text, -1)
 	}
 	if strings.HasPrefix(arg, "set ") || strings.HasPrefix(arg, "unset ") {
 		operation, input, _ := strings.Cut(arg, " ")
@@ -79,7 +84,26 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 			a.notice = e.Error()
 			return nil
 		}
-		a.notice = "saved private variable " + name
+		notice := "saved private variable " + name
+		if operation == "unset" {
+			notice = "removed private variable " + name
+			if _, err := a.Variables.Validate("wraith::"+name, true); !global && err == nil {
+				notice += " · global binding is now active"
+			}
+		}
+		index := 0
+		if a.popup != nil && a.popup.Kind == "environment" {
+			index = a.popup.Index
+		}
+		scope := ""
+		if global {
+			scope = "global"
+		}
+		a.environmentCommand(scope, true)
+		if a.popup != nil && a.popup.Kind == "environment" {
+			a.popup.Index = max(0, min(index, len(a.popup.Items)-1))
+		}
+		a.notice = notice
 		return nil
 	}
 	if arg != "" {
