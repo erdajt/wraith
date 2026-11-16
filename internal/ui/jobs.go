@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -60,5 +61,26 @@ func (a *App) cancelJob(id string) {
 		a.notice = "cancelling command · output remains in history"
 	} else {
 		a.notice = "command has already stopped"
+	}
+}
+
+func (a *App) reconcileJobs() {
+	records, err := a.history().List()
+	if err != nil {
+		a.notice = "command reconciliation: " + err.Error()
+		return
+	}
+	for _, record := range records {
+		if record.Session != a.Session.ID || record.Finished.IsZero() || slices.Contains(a.Session.DeliveredRuns, record.ID) {
+			continue
+		}
+		if record.Agent || record.ShareOutput && !record.OutputHidden {
+			record, err = a.history().Load(record.ID)
+			if err != nil {
+				a.notice = "command reconciliation: " + err.Error()
+				return
+			}
+		}
+		a.pendingRuns[record.ID] = record
 	}
 }

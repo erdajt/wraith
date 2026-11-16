@@ -83,6 +83,7 @@ func (a *App) runApproved() tea.Cmd {
 		a.notice = "command launch: " + err.Error()
 		return nil
 	}
+	a.agentStopped = false
 	if p.Continue {
 		a.agentSteps++
 	}
@@ -149,25 +150,7 @@ func (a *App) deliverRuns() tea.Cmd {
 	if !a.canContinue() {
 		return nil
 	}
-	candidate := a.Session.Clone()
-	continueAgent := false
-	for id, r := range a.pendingRuns {
-		if r.Session != candidate.ID {
-			continue
-		}
-		if slices.Contains(candidate.DeliveredRuns, id) {
-			delete(a.pendingRuns, id)
-			continue
-		}
-		candidate.DeliveredRuns = append(candidate.DeliveredRuns, id)
-		if r.Agent || r.ShareOutput && !r.OutputHidden {
-			candidate.Messages = append(candidate.Messages, session.Message{Role: "user", Content: a.commandEvidence(r)})
-			if r.ShareOutput && !r.OutputHidden {
-				candidate.SharedRuns = append(candidate.SharedRuns, id)
-			}
-			continueAgent = continueAgent || r.Generation == a.generation && !a.agentStopped && r.Status != "cancelled"
-		}
-	}
+	candidate, continueAgent := a.pendingEvidence()
 	if len(candidate.DeliveredRuns) == len(a.Session.DeliveredRuns) {
 		return nil
 	}
@@ -246,4 +229,33 @@ func (a *App) canContinue() bool {
 		return false
 	}
 	return a.popup == nil || a.popup.Kind == "run-output" && (a.popup.Reader == nil || !a.popup.Reader.Frozen)
+}
+
+func (a *App) pendingEvidence() (session.Session, bool) {
+	candidate := a.Session.Clone()
+	continueAgent := false
+	records := make([]runner.Record, 0, len(a.pendingRuns))
+	for _, r := range a.pendingRuns {
+		records = append(records, r)
+	}
+	slices.SortFunc(records, func(a, b runner.Record) int { return a.Started.Compare(b.Started) })
+	for _, r := range records {
+		id := r.ID
+		if r.Session != candidate.ID {
+			continue
+		}
+		if slices.Contains(candidate.DeliveredRuns, id) {
+			delete(a.pendingRuns, id)
+			continue
+		}
+		candidate.DeliveredRuns = append(candidate.DeliveredRuns, id)
+		if !slices.Contains(candidate.SharedRuns, id) && (r.Agent || r.ShareOutput && !r.OutputHidden) {
+			candidate.Messages = append(candidate.Messages, session.Message{Role: "user", Content: a.commandEvidence(r)})
+			if r.ShareOutput && !r.OutputHidden {
+				candidate.SharedRuns = append(candidate.SharedRuns, id)
+			}
+			continueAgent = continueAgent || r.Generation == a.generation && !a.agentStopped && r.Status != "cancelled"
+		}
+	}
+	return candidate, continueAgent
 }

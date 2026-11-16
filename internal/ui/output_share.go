@@ -39,12 +39,16 @@ func (a *App) shareRun(r runner.Record) tea.Cmd {
 	text := a.commandEvidence(r)
 	candidate := a.Session.Clone()
 	candidate.SharedRuns = append(candidate.SharedRuns, r.ID)
+	if !slices.Contains(candidate.DeliveredRuns, r.ID) {
+		candidate.DeliveredRuns = append(candidate.DeliveredRuns, r.ID)
+	}
 	candidate.Messages = append(candidate.Messages, session.Message{Role: "user", Content: text})
 	if err := a.Store.Save(candidate); err != nil {
 		a.notice = "output remains in /history; chat save failed: " + err.Error()
 		return nil
 	}
 	a.Session = candidate
+	delete(a.pendingRuns, r.ID)
 	a.notice = "command output shared"
 	if r.Status == "cancelled" {
 		return nil

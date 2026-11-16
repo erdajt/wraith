@@ -47,7 +47,7 @@ func (a *App) submit() tea.Cmd {
 		a.notice = err.Error()
 		return nil
 	}
-	probe := a.Session.Clone()
+	probe, _ := a.pendingEvidence()
 	probe.Messages = append(probe.Messages, session.Message{Role: "user", Content: text})
 	if err := contextual.Fits(probe, a.runtimeConfig(), a.chatInstructions()); err != nil {
 		a.notice = err.Error()
@@ -64,13 +64,14 @@ func (a *App) submit() tea.Cmd {
 	a.agentSteps = 0
 	a.generation, a.agentStopped = session.ID(), false
 	a.proposal = nil
+	original := a.Session
 	a.Session = probe
 	if a.Session.Title == "untitled" {
 		r := []rune(text)
 		a.Session.Title = string(r[:min(len(r), 60)])
 	}
 	if err := a.Store.Save(a.Session); err != nil {
-		a.Session.Messages = a.Session.Messages[:len(a.Session.Messages)-1]
+		a.Session = original
 		a.Prompt.Set(text)
 		a.notice = err.Error()
 		return nil

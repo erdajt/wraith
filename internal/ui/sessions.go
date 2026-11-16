@@ -45,6 +45,7 @@ func (a *App) resume(id string) tea.Cmd {
 	a.selected = max(0, len(s.Messages)-1)
 	a.pendingPrompt = ""
 	a.notice = "resumed " + s.Title
+	a.reconcileJobs()
 	return a.probe()
 }
 

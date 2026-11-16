@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"encoding/json"
+	"github.com/erdajt/wraith/internal/ollama"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -63,5 +66,45 @@ func TestHiddenResultDisclosesStatusWithoutOutputOrError(t *testing.T) {
 	got := a.Session.Messages[0].Content
 	if strings.Contains(got, "private-") || !strings.Contains(got, "output withheld") || len(a.Session.SharedRuns) != 0 {
 		t.Fatalf("hidden result: %s", got)
+	}
+}
+
+func TestPendingResultIsIncludedWithNextSubmittedDraft(t *testing.T) {
+	a := fixture(t)
+	r := runner.Record{ID: session.ID(), Session: a.Session.ID, Agent: true, ShareOutput: true, Output: "queued evidence", Finished: time.Now()}
+	a.pendingRuns[r.ID] = r
+	a.Client.HTTP.Transport = transport(func(req *http.Request) (*http.Response, error) {
+		var body ollama.Request
+		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+			t.Error(err)
+		}
+		n := len(body.Messages)
+		if n < 3 || !strings.Contains(body.Messages[n-2].Content, "queued evidence") || body.Messages[n-1].Content != "use the result" {
+			t.Errorf("pending result not delivered with draft: %+v", body.Messages)
+		}
+		return response(`{"done":true,"message":{"role":"assistant","content":"done"}}`), nil
+	})
+	a.Prompt.Set("use the result")
+	a.submit()
+	drain(t, a)
+	if len(a.Session.DeliveredRuns) != 1 {
+		t.Fatal("delivery id missing")
+	}
+}
+
+func TestReconciliationPersistsEvidenceWithoutRestartingAgent(t *testing.T) {
+	a := fixture(t)
+	r := runner.Record{ID: session.ID(), Session: a.Session.ID, Agent: true, ShareOutput: true, Output: "completed offline", Finished: time.Now()}
+	if err := a.history().Save(r); err != nil {
+		t.Fatal(err)
+	}
+	a.reconcileJobs()
+	if cmd := a.deliverRuns(); cmd != nil || a.busy {
+		t.Fatal("reconciliation restarted agent")
+	}
+	a.reconcileJobs()
+	a.deliverRuns()
+	if len(a.Session.Messages) != 1 || !strings.Contains(a.Session.Messages[0].Content, "completed offline") {
+		t.Fatal("reconciliation lost or duplicated output")
 	}
 }

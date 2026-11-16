@@ -190,6 +190,7 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 			a.inputHistory = entries
 		}
 	}
+	a.agentStopped = true
 	a.pendingRuns = map[string]runner.Record{}
 	a.lastPoll = map[string]time.Time{}
 	a.jobs = runner.NewManager(a.history(), c.Execution.MaxJobs)
@@ -199,6 +200,9 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 		} else if len(recovered) > 0 {
 			a.notice = "recovered interrupted commands · /history"
 		}
+	}
+	if !demo {
+		a.reconcileJobs()
 	}
 	a.showThinking = c.Appearance.Thinking
 	a.thinkingExpanded = map[string]bool{}
