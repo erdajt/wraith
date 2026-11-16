@@ -8,6 +8,7 @@ import (
 )
 
 type Provider struct {
+	Environment   []string          `json:"-" yaml:"-"`
 	Context       int               `json:"context" yaml:"context"`
 	ModelContexts map[string]int    `json:"model_contexts" yaml:"model_contexts"`
 	Kind          string            `json:"kind" yaml:"kind"`

@@ -78,7 +78,10 @@ func CLI(ctx context.Context, cfg config.Provider, req ollama.Request, emit func
 	defer cancel()
 	cmd := exec.CommandContext(child, argv[0], argv[1:]...)
 	cmd.Dir = dir
-	cmd.Env = os.Environ()
+	cmd.Env = cfg.Environment
+	if cmd.Env == nil {
+		cmd.Env = os.Environ()
+	}
 	if cfg.APIKey != "" && cfg.KeyEnv != "" {
 		cmd.Env = append(cmd.Env, cfg.KeyEnv+"="+cfg.APIKey)
 	}

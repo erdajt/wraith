@@ -8,9 +8,11 @@ import (
 
 	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/ollama"
+	"github.com/erdajt/wraith/internal/variables"
 )
 
 type Client struct {
+	Variables variables.Snapshot
 	*ollama.Client
 	Profile config.Provider
 	Name    string
@@ -101,6 +103,11 @@ func (c *Client) Load(ctx context.Context, model, keepAlive string, options olla
 }
 
 func (c *Client) Chat(ctx context.Context, request ollama.Request, emit func(ollama.Response)) (ollama.Response, error) {
+	private, sanitized, err := c.privateRequest(request)
+	if err != nil {
+		return ollama.Response{}, err
+	}
+	c, request = private, sanitized
 	switch c.Profile.Kind {
 	case "ollama":
 		return c.Client.Chat(ctx, request, emit)
