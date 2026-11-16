@@ -98,6 +98,7 @@ type App struct {
 	pendingTool *contextual.ToolRequest
 	agentReads  int
 	lastPoll    map[string]time.Time
+	pollNext    map[string]int64
 
 	inputHistory                       []string
 	inputIndex, inputDraftPosition     int
@@ -194,6 +195,7 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 	a.agentStopped = true
 	a.pendingRuns = map[string]runner.Record{}
 	a.lastPoll = map[string]time.Time{}
+	a.pollNext = map[string]int64{}
 	a.jobs = runner.NewManager(a.history(), c.Execution.MaxJobs)
 	if !demo {
 		if recovered, e := a.history().Recover(); e != nil {

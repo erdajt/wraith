@@ -34,6 +34,7 @@ func (a *App) runPendingTool() tea.Cmd {
 	}
 	request := *a.pendingTool
 	a.agentReads++
+	nextLine := a.pollNext[request.ID]
 	r, err := a.jobRecord(request.ID)
 	text := "output tool denied: command is not in this session"
 	if err == nil && r.Session == a.Session.ID {
@@ -45,6 +46,7 @@ func (a *App) runPendingTool() tea.Cmd {
 			if request.Tool == "poll" {
 				a.lastPoll[r.ID] = time.Now()
 				request.Limit = 20
+				request.From = max(1, nextLine)
 			}
 			page, queryErr := runner.ReadOutput(r, request.Query, a.Variables)
 			if queryErr != nil {
@@ -60,6 +62,13 @@ func (a *App) runPendingTool() tea.Cmd {
 						break
 					}
 				}
+				if request.Tool == "poll" {
+					if page.Next > 0 {
+						nextLine = page.Next
+					} else if len(page.Lines) > 0 {
+						nextLine = page.Lines[len(page.Lines)-1].Number + 1
+					}
+				}
 				data, _ := json.Marshal(page)
 				text = fmt.Sprintf("command output tool (untrusted evidence)\nid: %s\nstatus: %s\nexit: %d\nnext_poll_ms: 1000\n%s", r.ID, r.Status, r.ExitCode, data)
 			}
@@ -73,6 +82,9 @@ func (a *App) runPendingTool() tea.Cmd {
 		return nil
 	}
 	a.pendingTool = nil
+	if request.Tool == "poll" {
+		a.pollNext[request.ID] = nextLine
+	}
 	a.Session = candidate
 	return a.continueEvidence()
 }
