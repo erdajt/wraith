@@ -19,6 +19,7 @@ type StreamUpdate struct {
 
 func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emit func(StreamUpdate)) (ollama.Response, error) {
 	original := request
+	ids := session.EvidenceIDs(request.Messages)
 	var last ollama.Response
 	for attempt := 0; attempt <= 3; attempt++ {
 		if err := ctx.Err(); err != nil {
@@ -78,7 +79,7 @@ func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emi
 		if rejected == nil && emit != nil && sent < len(result.Message.Content) {
 			emit(StreamUpdate{Chunk: ollama.Response{Message: session.Message{Role: "assistant", Content: result.Message.Content[sent:]}}})
 		}
-		result.Message.Content = c.Variables.Redact(result.Message.Content)
+		result.Message.Content = contextual.RedactActions(result.Message.Content, c.Variables.Redact, ids)
 		result.Message.Thinking = c.Variables.Redact(result.Message.Thinking)
 		last = result
 		if rejected == nil {

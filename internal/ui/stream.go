@@ -179,7 +179,7 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 			a.notice += " · output limit reached"
 		}
 	}
-	a.partial.Content = a.Variables.Redact(a.partial.Content)
+	a.partial.Content = contextual.RedactActions(a.partial.Content, a.Variables.Redact, session.EvidenceIDs(a.Session.Messages))
 	a.partial.Thinking = a.Variables.Redact(a.partial.Thinking)
 	if a.partial.Content != "" || a.partial.Thinking != "" {
 		a.Session.Messages = append(a.Session.Messages, a.partial)

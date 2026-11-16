@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/variables"
@@ -55,12 +56,13 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 		copy.Profile.Environment = append(copy.Profile.Environment, entry)
 	}
 	request.Messages = append([]session.Message(nil), request.Messages...)
+	ids := session.EvidenceIDs(request.Messages)
 	for i := range request.Messages {
 		if evidence := request.Messages[i].Evidence; evidence != nil {
 			request.Messages[i].Content = evidence.Render(c.Variables.Redact)
 			request.Messages[i].Evidence = nil
 		} else {
-			request.Messages[i].Content = c.Variables.Redact(request.Messages[i].Content)
+			request.Messages[i].Content = contextual.RedactActions(request.Messages[i].Content, c.Variables.Redact, ids)
 		}
 		request.Messages[i].Thinking = ""
 	}
