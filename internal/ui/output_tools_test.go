@@ -17,6 +17,7 @@ func TestOutputToolsRespectPrivacyAndSessionOwnership(t *testing.T) {
 	for _, policy := range []string{"shared", "hidden", "other session"} {
 		t.Run(policy, func(t *testing.T) {
 			a := fixture(t)
+			a.agentStopped = false
 			a.environmentCommand("set TARGET=private.example", false)
 			a.popup = nil
 			r := runner.Record{ID: session.ID(), Session: a.Session.ID, ShareOutput: true, Output: "private.example failed\n", Status: "completed", Finished: time.Now()}
@@ -55,6 +56,7 @@ func TestOutputToolsRespectPrivacyAndSessionOwnership(t *testing.T) {
 
 func TestReadBudgetPausesWithoutCancellingJobs(t *testing.T) {
 	a := fixture(t)
+	a.agentStopped = false
 	a.agentReads = a.Config.Execution.MaxReads
 	a.pendingTool = &contextual.ToolRequest{Tool: "poll", ID: session.ID()}
 	if cmd := a.runPendingTool(); cmd != nil || !a.agentStopped || a.pendingTool != nil || a.busy {

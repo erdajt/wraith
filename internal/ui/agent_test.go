@@ -96,3 +96,46 @@ func TestBackgroundApprovalReturnsReceiptAndDenialStopsItsTurn(t *testing.T) {
 		t.Fatalf("turn jobs survived denial: %v %v", records, err)
 	}
 }
+
+func TestCancelledStreamCannotOfferExecutionOrResumeTools(t *testing.T) {
+	for _, content := range []string{
+		"```wraith-run\n{\"command\":\"printf late\",\"reason\":\"queued response\"}\n```",
+		"```wraith-tool\n{\"tool\":\"poll\",\"id\":\"0123456789abcdef01234567\"}\n```",
+	} {
+		t.Run(content, func(t *testing.T) {
+			a := fixture(t)
+			a.busy = true
+			a.stopAgent()
+			a.receive(streamMsg{Final: true, Chunk: ollama.Response{Done: true, Message: session.Message{Role: "assistant", Content: content}}})
+			if a.proposal != nil || a.pendingTool != nil || a.busy || a.agentReads != 0 {
+				t.Fatal("cancelled turn continued")
+			}
+			if n := len(a.Session.Messages); n > 0 && !a.Session.Messages[n-1].Interrupted {
+				t.Fatal("cancelled response not marked interrupted")
+			}
+		})
+	}
+}
+
+func TestOrdinaryApprovedRunFollowsExecutionMode(t *testing.T) {
+	for _, mode := range []string{"agent", "blocks"} {
+		t.Run(mode, func(t *testing.T) {
+			a := fixture(t)
+			a.Config.Execution.Mode = mode
+			calls := 0
+			a.Client.HTTP.Transport = transport(func(r *http.Request) (*http.Response, error) {
+				calls++
+				return response(`{"done":true,"message":{"role":"assistant","content":"observed output"}}`), nil
+			})
+			a.approve(proposal{Command: "printf result", Source: "block"})
+			a.runApproved()
+			drain(t, a)
+			if mode == "agent" && (calls != 1 || len(a.Session.SharedRuns) != 1) {
+				t.Fatal("agent mode did not observe ordinary run")
+			}
+			if mode == "blocks" && (calls != 0 || len(a.Session.Messages) != 0) {
+				t.Fatal("blocks output shared automatically")
+			}
+		})
+	}
+}

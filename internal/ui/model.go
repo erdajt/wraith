@@ -86,8 +86,9 @@ type App struct {
 	variableInventory, envRevision, envPending string
 	envGlobal                                  bool
 
-	streamSerial uint64
-	jobs         *runner.Manager
+	streamStopped bool
+	streamSerial  uint64
+	jobs          *runner.Manager
 
 	pendingRuns  map[string]runner.Record
 	generation   string

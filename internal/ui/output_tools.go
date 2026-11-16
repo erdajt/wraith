@@ -20,6 +20,10 @@ func (a *App) jobRecord(id string) (runner.Record, error) {
 }
 
 func (a *App) runPendingTool() tea.Cmd {
+	if a.agentStopped {
+		a.pendingTool = nil
+		return nil
+	}
 	if a.pendingTool == nil || !a.canContinue() {
 		return nil
 	}

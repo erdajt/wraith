@@ -72,7 +72,7 @@ func (a *App) runApproved() tea.Cmd {
 	}
 
 	a.proposal = nil
-	record := runner.Record{CaptureLimit: a.Config.Execution.CaptureBytes, TailLimit: a.Config.Execution.TailBytes, ID: session.ID(), Session: a.Session.ID, Command: p.Resolved, Environment: p.Environment, ShareOutput: !p.HideOutput && (a.Config.Execution.Mode == "agent" && p.Continue || a.Config.Execution.AutoShare), OutputHidden: p.HideOutput, Background: p.Background, Directory: a.runDirectory(), Shell: a.Config.Shell[0], Source: p.Source, Agent: p.Continue && a.Config.Execution.Mode == "agent", Generation: a.generation}
+	record := runner.Record{CaptureLimit: a.Config.Execution.CaptureBytes, TailLimit: a.Config.Execution.TailBytes, ID: session.ID(), Session: a.Session.ID, Command: p.Resolved, Environment: p.Environment, ShareOutput: !p.HideOutput && (a.Config.Execution.Mode == "agent" || a.Config.Execution.AutoShare), OutputHidden: p.HideOutput, Background: p.Background, Directory: a.runDirectory(), Shell: a.Config.Shell[0], Source: p.Source, Agent: a.Config.Execution.Mode == "agent", Generation: a.generation}
 	if !p.Continue {
 		record.Generation = ""
 	}

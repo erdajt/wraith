@@ -121,6 +121,7 @@ func (a *App) startChat() tea.Cmd {
 	a.phase = "connecting"
 	req := ollama.Request{PrivateInventory: true, Model: a.Session.Model, Messages: contextual.ForChat(a.Session, a.Config, a.Instructions), Think: think, KeepAlive: a.Config.KeepAlive, Options: ollama.Options{Context: a.contextLimit(), Predict: a.Config.Predict, Temperature: a.Config.Temperature, Threads: a.Config.Threads}}
 	client := a.Client
+	a.streamStopped = false
 	a.streamSerial++
 	serial := a.streamSerial
 	go func() {
@@ -140,6 +141,12 @@ func (a *App) startChat() tea.Cmd {
 func (a *App) receive(m streamMsg) tea.Cmd {
 	if m.Serial != a.streamSerial {
 		return nil
+	}
+	if a.streamStopped {
+		if !m.Final {
+			return a.next()
+		}
+		m.Err = context.Canceled
 	}
 	if m.Retry > 0 {
 		a.partial = session.Message{Role: "assistant"}
