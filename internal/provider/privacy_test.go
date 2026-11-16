@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/erdajt/wraith/internal/config"
+	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/variables"
@@ -128,5 +129,20 @@ func TestStructuredEvidenceSurvivesProviderRedaction(t *testing.T) {
 	}
 	if request.Messages[0].Evidence == nil {
 		t.Fatal("request was mutated")
+	}
+}
+
+func TestPrivateValueCannotCorruptStaticExecutionSchema(t *testing.T) {
+	c := config.Default()
+	client := New(c)
+	client.Variables = variables.NewSnapshot([]variables.Entry{{Name: "FIELD", Value: "command"}}, nil)
+	request := ollama.Request{ExecutionMode: "agent", Model: "test", Messages: contextual.ForChat(session.New("test"), c, "the private value is command")}
+	_, prepared, err := client.privateRequest(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := prepared.Messages[0].Content
+	if !strings.Contains(content, `{"command":"the exact shell command"`) || !strings.Contains(content, "private value is wraith::FIELD") {
+		t.Fatalf("policy schema corrupted: %s", content)
 	}
 }

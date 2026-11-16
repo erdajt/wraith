@@ -56,6 +56,16 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 		copy.Profile.Environment = append(copy.Profile.Environment, entry)
 	}
 	request.Messages = append([]session.Message(nil), request.Messages...)
+	policy := ""
+	switch request.ExecutionMode {
+	case "agent":
+		policy = contextual.AgentPrompt
+	case "blocks":
+		policy = contextual.BlocksPrompt
+	}
+	if policy != "" && len(request.Messages) > 0 && request.Messages[0].Role == "system" {
+		request.Messages[0].Content = strings.Replace(request.Messages[0].Content, "\n\n"+policy, "", 1)
+	}
 	ids := session.EvidenceIDs(request.Messages)
 	for i := range request.Messages {
 		if evidence := request.Messages[i].Evidence; evidence != nil {
@@ -65,6 +75,14 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 			request.Messages[i].Content = contextual.RedactActions(request.Messages[i].Content, c.Variables.Redact, ids)
 		}
 		request.Messages[i].Thinking = ""
+	}
+
+	if policy != "" {
+		if len(request.Messages) > 0 && request.Messages[0].Role == "system" {
+			request.Messages[0].Content += "\n\n" + policy
+		} else {
+			request.Messages = append([]session.Message{{Role: "system", Content: policy}}, request.Messages...)
+		}
 	}
 
 	if request.PrivateInventory {

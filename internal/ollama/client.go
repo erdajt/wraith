@@ -22,6 +22,7 @@ type Options struct {
 	Threads     int     `json:"num_thread,omitempty"`
 }
 type Request struct {
+	ExecutionMode    string            `json:"-"`
 	PrivateInventory bool              `json:"-"`
 	Model            string            `json:"model"`
 	Messages         []session.Message `json:"messages"`

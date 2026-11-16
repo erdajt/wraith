@@ -119,7 +119,7 @@ func (a *App) startChat() tea.Cmd {
 	a.follow = true
 	a.partial = session.Message{Role: "assistant"}
 	a.phase = "connecting"
-	req := ollama.Request{PrivateInventory: true, Model: a.Session.Model, Messages: contextual.ForChat(a.Session, a.Config, a.Instructions), Think: think, KeepAlive: a.Config.KeepAlive, Options: ollama.Options{Context: a.contextLimit(), Predict: a.Config.Predict, Temperature: a.Config.Temperature, Threads: a.Config.Threads}}
+	req := ollama.Request{ExecutionMode: a.Config.Execution.Mode, PrivateInventory: true, Model: a.Session.Model, Messages: contextual.ForChat(a.Session, a.Config, a.Instructions), Think: think, KeepAlive: a.Config.KeepAlive, Options: ollama.Options{Context: a.contextLimit(), Predict: a.Config.Predict, Temperature: a.Config.Temperature, Threads: a.Config.Threads}}
 	client := a.Client
 	a.streamStopped = false
 	a.streamSerial++
