@@ -26,7 +26,7 @@ type PTY struct {
 	once   sync.Once
 }
 
-func Start(argv []string, dir string, w, h int) (*PTY, error) {
+func Start(argv []string, dir string, w, h int, environment ...string) (*PTY, error) {
 	if len(argv) == 0 {
 		return nil, errors.New("empty shell command")
 	}
@@ -54,7 +54,8 @@ func Start(argv []string, dir string, w, h int) (*PTY, error) {
 	cmd.Stdin = slave
 	cmd.Stdout = slave
 	cmd.Stderr = slave
-	cmd.Env = append(os.Environ(), "TERM=xterm-256color", "COLORTERM=truecolor", "WRAITH_TERMINAL=1")
+	cmd.Env = append(os.Environ(), environment...)
+	cmd.Env = append(cmd.Env, "TERM=xterm-256color", "COLORTERM=truecolor", "WRAITH_TERMINAL=1")
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true, Setctty: true, Ctty: 0}
 	p := &PTY{file: f, cmd: cmd, Events: make(chan Event, 128), done: make(chan struct{}), waited: make(chan struct{})}
 	if err = p.Resize(w, h); err != nil {

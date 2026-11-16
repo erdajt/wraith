@@ -32,6 +32,10 @@ func (a *App) openTerminal(index int) tea.Cmd {
 		a.resizePanes()
 		return nil
 	}
+	if err := a.refreshVariables(); err != nil {
+		a.notice = err.Error()
+		return nil
+	}
 	a.panes[index] = &pane{Visible: true}
 	w, h := a.paneSize(index)
 	dir := a.Config.Terminal.Directory
@@ -39,7 +43,7 @@ func (a *App) openTerminal(index int) tea.Cmd {
 		home, _ := os.UserHomeDir()
 		dir = filepath.Join(home, dir[2:])
 	}
-	p, err := terminal.Start(a.Config.Shell, dir, w-2, h-2)
+	p, err := terminal.Start(a.Config.Shell, dir, w-2, h-2, a.Variables.Environment()...)
 	if err != nil {
 		a.panes[index] = nil
 		a.notice = "shell: " + err.Error()

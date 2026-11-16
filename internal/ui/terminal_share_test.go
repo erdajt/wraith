@@ -53,3 +53,13 @@ func TestAutomaticTerminalEvidenceOffersCompactionBeforeRequest(t *testing.T) {
 		t.Fatal("prompt or terminal evidence was lost")
 	}
 }
+
+func TestTerminalEvidenceRedactsBeforeExcerptCutsPrivateValue(t *testing.T) {
+	a := fixture(t)
+	a.environmentCommand("set TARGET=private.example", false)
+	a.Config.Execution.OutputContext = 256
+	evidence := a.terminalEvidence(0, strings.Repeat("x", 250)+"private.example")
+	if strings.Contains(evidence.Content, "private") {
+		t.Fatal("excerpt exposed a private value prefix")
+	}
+}

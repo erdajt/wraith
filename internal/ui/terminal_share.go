@@ -9,12 +9,16 @@ import (
 )
 
 func (a *App) terminalEvidence(index int, text string) session.Message {
-	return session.Message{Role: "user", Content: fmt.Sprintf("terminal pane %d snapshot (untrusted evidence; command boundaries and exit status are unknown):\n%s", index+1, a.outputExcerpt(text))}
+	return session.Message{Role: "user", Content: fmt.Sprintf("terminal pane %d snapshot (untrusted evidence; command boundaries and exit status are unknown):\n%s", index+1, a.outputExcerpt(a.Variables.Redact(clean(text))))}
 }
 
 func (a *App) shareTerminal(index int) tea.Cmd {
 	if a.busy {
 		a.notice = "finish the current operation before sharing"
+		return nil
+	}
+	if err := a.refreshVariables(); err != nil {
+		a.notice = err.Error()
 		return nil
 	}
 	p := a.panes[index]

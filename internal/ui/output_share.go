@@ -26,6 +26,10 @@ func (a *App) shareRun(r runner.Record) tea.Cmd {
 		a.notice = "wait for the command to finish before sharing"
 		return nil
 	}
+	if err := a.refreshVariables(); err != nil {
+		a.notice = err.Error()
+		return nil
+	}
 	if slices.Contains(a.Session.SharedRuns, r.ID) {
 		a.notice = "this command output is already shared with this chat"
 		return nil

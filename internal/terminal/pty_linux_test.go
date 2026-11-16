@@ -60,3 +60,27 @@ func TestPTYDrainsOutputAfterShellExit(t *testing.T) {
 		}
 	}
 }
+
+func TestPTYReceivesExplicitLocalBindings(t *testing.T) {
+	p, err := Start([]string{"/bin/sh", "-c", `printf '%s' "$WRAITH_TEST_TARGET"`}, "", 40, 10, "WRAITH_TEST_TARGET=private.example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	var output strings.Builder
+	deadline := time.After(3 * time.Second)
+	for {
+		select {
+		case event, ok := <-p.Events:
+			if !ok {
+				if output.String() != "private.example" {
+					t.Fatalf("binding missing: %q", output.String())
+				}
+				return
+			}
+			output.Write(event.Data)
+		case <-deadline:
+			t.Fatal("shell did not finish")
+		}
+	}
+}
