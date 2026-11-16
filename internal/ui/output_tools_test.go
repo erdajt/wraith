@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -151,5 +152,32 @@ func TestPollSkipsOversizedLineWithoutStalling(t *testing.T) {
 	page := a.Session.Messages[0].Evidence.Page
 	if a.pollNext[r.ID] != 3 || len(page.Lines) != 2 || !page.Truncated || !strings.Contains(page.Lines[0].Text, "exceeds") || page.Lines[1].Text != "next" {
 		t.Fatalf("poll failed to advance: %+v, cursor %d", page, a.pollNext[r.ID])
+	}
+}
+
+func TestOutputToolsWaitForDurableFinalResult(t *testing.T) {
+	a := fixture(t)
+	a.agentStopped = false
+	r := runner.Record{ID: session.ID(), Session: a.Session.ID, Command: "sleep 30", Shell: "/bin/sh", ShareOutput: true}
+	if err := a.jobs.Start(context.Background(), r, time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(a.history().Root, r.ID+".json.gz")
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(path, 0700); err != nil {
+		t.Fatal(err)
+	}
+	a.jobs.Close()
+	if jobs := a.jobs.Snapshot(); len(jobs) != 1 || jobs[0].Err == nil {
+		t.Fatalf("missing persistence failure: %+v", jobs)
+	}
+	a.pendingTool = &contextual.ToolRequest{Tool: "poll", ID: r.ID}
+	if cmd := a.runPendingTool(); cmd != nil || !a.agentStopped || a.pendingTool != nil || len(a.Session.Messages) != 0 {
+		t.Fatal("unsaved final output reached conversation")
+	}
+	if _, err := a.jobRecord(r.ID); err != nil {
+		t.Fatalf("local inspection lost: %v", err)
 	}
 }

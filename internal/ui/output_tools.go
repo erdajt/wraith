@@ -31,6 +31,13 @@ func (a *App) runPendingTool() tea.Cmd {
 		return nil
 	}
 	request := *a.pendingTool
+	for _, job := range a.jobs.Snapshot() {
+		if job.Record.ID == request.ID && job.Err != nil {
+			a.pendingTool, a.agentStopped = nil, true
+			a.notice = "output result is not saved; inspect /jobs before continuing"
+			return nil
+		}
+	}
 	a.agentReads++
 	nextLine := a.pollNext[request.ID]
 	r, err := a.jobRecord(request.ID)
