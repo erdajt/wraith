@@ -40,7 +40,7 @@ new scratch shells and approved tracked jobs receive active bindings in their en
 
 provider requests, shared output and compaction inputs pass through the privacy boundary. registered literal values and supported JSON, URL and shell-quoted forms are replaced with markers. old bindings remain in a local redaction journal after removal or rotation. model-facing searches operate on redacted output. CLI provider processes have registered names and environment values containing private literals removed; conflicting authentication or routing configuration fails locally rather than silently changing credentials.
 
-this is exact-value redaction, not general anonymization: arbitrary encodings, substrings, tool transformations and partial terminal selections can evade matching. comments are intended to be shared, so describe purpose without adding unrelated secrets. local files, editor buffers, command history and exports intended for local viewing may contain values; compression is not encryption.
+this is exact-value redaction, not general anonymization: arbitrary encodings, substrings, tool transformations and partial terminal selections can evade matching. comments are intended to be shared, so describe purpose without adding unrelated secrets. local files, editor buffers, command history may contain values; both CLI and in-app exports redact registered values by default. compression is not encryption.
 
 ## invalid references and retries
 

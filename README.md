@@ -6,7 +6,7 @@
 
 a terminal workspace for cybersecurity research, code review and lab work.
 
-[usage](docs/usage.md) · [configuration](docs/configuration.md) · [providers](docs/providers.md) · [context](docs/context.md)
+[usage](docs/usage.md) · [configuration](docs/configuration.md) · [providers](docs/providers.md) · [context](docs/context.md) · [private variables](docs/private-variables.md)
 
 </div>
 
@@ -38,7 +38,10 @@ configure the editor, shell and providers in `~/.config/wraith/config.yaml`. `wr
 | command completion | type `/`, filter with your query, use arrows and enter; `/settings.` reveals categories |
 | command approval | review the command and its reason, run, edit, reject, or ask for a revision inline |
 | output history | compressed records of approved commands, exit status and output, with a vim reader |
-| private output | command output stays out of model context until shared; automatic sharing is optional |
+| output control | agent runs share bounded evidence; hide output per job, or use blocks mode for manual sharing |
+| background jobs | approve tracked background work, inspect live output, cancel jobs and receive completion evidence |
+| targeted output reads | model polls, searches and pages authorized output without filling context |
+| private variables | directory/global annotated bindings, green local substitution and provider redaction |
 | real terminals | centered `alt+e` scratch shell and independent `alt+s` side shell with configurable sizes |
 | terminal copy mode | triple escape exposes a cursor, visual selection, clipboard yanks and `/` search |
 | context management | persistent instructions, exact pins, automatic or prompted compaction and original archives |
@@ -61,24 +64,38 @@ configure the editor, shell and providers in `~/.config/wraith/config.yaml`. `wr
 | `/`, `n`, `N` | search the focused prompt or conversation and repeat matches |
 | up/down in insert mode | recall prompts and slash commands; restore your unsent draft |
 | `[` / `]`, `za` | select messages; expand or collapse thinking |
+| `<leader>j`, `/jobs` | inspect current-session jobs and live output |
+| `ctrl+x` in job output | cancel a tracked job |
 | `<leader>b` | open blocks; default leader is space, with hints and configurable sequences |
 | `alt+e`, `alt+s` | toggle scratch and side shells |
 | `ctrl+\` | leave live shell focus |
 | triple escape inside a shell | enter terminal copy mode; `i` returns to live input |
-| `ctrl+g` in output | share evidence with the model when automatic sharing is off |
+| `ctrl+g` in output | share evidence when that job is private |
 | `q` in normal mode, `ctrl+q` | save and exit |
 
 pickers support arrows, `j/k` and `/` filtering. settings are grouped into categories; `?` explains the selected option. this modal editor implements the documented motions and operators; the external editor supplies full Neovim features. [complete keys and commands →](docs/usage.md)
 
 ## commands you control
 
-the model distinguishes suggested code from a request to execute a concrete command. execution requests show the command and its **reason**, without exposing the internal protocol. placeholder targets remain suggestions. select run once to authorize execution, edit the command first, reject it, or request a revision. an empty revision prompt prepares a `modify:` draft for your next message.
+the model distinguishes suggested code from a request to execute a concrete command. execution requests show the command and its **reason**, without exposing the internal protocol. placeholder targets remain suggestions. select run once to authorize execution, edit and save to run once, reject and stop the turn, or request a revision. an empty revision prompt prepares a `modify:` draft for your next message.
 
-normal code blocks remain available through `/blocks` or enter on their command rows. saving a shell block stages its actual command in a terminal; enter inserts it into the shell input, and the next enter executes it. other languages use a saved file and interpreter. choose the configurable blocks-only mode to disable model execution proposals.
+normal code blocks remain available through `/blocks` or enter on their command rows. saving a shell block stages its actual command in a terminal; enter inserts it into the shell input, and the next enter executes it. other languages use a saved file and interpreter. blocks mode keeps execution proposals and approvals while making output sharing optional.
 
-`/history` opens tracked command records and output. sharing is off by default. use the output binding to share the bounded tracked record, or enable `execution.auto_share`. raw scratch-shell output can be shared from copy mode; automatic terminal sharing captures changed snapshots before the next request. it does not infer command boundaries in an interactive shell. [approval and output details →](docs/execution.md)
+`/jobs` shows current-session jobs; `/history` opens saved command records. agent mode returns the approved command, status and bounded output automatically, then continues. choose **run · hide output from agent** to withhold that job’s output. blocks mode shares only on request unless `execution.auto_share` is enabled. raw scratch-shell output can be shared from copy mode; automatic terminal sharing captures changed snapshots before the next request. it does not infer command boundaries in an interactive shell. [approval and output details →](docs/execution.md)
+
+background requests show their mode in approval. the agent receives a start receipt, can poll or search authorized output, and receives completion evidence at a safe point without replacing your draft. configurable concurrency, timeouts, capture sizes and per-turn budgets bound the work.
 
 shells preserve their cwd, jobs and scrollback while hidden. exiting restarts the shell, with a restart limit for repeatedly failing configurations. the side pane ends above the footer. inherited backgrounds expose the host terminal's background; font, actual alpha and blur are host-terminal settings. [terminal configuration →](docs/terminals.md)
+
+## keep target values local
+
+```text
+/env edit
+/env set TARGET_DOMAIN=lab.example
+/env global edit
+```
+
+bindings belong to the launch directory unless you confirm global scope. attach `#`, `//` or `/* */` comments to explain each name; the model receives names and comments, not values. it writes `wraith::TARGET_DOMAIN`, which Wraith resolves locally and highlights in green. approved shells receive literal values; provider-bound conversation and shared output use redacted markers. invalid references trigger up to three visible streaming retries. exact-value redaction has limits for arbitrary encodings and partial selections; [variable syntax and privacy details](docs/private-variables.md) explain the boundary.
 
 ## keep the context that matters
 
@@ -137,9 +154,9 @@ make build
 make check
 ```
 
-checks cover race detection, provider streams, cancellation, corrective compaction, compressed recovery, real ptys, editor handoff, command approval, output sharing, search and modal editing. tests use local fixtures without a model or GPU. fuzz targets exercise terminal parsing and prompt edits.
+checks cover race detection, private-value boundaries, shell quoting, concurrent jobs, output pagination, recovery journals, provider streams, cancellation, corrective compaction, compressed recovery, real ptys, editor handoff, command approval, output sharing, search and modal editing. tests use local fixtures without a model or GPU. fuzz targets exercise terminal parsing and prompt edits.
 
-[ci](.github/workflows/ci.yml) runs on pushes and pull requests, verifies modules, fuzzes parsers and cross-builds linux amd64/arm64. [tagged releases](.github/workflows/release.yml) run checks before creating checksummed draft packages. [architecture](docs/architecture.md) · [development](docs/development.md)
+[ci](.github/workflows/ci.yml) runs on every push to main and on pull requests, verifies modules, fuzzes parsers and cross-builds linux amd64/arm64. [tagged releases](.github/workflows/release.yml) run checks before creating checksummed draft packages. [architecture](docs/architecture.md) · [development](docs/development.md)
 
 ## freedom
 
