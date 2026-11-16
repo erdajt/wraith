@@ -106,7 +106,11 @@ func compactAttempt(ctx context.Context, client Chatter, s session.Session, c co
 }
 
 func extract(ctx context.Context, client Chatter, c config.Config, think any, system, input string, out any) error {
-	r, err := client.Chat(ctx, ollama.Request{Model: c.Model, Messages: []session.Message{{Role: "system", Content: system}, {Role: "user", Content: input}}, Format: "json", Think: think, KeepAlive: c.KeepAlive, Options: ollama.Options{Context: c.Context, Predict: c.Compact.Budget, Temperature: 0.1}}, nil)
+	task := "extract"
+	if strings.HasPrefix(system, AuditPrompt) {
+		task = "audit"
+	}
+	r, err := client.Chat(ctx, ollama.Request{CompactionTask: task, Model: c.Model, Messages: []session.Message{{Role: "system", Content: system}, {Role: "user", Content: input}}, Format: "json", Think: think, KeepAlive: c.KeepAlive, Options: ollama.Options{Context: c.Context, Predict: c.Compact.Budget, Temperature: 0.1}}, nil)
 	if err != nil {
 		return err
 	}

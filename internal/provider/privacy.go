@@ -66,6 +66,16 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 	if policy != "" && len(request.Messages) > 0 && request.Messages[0].Role == "system" {
 		request.Messages[0].Content = strings.Replace(request.Messages[0].Content, "\n\n"+policy, "", 1)
 	}
+	compactPolicy := ""
+	switch request.CompactionTask {
+	case "extract":
+		compactPolicy = contextual.CompactPrompt
+	case "audit":
+		compactPolicy = contextual.AuditPrompt
+	}
+	if compactPolicy != "" && len(request.Messages) > 0 && request.Messages[0].Role == "system" {
+		request.Messages[0].Content = strings.TrimPrefix(request.Messages[0].Content, compactPolicy)
+	}
 	ids := session.EvidenceIDs(request.Messages)
 	for i := range request.Messages {
 		if evidence := request.Messages[i].Evidence; evidence != nil {
@@ -85,6 +95,13 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 		}
 	}
 
+	if compactPolicy != "" {
+		if len(request.Messages) > 0 && request.Messages[0].Role == "system" {
+			request.Messages[0].Content = compactPolicy + request.Messages[0].Content
+		} else {
+			request.Messages = append([]session.Message{{Role: "system", Content: compactPolicy}}, request.Messages...)
+		}
+	}
 	if request.PrivateInventory {
 		instructions, err := c.Variables.Instructions()
 		if err != nil {

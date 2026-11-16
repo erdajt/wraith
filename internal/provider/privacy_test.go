@@ -146,3 +146,20 @@ func TestPrivateValueCannotCorruptStaticExecutionSchema(t *testing.T) {
 		t.Fatalf("policy schema corrupted: %s", content)
 	}
 }
+
+func TestCompactionSchemaSurvivesPrivateWordCollisions(t *testing.T) {
+	for _, tc := range []struct{ task, policy string }{{"extract", contextual.CompactPrompt}, {"audit", contextual.AuditPrompt}} {
+		t.Run(tc.task, func(t *testing.T) {
+			client := New(config.Default())
+			client.Variables = variables.NewSnapshot([]variables.Entry{{Name: "FIELD", Value: "facts"}, {Name: "OTHER", Value: "missing"}}, nil)
+			request := ollama.Request{CompactionTask: tc.task, Messages: []session.Message{{Role: "system", Content: tc.policy + "\nfeedback: facts missing"}, {Role: "user", Content: "facts missing"}}}
+			_, got, err := client.privateRequest(request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.Messages[0].Content != tc.policy+"\nfeedback: wraith::FIELD wraith::OTHER" || got.Messages[1].Content != "wraith::FIELD wraith::OTHER" {
+				t.Fatalf("schema or source boundary: %+v", got.Messages)
+			}
+		})
+	}
+}
