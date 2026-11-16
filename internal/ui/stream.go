@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/ollama"
+	"github.com/erdajt/wraith/internal/provider"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/vim"
 )
@@ -23,8 +24,8 @@ func (a *App) submit() tea.Cmd {
 		return a.runCommand(strings.TrimPrefix(text, "/"))
 	}
 	if name, _, assignment := strings.Cut(text, "="); assignment && !strings.ContainsAny(strings.TrimSpace(name), " \t\n") {
-		if a.busy {
-			a.notice = "finish the current operation before changing variables"
+		if a.busy || a.demo {
+			a.notice = "private variable changes are unavailable during an operation or demo"
 			return nil
 		}
 		a.Prompt = vim.New()
@@ -117,21 +118,33 @@ func (a *App) startChat() tea.Cmd {
 	a.phase = "connecting"
 	req := ollama.Request{PrivateInventory: true, Model: a.Session.Model, Messages: contextual.ForChat(a.Session, a.Config, a.Instructions), Think: think, KeepAlive: a.Config.KeepAlive, Options: ollama.Options{Context: a.contextLimit(), Predict: a.Config.Predict, Temperature: a.Config.Temperature, Threads: a.Config.Threads}}
 	client := a.Client
+	a.streamSerial++
+	serial := a.streamSerial
 	go func() {
 		defer cancel()
-		r, e := client.Chat(ctx, req, func(r ollama.Response) {
+		r, e := client.ChatWithRepair(ctx, req, func(update provider.StreamUpdate) {
 			select {
-			case a.events <- streamMsg{Chunk: r}:
+			case a.events <- streamMsg{Serial: serial, Chunk: update.Chunk, Retry: update.Retry, Problem: update.Problem}:
 			case <-ctx.Done():
 			case <-a.done:
 			}
 		})
-		a.post(streamMsg{Chunk: r, Final: true, Err: e})
+		a.post(streamMsg{Serial: serial, Chunk: r, Final: true, Err: e})
 	}()
 	return a.next()
 }
 
 func (a *App) receive(m streamMsg) tea.Cmd {
+	if m.Serial != a.streamSerial {
+		return nil
+	}
+	if m.Retry > 0 {
+		a.partial = session.Message{Role: "assistant"}
+		a.phase = fmt.Sprintf("retrying %d/3 · %s", m.Retry, m.Problem)
+		a.notice = a.phase
+		return a.next()
+	}
+
 	if !m.Final {
 		a.partial.Content += m.Chunk.Message.Content
 		a.partial.Thinking += m.Chunk.Message.Thinking
@@ -144,6 +157,9 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 	a.busy = false
 	a.cancel = nil
 	if m.Err != nil {
+		if m.Chunk.Message.Content != "" || m.Chunk.Message.Thinking != "" {
+			a.partial = m.Chunk.Message
+		}
 		a.partial.Interrupted = true
 		a.notice = m.Err.Error() + " · /retry"
 	} else {
@@ -153,6 +169,8 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 			a.notice += " · output limit reached"
 		}
 	}
+	a.partial.Content = a.Variables.Redact(a.partial.Content)
+	a.partial.Thinking = a.Variables.Redact(a.partial.Thinking)
 	if a.partial.Content != "" || a.partial.Thinking != "" {
 		a.Session.Messages = append(a.Session.Messages, a.partial)
 		a.selected = len(a.Session.Messages) - 1

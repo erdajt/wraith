@@ -62,3 +62,25 @@ func TestMalformedAssignmentNeverBecomesPrompt(t *testing.T) {
 		t.Fatal("diagnostic echoed private value")
 	}
 }
+
+func TestRemoveRefreshesPickerAndRevealsGlobalBinding(t *testing.T) {
+	a := fixture(t)
+	a.environmentCommand("global set TARGET=global.example", true)
+	a.environmentCommand("set TARGET=local.example", false)
+	a.environmentCommand("", false)
+	a.environmentKey(key("d"))
+	if a.popup == nil || len(a.popup.Items) != 0 || !strings.Contains(a.notice, "global binding is now active") {
+		t.Fatalf("stale variable picker: %s", a.notice)
+	}
+}
+
+func TestDemoAssignmentsDoNotMutateBindings(t *testing.T) {
+	a := fixture(t)
+	a.demo = true
+	a.Prompt.Set("TARGET=private.example")
+	a.submit()
+	state, err := a.variableStore().Load(a.Directory, false)
+	if err != nil || len(state.Entries) != 0 {
+		t.Fatalf("demo changed bindings: %v", err)
+	}
+}

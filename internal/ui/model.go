@@ -60,9 +60,12 @@ type modelsMsg struct {
 	Err    error
 }
 type streamMsg struct {
-	Chunk ollama.Response
-	Final bool
-	Err   error
+	Serial  uint64
+	Retry   int
+	Problem string
+	Chunk   ollama.Response
+	Final   bool
+	Err     error
 }
 type compactMsg struct {
 	Session session.Session
@@ -81,6 +84,8 @@ type App struct {
 	Variables                                  variables.Snapshot
 	variableInventory, envRevision, envPending string
 	envGlobal                                  bool
+
+	streamSerial uint64
 
 	inputHistory                       []string
 	inputIndex, inputDraftPosition     int
