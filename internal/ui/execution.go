@@ -16,9 +16,7 @@ import (
 )
 
 type runMsg struct {
-	Output string
 	Record runner.Record
-	Final  bool
 	Err    error
 }
 type proposal struct {
@@ -75,37 +73,48 @@ func (a *App) runApproved() tea.Cmd {
 	a.proposal = nil
 	record := runner.Record{ID: session.ID(), Session: a.Session.ID, Command: p.Resolved, Environment: p.Environment, ShareOutput: !p.HideOutput && (a.Config.Execution.Mode == "agent" && p.Continue || a.Config.Execution.AutoShare), OutputHidden: p.HideOutput, Background: p.Background, Directory: a.runDirectory(), Shell: a.Config.Shell[0], Source: p.Source}
 	timeout, _ := time.ParseDuration(a.Config.Timeout)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	a.cancel = cancel
-	a.busy = true
-	a.executing = true
-	a.runContinue = p.Continue
+	if err := a.jobs.Start(context.Background(), record, timeout); err != nil {
+		a.proposal = &p
+		a.notice = "command launch: " + err.Error()
+		return nil
+	}
+	a.cancel = func() { a.jobs.Cancel(record.ID) }
+	a.busy, a.executing = true, true
 	a.phase = "running command"
-	a.runPreview = ""
+	record.Status = "starting"
 	a.activeRun = record
 	a.showRun(record, "")
-	history := a.history()
-	a.workers.Add(1)
-	go func() {
-		defer a.workers.Done()
-		defer cancel()
-		result, err := history.Run(ctx, record, func(output string) { a.post(runMsg{Output: output}) })
-		a.post(runMsg{Final: true, Record: result, Err: err})
-	}()
-	return a.next()
+	return nil
+}
+
+func (a *App) syncJobs() tea.Cmd {
+	if a.jobs == nil {
+		return nil
+	}
+	select {
+	case <-a.jobs.Updates:
+	default:
+		return nil
+	}
+	for _, job := range a.jobs.Snapshot() {
+		r := job.Record
+		if a.popup != nil && a.popup.Kind == "run-output" && a.popup.Record.ID == r.ID {
+			a.showRun(r, r.Output)
+		}
+		if r.ID == a.activeRun.ID && a.executing {
+			a.activeRun = r
+			if !r.Finished.IsZero() {
+				cmd := a.receiveRun(runMsg{Record: r, Err: job.Err})
+				a.jobs.Forget(r.ID)
+				return cmd
+			}
+		}
+	}
+	return nil
 }
 
 func (a *App) receiveRun(m runMsg) tea.Cmd {
-	if !m.Final {
-		a.runPreview += m.Output
-		if len(a.runPreview) > 16384 {
-			a.runPreview = a.runPreview[len(a.runPreview)-16384:]
-		}
-		if a.popup != nil && a.popup.Kind == "run-output" {
-			a.showRun(a.activeRun, a.runPreview)
-		}
-		return a.next()
-	}
+
 	a.busy = false
 	a.executing = false
 	a.cancel = nil
@@ -117,7 +126,6 @@ func (a *App) receiveRun(m runMsg) tea.Cmd {
 	}
 	a.notice = fmt.Sprintf("command %s · exit %d · /history", m.Record.Status, m.Record.ExitCode)
 	a.showRun(m.Record, m.Record.Output)
-	a.runContinue = false
 	if m.Record.ShareOutput && !m.Record.OutputHidden {
 		return a.shareRun(m.Record)
 	}

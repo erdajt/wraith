@@ -22,8 +22,12 @@ import (
 func drain(t *testing.T, a *App) {
 	t.Helper()
 	deadline := time.After(3 * time.Second)
+	polling := time.NewTicker(5 * time.Millisecond)
+	defer polling.Stop()
 	for a.busy {
 		select {
+		case now := <-polling.C:
+			a.Update(tick(now))
 		case msg := <-a.events:
 			a.Update(msg)
 		case <-deadline:

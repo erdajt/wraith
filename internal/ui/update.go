@@ -15,10 +15,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.resizePanes()
 	case tick:
 		a.frame++
+		jobs := a.syncJobs()
 		if a.Config.Animations {
-			return a, a.ticker()
+			return a, tea.Batch(a.ticker(), jobs)
 		}
-		return a, tea.Tick(time.Second, func(t time.Time) tea.Msg { return tick(t) })
+		return a, tea.Batch(jobs, tea.Tick(time.Second, func(t time.Time) tea.Msg { return tick(t) }))
 	case infoMsg:
 		if m.Model == a.Session.Model && m.Serial == a.loadSerial {
 			a.loading = false

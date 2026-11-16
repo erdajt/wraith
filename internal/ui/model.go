@@ -86,6 +86,7 @@ type App struct {
 	envGlobal                                  bool
 
 	streamSerial uint64
+	jobs         *runner.Manager
 
 	inputHistory                       []string
 	inputIndex, inputDraftPosition     int
@@ -103,9 +104,8 @@ type App struct {
 	pendingAgent                       bool
 	selectedBlock                      editor.Block
 	proposal                           *proposal
-	executing, runContinue             bool
+	executing                          bool
 	activeRun                          runner.Record
-	runPreview                         string
 	workers                            sync.WaitGroup
 	Config                             config.Config
 	Paths                              config.Paths
@@ -180,6 +180,14 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 			a.inputHistory = entries
 		}
 	}
+	a.jobs = runner.NewManager(a.history(), 4)
+	if !demo {
+		if recovered, e := a.history().Recover(); e != nil {
+			a.notice = "command recovery: " + e.Error()
+		} else if len(recovered) > 0 {
+			a.notice = "recovered interrupted commands · /history"
+		}
+	}
 	a.showThinking = c.Appearance.Thinking
 	a.thinkingExpanded = map[string]bool{}
 	if demo {
@@ -209,6 +217,9 @@ func (a *App) Close() {
 			a.cancel()
 		}
 		close(a.done)
+		if a.jobs != nil {
+			a.jobs.Close()
+		}
 		a.workers.Wait()
 		for _, p := range a.panes {
 			if p != nil && p.PTY != nil {
