@@ -86,3 +86,5 @@ wraith export SESSION_ID > chat.md
 both `/resume` and `--resume` open a searchable picker when no id is supplied. sessions belong to their original working directory; symlink aliases resolve to the same directory. a different-directory id reports the original path and opens a fresh chat. an invalid id reports `invalid session id` and opens a fresh chat. old sessions without recorded directories remain exportable but cannot be silently assigned to a directory.
 
 flags precede prompt text or subcommands. `--config-dir`, `--data-dir` and `--cache-dir` provide isolated storage. one interactive writer owns each data directory. `--demo` and `--snapshot` use sample content without model calls or saved changes.
+
+older sessions without an original directory can still be exported. export uses the current directory and retained variable journal for redaction without assigning the session a directory or enabling resume.
