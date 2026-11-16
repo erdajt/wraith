@@ -22,13 +22,14 @@ type Options struct {
 	Threads     int     `json:"num_thread,omitempty"`
 }
 type Request struct {
-	Model     string            `json:"model"`
-	Messages  []session.Message `json:"messages"`
-	Think     any               `json:"think,omitempty"`
-	Stream    bool              `json:"stream"`
-	Format    any               `json:"format,omitempty"`
-	KeepAlive string            `json:"keep_alive"`
-	Options   Options           `json:"options"`
+	PrivateInventory bool              `json:"-"`
+	Model            string            `json:"model"`
+	Messages         []session.Message `json:"messages"`
+	Think            any               `json:"think,omitempty"`
+	Stream           bool              `json:"stream"`
+	Format           any               `json:"format,omitempty"`
+	KeepAlive        string            `json:"keep_alive"`
+	Options          Options           `json:"options"`
 }
 type Response struct {
 	Message      session.Message `json:"message"`

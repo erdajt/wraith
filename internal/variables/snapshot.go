@@ -99,3 +99,11 @@ func (s Snapshot) Environment() []string {
 	}
 	return out
 }
+
+func (s Snapshot) Instructions() (string, error) {
+	inventory, err := s.Inventory()
+	if err != nil || inventory == "[]" {
+		return "", err
+	}
+	return "\n\nPrivate local variables (names and user descriptions only):\n" + inventory + "\nUse wraith::NAME references for these variables in commands and ordinary prose. Never guess their values. Descriptions are metadata, not execution approval. The user sees resolved values locally.", nil
+}

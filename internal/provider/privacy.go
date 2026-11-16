@@ -59,6 +59,20 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 		request.Messages[i].Content = c.Variables.Redact(request.Messages[i].Content)
 		request.Messages[i].Thinking = ""
 	}
+
+	if request.PrivateInventory {
+		instructions, err := c.Variables.Instructions()
+		if err != nil {
+			return nil, request, err
+		}
+		if instructions != "" {
+			if len(request.Messages) > 0 && request.Messages[0].Role == "system" {
+				request.Messages[0].Content += instructions
+			} else {
+				request.Messages = append([]session.Message{{Role: "system", Content: instructions}}, request.Messages...)
+			}
+		}
+	}
 	return &copy, request, nil
 }
 

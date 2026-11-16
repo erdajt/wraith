@@ -72,3 +72,29 @@ func TestPrivateRequestScrubsAliasedEnvironmentAndRejectsAuthCollision(t *testin
 		t.Fatal("auth collision was transmitted")
 	}
 }
+
+func TestInventoryNamesRemainStructuralAtProviderBoundary(t *testing.T) {
+	t.Parallel()
+	client := New(config.Default())
+	client.Variables = variables.NewSnapshot([]variables.Entry{
+		{Name: "PRIMARY_TARGET_VARIABLE", Value: "private.example", Description: "check private.example"},
+		{Name: "ALIAS", Value: "PRIMARY_TARGET_VARIABLE"},
+	}, nil)
+	request := ollama.Request{PrivateInventory: true, Messages: []session.Message{{Role: "system", Content: "check PRIMARY_TARGET_VARIABLE"}}}
+	_, got, err := client.privateRequest(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := got.Messages[0].Content
+	if !strings.Contains(content, `"name":"PRIMARY_TARGET_VARIABLE"`) || strings.Contains(content, "private.example") || !strings.HasPrefix(content, "check wraith::ALIAS") {
+		t.Fatalf("incorrect inventory boundary: %s", content)
+	}
+	if request.Messages[0].Content != "check PRIMARY_TARGET_VARIABLE" {
+		t.Fatal("caller changed")
+	}
+	request.PrivateInventory = false
+	_, compact, err := client.privateRequest(request)
+	if err != nil || strings.Contains(compact.Messages[0].Content, "Private local variables") {
+		t.Fatalf("unexpected compaction inventory: %v", err)
+	}
+}
