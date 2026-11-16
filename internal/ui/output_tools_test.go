@@ -207,3 +207,25 @@ func TestFailedToolCompactionDoesNotRetryEveryTick(t *testing.T) {
 		t.Fatal("failed compaction retained automatic read")
 	}
 }
+
+func TestLargeContextDoesNotOverflowOutputBudget(t *testing.T) {
+	a := fixture(t)
+	a.Config = a.Config.WithModelContext(a.Session.Model, int(^uint(0)>>1)/2)
+	a.agentStopped = false
+	r := runner.Record{ID: session.ID(), Session: a.Session.ID, ShareOutput: true, Output: "evidence\n", Finished: time.Now()}
+	if err := a.history().Save(r); err != nil {
+		t.Fatal(err)
+	}
+	a.Client.HTTP.Transport = transport(func(*http.Request) (*http.Response, error) {
+		return response(`{"done":true,"message":{"role":"assistant","content":"observed"}}`), nil
+	})
+	a.pendingTool = &contextual.ToolRequest{Tool: "poll", ID: r.ID}
+	a.runPendingTool()
+	drain(t, a)
+	if a.pendingTool != nil || len(a.Session.Messages) == 0 || a.Session.Messages[0].Evidence == nil {
+		t.Fatal("valid large context incorrectly deferred output read")
+	}
+	if page := a.Session.Messages[0].Evidence.Page; len(page.Lines) != 1 || page.Lines[0].Text != "evidence" {
+		t.Fatalf("lost output evidence: %+v", page)
+	}
+}

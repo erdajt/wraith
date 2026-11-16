@@ -40,7 +40,8 @@ func (a *App) runPendingTool() tea.Cmd {
 		}
 	}
 	remaining := a.contextLimit() - a.Config.Predict - 128 - contextual.ChatUsed(a.Session, a.runtimeConfig(), a.chatInstructions())
-	budget := min(a.Config.Execution.OutputContext, max(0, remaining-256)*3)
+	available := min(a.Config.Execution.OutputContext, max(0, remaining-256))
+	budget := min(a.Config.Execution.OutputContext, available*3)
 	if budget < 256 {
 		return a.deferOutputRead()
 	}
