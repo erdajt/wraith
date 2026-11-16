@@ -20,7 +20,8 @@ type proposal struct {
 	Command, Language, Text, Source, Reason string
 	Continue, Background, HideOutput        bool
 	Resolved                                string
-	Environment                             []string
+	launch                                  runner.Record
+	timeout                                 time.Duration
 	Variables                               variables.Snapshot
 	prepared                                bool
 }
@@ -39,9 +40,9 @@ func (a *App) approve(p proposal) tea.Cmd {
 		return nil
 	}
 	a.proposal = &p
-	a.popup = &menu{Kind: "approval", Title: "approve command · " + a.runDirectory(), Items: []item{{"run", "run", "execute and save output"}, {"run · hide output from agent", "run-hidden", "execute without sharing output"}, {"edit", "edit", "save to execute once"}, {"view full command", "view", "scroll before deciding"}, {"ask assistant to modify", "modify", "describe the change"}, {"reject", "cancel", "do not execute"}}}
+	a.popup = &menu{Kind: "approval", Title: "approve command · " + p.launch.Directory, Items: []item{{"run", "run", "execute and save output"}, {"run · hide output from agent", "run-hidden", "execute without sharing output"}, {"edit", "edit", "save to execute once"}, {"view full command", "view", "scroll before deciding"}, {"ask assistant to modify", "modify", "describe the change"}, {"reject", "cancel", "do not execute"}}}
 	if p.Background {
-		a.popup.Title = "approve background command · " + a.runDirectory()
+		a.popup.Title = "approve background command · " + p.launch.Directory
 	}
 	return nil
 }
@@ -67,18 +68,19 @@ func (a *App) runApproved() tea.Cmd {
 		a.notice = err.Error()
 		return nil
 	}
-	if p.Continue && a.generation == "" {
-		a.generation = session.ID()
+	if p.launch.Session != a.Session.ID || p.Continue && p.launch.Generation != a.generation {
+		a.notice = "command approval belongs to an earlier conversation or turn"
+		a.proposal = nil
+		return nil
 	}
-
 	a.proposal = nil
-	record := runner.Record{CaptureLimit: a.Config.Execution.CaptureBytes, TailLimit: a.Config.Execution.TailBytes, ID: session.ID(), Session: a.Session.ID, Command: p.Resolved, Environment: p.Environment, ShareOutput: !p.HideOutput && (a.Config.Execution.Mode == "agent" || a.Config.Execution.AutoShare), OutputHidden: p.HideOutput, Background: p.Background, Directory: a.runDirectory(), Shell: a.Config.Shell[0], Source: p.Source, Agent: a.Config.Execution.Mode == "agent", Generation: a.generation}
-	if !p.Continue {
-		record.Generation = ""
+	record := p.launch
+	record.Command, record.Source = p.Resolved, p.Source
+	if p.HideOutput {
+		record.OutputHidden, record.ShareOutput = true, false
 	}
-	timeout, _ := time.ParseDuration(a.Config.Execution.CommandTimeout)
 	a.jobs.SetLimit(a.Config.Execution.MaxJobs)
-	if err := a.jobs.Start(context.Background(), record, timeout); err != nil {
+	if err := a.jobs.Start(context.Background(), record, p.timeout); err != nil {
 		a.proposal = &p
 		a.notice = "command launch: " + err.Error()
 		return nil
@@ -219,7 +221,23 @@ func (a *App) prepareProposal(p *proposal) error {
 		return err
 	}
 	p.Resolved, p.Variables = resolved, a.Variables
-	p.Environment = append(os.Environ(), a.Variables.Environment()...)
+	if p.Continue && a.generation == "" {
+		a.generation = session.ID()
+	}
+	p.timeout, err = time.ParseDuration(a.Config.Execution.CommandTimeout)
+	if err != nil {
+		return err
+	}
+	p.launch = runner.Record{
+		ID: session.ID(), Session: a.Session.ID, Command: resolved,
+		Directory: a.runDirectory(), Shell: a.Config.Shell[0], Source: p.Source,
+		Environment: append(os.Environ(), a.Variables.Environment()...),
+		Agent:       a.Config.Execution.Mode == "agent", ShareOutput: a.Config.Execution.Mode == "agent" || a.Config.Execution.AutoShare,
+		Background: p.Background, CaptureLimit: a.Config.Execution.CaptureBytes, TailLimit: a.Config.Execution.TailBytes,
+	}
+	if p.Continue {
+		p.launch.Generation = a.generation
+	}
 	p.prepared = true
 	return nil
 }

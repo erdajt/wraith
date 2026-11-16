@@ -98,3 +98,29 @@ func TestInvalidPrivateCommandNeverReachesApproval(t *testing.T) {
 		t.Fatal("invalid reference executable")
 	}
 }
+
+func TestApprovalRetainsDirectoryShellAndSharingPolicy(t *testing.T) {
+	a := fixture(t)
+	directory := t.TempDir()
+	a.Config.Execution.Mode = "blocks"
+	a.Config.Terminal.Directory = directory
+	a.approve(proposal{Command: "pwd"})
+	a.Config.Terminal.Directory = "/missing-directory"
+	a.Config.Shell = []string{"/missing-shell"}
+	a.Config.Execution.Mode = "agent"
+	a.runApproved()
+	drain(t, a)
+	if strings.TrimSpace(a.activeRun.Output) != directory || a.activeRun.Agent || a.activeRun.ShareOutput {
+		t.Fatalf("approval changed: %+v", a.activeRun)
+	}
+}
+
+func TestApprovalCannotRunAfterSessionChanges(t *testing.T) {
+	a := fixture(t)
+	a.approve(proposal{Command: "printf stale", Continue: true})
+	a.Session.ID = "another-session"
+	a.runApproved()
+	if a.executing || a.proposal != nil || len(a.jobs.Snapshot()) != 0 {
+		t.Fatal("stale approval executed")
+	}
+}
