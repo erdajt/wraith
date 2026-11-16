@@ -124,7 +124,16 @@ func (s Store) transact(directory string, global bool, revision string, replacem
 		entries = append(entries, entry)
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Name < entries[j].Name })
-	state.Snapshot = NewSnapshot(entries, retained)
+	var scopes []string
+	for scope := range j.Accepted {
+		scopes = append(scopes, scope)
+	}
+	sort.Strings(scopes)
+	redactions := append([]Entry(nil), retained...)
+	for _, scope := range scopes {
+		redactions = append(redactions, j.Accepted[scope]...)
+	}
+	state.Snapshot = NewSnapshot(entries, redactions)
 	if _, err := state.Snapshot.Inventory(); err != nil {
 		return state, err
 	}

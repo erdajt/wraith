@@ -20,21 +20,29 @@ type Entry struct {
 }
 
 func Parse(text string) ([]Entry, error) {
-	if len(text) > FileLimit || !utf8.ValidString(text) || strings.ContainsRune(text, '\x00') {
+	if len(text) > FileLimit || !utf8.ValidString(text) || strings.IndexFunc(text, func(r rune) bool { return unicode.IsControl(r) && r != '\n' && r != '\r' && r != '\t' }) >= 0 {
 		return nil, errors.New("environment file exceeds 256 kib or contains invalid text")
+	}
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	if strings.ContainsRune(text, '\r') {
+		return nil, errors.New("environment file contains a carriage return")
 	}
 	var entries []Entry
 	var pending []string
 	seen := map[string]bool{}
 	block := false
 	inlineBlock := -1
-	for number, line := range strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n") {
+	for number, line := range strings.Split(text, "\n") {
 		var code strings.Builder
 		var comments []string
 		var quote byte
+		trailing := inlineBlock >= 0
 		for i := 0; i < len(line); {
 			if block {
 				end := strings.Index(line[i:], "*/")
+				if nested := strings.Index(line[i:], "/*"); nested >= 0 && (end < 0 || nested < end) {
+					return nil, fmt.Errorf("environment line %d: nested block comment", number+1)
+				}
 				if end < 0 {
 					comments = append(comments, strings.TrimSpace(line[i:]))
 					break
@@ -67,8 +75,12 @@ func Parse(text string) ([]Entry, error) {
 			}
 			if separated && strings.HasPrefix(line[i:], "/*") {
 				block = true
+				trailing = trailing || strings.TrimSpace(code.String()) != ""
 				i += 2
 				continue
+			}
+			if trailing && ch != ' ' && ch != '\t' {
+				return nil, fmt.Errorf("environment line %d: syntax after trailing comment", number+1)
 			}
 			if ch == '\'' || ch == '"' {
 				quote = ch

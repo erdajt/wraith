@@ -94,3 +94,23 @@ func TestConcurrentVariableSavesRejectStaleRevisions(t *testing.T) {
 		t.Fatalf("expected one accepted edit, got %v and %v", first, second)
 	}
 }
+
+func TestFirstAcceptedValueRemainsRedactedAcrossDirectories(t *testing.T) {
+	t.Parallel()
+	s := Store{Root: t.TempDir()}
+	dir := t.TempDir()
+	state, err := s.Load(dir, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Save(dir, false, state.Revision, "TARGET=private.test"); err != nil {
+		t.Fatal(err)
+	}
+	other, err := s.Load(t.TempDir(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(other.Snapshot.Redact("private.test"), "private.test") {
+		t.Fatal("accepted value disappeared from privacy snapshot")
+	}
+}

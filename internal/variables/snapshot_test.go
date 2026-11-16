@@ -45,3 +45,21 @@ func TestInventoryChecksSizeAfterRedaction(t *testing.T) {
 		t.Fatal("expanded inventory exceeded its budget")
 	}
 }
+
+func TestUnknownMarkersCannotShieldPrivateValues(t *testing.T) {
+	t.Parallel()
+	s := NewSnapshot([]Entry{{"TOKEN", "PRIVATEVALUE", ""}}, nil)
+	if strings.Contains(s.Redact("wraith::PRIVATEVALUE"), "PRIVATEVALUE") {
+		t.Fatal("unknown marker bypassed redaction")
+	}
+}
+
+func TestMalformedKnownMarkerCannotShieldLiteral(t *testing.T) {
+	t.Parallel()
+	s := NewSnapshot([]Entry{{Name: "TOKEN", Value: "TOKEN"}}, nil)
+	for _, input := range []string{"wraith::TOKENlower", "wraith::TOKENé", "wraith::TOKEN::"} {
+		if got := s.Redact(input); got == input {
+			t.Errorf("malformed marker escaped redaction: %q", input)
+		}
+	}
+}

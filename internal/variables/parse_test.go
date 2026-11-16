@@ -57,3 +57,25 @@ func FuzzParse(f *testing.F) {
 		}
 	})
 }
+
+func TestInlineCommentContinuationsRejectTerminalControls(t *testing.T) {
+	t.Parallel()
+	if _, err := Parse("TARGET=value /* first\n\x1b[31m */"); err == nil {
+		t.Fatal("terminal controls accepted in annotation")
+	}
+}
+
+func TestParseRejectsMalformedComments(t *testing.T) {
+	t.Parallel()
+	for _, input := range []string{
+		"TARGET=host /* outer /* nested */ */",
+		"TARGET=host /* note */ garbage",
+		"TARGET=host /* note\n*/ NEXT=other",
+		"# note\rbroken\nTARGET=host",
+		"TARGET=host /* note\n\x7f */",
+	} {
+		if _, err := Parse(input); err == nil {
+			t.Errorf("accepted malformed comment %q", input)
+		}
+	}
+}

@@ -7,24 +7,28 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 var markerPattern = regexp.MustCompile(`wraith::[A-Z_][A-Z0-9_]*`)
 
 type Snapshot struct {
-	replacer *strings.Replacer
-	entries  []Entry
-	pairs    []Entry
-	values   map[string]string
+	replacer    *strings.Replacer
+	markerNames map[string]bool
+	entries     []Entry
+	pairs       []Entry
+	values      map[string]string
 }
 
 func NewSnapshot(active, retained []Entry) Snapshot {
-	s := Snapshot{entries: append([]Entry(nil), active...), values: map[string]string{}}
+	s := Snapshot{entries: append([]Entry(nil), active...), values: map[string]string{}, markerNames: map[string]bool{}}
 	for _, entry := range active {
 		s.values[entry.Name] = entry.Value
 	}
 	seen := map[string]bool{}
 	for _, entry := range append(append([]Entry(nil), active...), retained...) {
+		s.markerNames[entry.Name] = true
 		encoded, _ := json.Marshal(entry.Value)
 		for _, value := range []string{entry.Value, string(encoded[1 : len(encoded)-1]), url.QueryEscape(entry.Value), url.PathEscape(entry.Value), strings.ReplaceAll(entry.Value, "'", "'\\''")} {
 			if value != "" && !seen[value] {
@@ -50,7 +54,13 @@ func (s Snapshot) Redact(text string) string {
 	start := 0
 	for _, span := range markerPattern.FindAllStringIndex(text, -1) {
 		out.WriteString(s.replacer.Replace(text[start:span[0]]))
-		out.WriteString(text[span[0]:span[1]])
+		suffix, _ := utf8.DecodeRuneInString(text[span[1]:])
+		complete := !unicode.IsLetter(suffix) && !unicode.IsDigit(suffix) && suffix != '_' && !strings.HasPrefix(text[span[1]:], "::")
+		if complete && s.markerNames[text[span[0]+8:span[1]]] {
+			out.WriteString(text[span[0]:span[1]])
+		} else {
+			out.WriteString(s.replacer.Replace(text[span[0]:span[1]]))
+		}
 		start = span[1]
 	}
 	out.WriteString(s.replacer.Replace(text[start:]))
