@@ -19,6 +19,7 @@ import (
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/store"
 	"github.com/erdajt/wraith/internal/ui"
+	"github.com/erdajt/wraith/internal/variables"
 )
 
 var version = "dev"
@@ -140,7 +141,11 @@ func run(args []string, out io.Writer) error {
 			if e != nil {
 				return e
 			}
-			_, e = io.WriteString(out, ui.Export(v))
+			state, e := (variables.Store{Root: filepath.Join(p.Config, "variables")}).Load(v.Directory, false)
+			if e != nil {
+				return fmt.Errorf("export privacy: %w", e)
+			}
+			_, e = io.WriteString(out, state.Snapshot.Redact(ui.Export(v)))
 			return e
 		default:
 		}

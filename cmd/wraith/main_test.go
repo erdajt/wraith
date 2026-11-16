@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/store"
+	"github.com/erdajt/wraith/internal/variables"
 )
 
 func TestSnapshotIsReadOnlyAndFitsTerminal(t *testing.T) {
@@ -70,5 +71,42 @@ func TestRemovedNewFlagReportsUnknownOption(t *testing.T) {
 	err := run([]string{"--new"}, &bytes.Buffer{})
 	if err == nil || !strings.Contains(err.Error(), "flag provided but not defined") {
 		t.Fatalf("removed flag accepted: %v", err)
+	}
+}
+
+func TestExportRedactsOriginalDirectoryAndRetiredValues(t *testing.T) {
+	root := t.TempDir()
+	s := session.New("test")
+	s.Directory = t.TempDir()
+	s.Messages = []session.Message{{Role: "user", Content: "retired.example current.example"}}
+	if err := (store.Store{Root: root}).Save(s); err != nil {
+		t.Fatal(err)
+	}
+	env := variables.Store{Root: filepath.Join(root, "config", "variables")}
+	state, err := env.Load(s.Directory, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err = env.Save(s.Directory, false, state.Revision, "TARGET=retired.example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = env.Save(s.Directory, false, state.Revision, "TARGET=current.example"); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	args := []string{"--config-dir", filepath.Join(root, "config"), "--data-dir", root, "export", s.ID}
+	if err := run(args, &out); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out.String(), ".example") || !strings.Contains(out.String(), "wraith::TARGET") {
+		t.Fatalf("private export: %s", out.String())
+	}
+	if err := os.Remove(filepath.Join(env.Root, "state.json")); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	if err := run(args, &out); err == nil || out.Len() != 0 {
+		t.Fatal("export ignored missing redaction journal")
 	}
 }
