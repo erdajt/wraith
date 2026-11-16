@@ -28,7 +28,7 @@ func Messages(s session.Session, instructions string) []session.Message {
 		if m.Role != "user" && m.Role != "assistant" {
 			continue
 		}
-		out = append(out, session.Message{Role: m.Role, Content: m.Content})
+		out = append(out, session.Message{Role: m.Role, Content: m.Content, Evidence: m.Evidence})
 	}
 	return out
 }

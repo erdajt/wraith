@@ -56,7 +56,12 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 	}
 	request.Messages = append([]session.Message(nil), request.Messages...)
 	for i := range request.Messages {
-		request.Messages[i].Content = c.Variables.Redact(request.Messages[i].Content)
+		if evidence := request.Messages[i].Evidence; evidence != nil {
+			request.Messages[i].Content = evidence.Render(c.Variables.Redact)
+			request.Messages[i].Evidence = nil
+		} else {
+			request.Messages[i].Content = c.Variables.Redact(request.Messages[i].Content)
+		}
 		request.Messages[i].Thinking = ""
 	}
 

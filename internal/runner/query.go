@@ -8,6 +8,7 @@ import (
 	"unicode"
 
 	"github.com/charmbracelet/x/ansi"
+	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/variables"
 )
 
@@ -20,16 +21,8 @@ type Query struct {
 	Limit   int    `json:"limit,omitempty"`
 }
 
-type OutputLine struct {
-	Number int64  `json:"line"`
-	Text   string `json:"text"`
-}
-
-type Page struct {
-	Lines     []OutputLine `json:"lines"`
-	Next      int64        `json:"next,omitempty"`
-	Truncated bool         `json:"capture_truncated"`
-}
+type OutputLine = session.OutputLine
+type Page = session.OutputPage
 
 func ReadOutput(record Record, query Query, snapshot variables.Snapshot) (Page, error) {
 	page := Page{Lines: []OutputLine{}, Truncated: record.Truncated}

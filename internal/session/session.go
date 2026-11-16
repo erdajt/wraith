@@ -9,11 +9,12 @@ import (
 )
 
 type Message struct {
-	Role        string `json:"role"`
-	Content     string `json:"content"`
-	Thinking    string `json:"thinking,omitempty"`
-	Edited      bool   `json:"edited,omitempty"`
-	Interrupted bool   `json:"interrupted,omitempty"`
+	Evidence    *Evidence `json:"evidence,omitempty"`
+	Role        string    `json:"role"`
+	Content     string    `json:"content"`
+	Thinking    string    `json:"thinking,omitempty"`
+	Edited      bool      `json:"edited,omitempty"`
+	Interrupted bool      `json:"interrupted,omitempty"`
 }
 
 type Usage struct {
@@ -58,6 +59,9 @@ func (s Session) Clone() Session {
 	s.DeliveredRuns = append([]string(nil), s.DeliveredRuns...)
 	s.SharedRuns = append([]string(nil), s.SharedRuns...)
 	s.Messages = append([]Message(nil), s.Messages...)
+	for i := range s.Messages {
+		s.Messages[i].Evidence = s.Messages[i].Evidence.Clone()
+	}
 	s.Facts = append([]string(nil), s.Facts...)
 	s.Pins = append([]string(nil), s.Pins...)
 	s.Archives = append([]string(nil), s.Archives...)

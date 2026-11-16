@@ -112,3 +112,21 @@ func TestRedactionGrowthCannotOverflowProviderContext(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestStructuredEvidenceSurvivesProviderRedaction(t *testing.T) {
+	client := New(config.Default())
+	client.Variables = variables.NewSnapshot([]variables.Entry{{Name: "TOKEN", Value: "ab"}, {Name: "FIELD", Value: "line"}}, nil)
+	evidence := session.Evidence{ID: strings.Repeat("ab", 12), Page: &session.OutputPage{Lines: []session.OutputLine{{Number: 1, Text: "ab line"}}}}
+	request := ollama.Request{Model: "test", Messages: []session.Message{evidence.Message()}}
+	_, prepared, err := client.privateRequest(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	message := prepared.Messages[0]
+	if message.Evidence != nil || !strings.Contains(message.Content, evidence.ID) || !strings.Contains(message.Content, `"line":1`) || strings.Contains(message.Content, "ab line") {
+		t.Fatalf("evidence boundary: %+v", message)
+	}
+	if request.Messages[0].Evidence == nil {
+		t.Fatal("request was mutated")
+	}
+}
