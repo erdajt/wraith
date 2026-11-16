@@ -2,7 +2,9 @@ package ui
 
 import (
 	"errors"
+	"github.com/erdajt/wraith/internal/store"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -27,6 +29,17 @@ func TestVariableRepairReplacesPartialReplyWithoutApprovingIt(t *testing.T) {
 	if err != nil || saved.Messages[1].Content != "checking wraith::MISSING " {
 		t.Fatalf("failed answer was lost: %v", err)
 	}
+	paths, err := filepath.Glob(filepath.Join(a.Paths.Cache, "repairs", "archives", "*.json.gz"))
+	if err != nil || len(paths) != 3 {
+		t.Fatalf("rejected attempts missing: %v %v", paths, err)
+	}
+	for _, path := range paths {
+		cached, err := (store.Store{Root: filepath.Join(a.Paths.Cache, "repairs")}).ReadArchive(filepath.Base(path))
+		if err != nil || len(cached.Messages) != 1 || !cached.Messages[0].Interrupted || !strings.Contains(cached.Messages[0].Content, "wraith::MISSING") {
+			t.Fatalf("invalid attempt cache: %+v %v", cached, err)
+		}
+	}
+
 }
 
 func TestSupersededStreamCannotAppendOrCompleteCurrentTurn(t *testing.T) {

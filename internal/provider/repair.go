@@ -12,9 +12,10 @@ import (
 )
 
 type StreamUpdate struct {
-	Chunk   ollama.Response
-	Retry   int
-	Problem string
+	Rejected session.Message
+	Chunk    ollama.Response
+	Retry    int
+	Problem  string
 }
 
 func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emit func(StreamUpdate)) (ollama.Response, error) {
@@ -110,7 +111,7 @@ func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emi
 			break
 		}
 		if emit != nil {
-			emit(StreamUpdate{Retry: attempt + 1, Problem: problem})
+			emit(StreamUpdate{Retry: attempt + 1, Problem: problem, Rejected: last.Message})
 		}
 	}
 	return last, errors.New("response repair stopped")

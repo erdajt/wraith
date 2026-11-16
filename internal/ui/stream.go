@@ -3,6 +3,8 @@ package ui
 import (
 	"context"
 	"fmt"
+	"github.com/erdajt/wraith/internal/store"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -128,7 +130,7 @@ func (a *App) startChat() tea.Cmd {
 		defer cancel()
 		r, e := client.ChatWithRepair(ctx, req, func(update provider.StreamUpdate) {
 			select {
-			case a.events <- streamMsg{Serial: serial, Chunk: update.Chunk, Retry: update.Retry, Problem: update.Problem}:
+			case a.events <- streamMsg{Serial: serial, Chunk: update.Chunk, Retry: update.Retry, Problem: update.Problem, Rejected: update.Rejected}:
 			case <-ctx.Done():
 			case <-a.done:
 			}
@@ -152,6 +154,14 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 		a.partial = session.Message{Role: "assistant"}
 		a.phase = fmt.Sprintf("retrying %d/3 · %s", m.Retry, m.Problem)
 		a.notice = a.phase
+		if m.Rejected.Content != "" || m.Rejected.Thinking != "" {
+			rejected := m.Rejected
+			rejected.Interrupted = true
+			attempt := session.Session{Version: 1, ID: a.Session.ID, Model: a.Session.Model, Provider: a.Session.Provider, Directory: a.Directory, Title: fmt.Sprintf("rejected response · retry %d · %s", m.Retry, m.Problem), Messages: []session.Message{rejected}}
+			if _, err := (store.Store{Root: filepath.Join(a.Paths.Cache, "repairs")}).Archive(attempt); err != nil {
+				a.notice += " · attempt cache: " + err.Error()
+			}
+		}
 		return a.next()
 	}
 
