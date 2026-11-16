@@ -38,3 +38,11 @@ actions are pinned to commit hashes, dependency updates are scheduled through de
 ## visual review
 
 `wraith --demo` opens a read-only sample workspace. `wraith --snapshot --width 110 --height 32` emits one ansi frame for layout inspection. the readme preview is an svg rendering of that demo output, not a live model benchmark. test small dimensions, wide unicode, menus, both terminal panes, and each theme when changing layout code.
+
+## test coverage
+
+unit tests use the standard [testing package](https://pkg.go.dev/testing), descriptive behavior names, table-driven cases where inputs vary, temporary directories and cleanup-owned resources. independent tests run in parallel; process/environment tests keep their global state isolated. tests that own asynchronous work use cancellation and explicit completion rather than relying on arbitrary sleeps.
+
+the execution suites run real short shell jobs for approval, cancellation, timeout, concurrent output and failed persistence. provider transports are fixtures, so privacy, streaming repair, compaction and evidence ownership are tested without credentials or a GPU. regression cases cover oversized polling lines, retained final errors, interrupted journals, variable rotation, non-shell editor review and CLI export redaction.
+
+CI runs the complete race suite with shuffled order and coverage on every push to `main` and on pull requests. it also verifies module checksums, formatting and vet, installs neovim for editor integration, fuzzes terminal parsing and modal editing, and builds Linux amd64/arm64 binaries. release tags call the same workflow before packaging. local success does not establish that a hosted run passed; inspect the corresponding Actions run when validating a deployment.
