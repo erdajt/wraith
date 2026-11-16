@@ -137,7 +137,7 @@ func ReadOutput(record Record, query Query, snapshot variables.Snapshot) (Page, 
 			page.Next = number
 			break
 		}
-		page.Lines = append(page.Lines, OutputLine{number, text})
+		page.Lines = append(page.Lines, OutputLine{Number: number, Text: text})
 		size += len(text)
 	}
 	return page, nil
