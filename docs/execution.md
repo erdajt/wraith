@@ -1,37 +1,64 @@
 # commands and evidence
 
-`execution.mode` selects `agent` or `blocks`. agent mode lets the model request one concrete command when execution would help. blocks mode keeps suggestions as ordinary markdown. neither mode runs a command merely because it appeared in a response.
+`execution.mode` selects `agent` or `blocks`. both distinguish concrete execution requests from ordinary markdown examples. neither runs a command merely because it appeared in a response.
+
+in agent mode, approved commands return their input, status and bounded output to the model, which can continue the task. blocks mode keeps the approval flow but shares output only when requested, unless `execution.auto_share` is enabled. an explicit hide-output choice overrides either mode.
 
 ## approval
 
-an execution request displays the command and its `reason:`. the transport marker and json fields are decoded before chat rendering, block selection, copying, exporting or editor handoff. incomplete or malformed requests cannot run. requests with unresolved placeholders stay suggestions.
+execution requests display the resolved command and its `reason:`. transport markers and json fields are decoded before chat rendering, selection, copying or editor handoff. unresolved placeholders remain suggestions. read the full command before approving; placeholder detection cannot recognize every possible template.
 
-choose an action with `j/k` or arrows and enter:
+choose with `j/k` or arrows and enter:
 
-- **run** executes the displayed command and captures its output. selecting run is the approval; no second approval popup follows.
-- **edit** opens the plain command in your configured editor. save and exit to review the changed command before running it.
-- **view full command** opens a scrollable preview, including the reason.
-- **ask assistant to modify** opens an inline revision field. enter sends the revision request. submitting an empty field prepares the main prompt with the command, reason and `modify:`; nothing is sent until you finish that prompt.
-- **reject** records that the command was not executed.
+- **run** executes once and captures merged stdout/stderr; no second approval follows.
+- **run · hide output from agent** shares only the redacted command and completion status. the model cannot poll or search this run's output.
+- **edit** opens the resolved command in your configured editor. save and exit to execute the edited command once. exiting without saving runs nothing. invalid edits remain available for recovery.
+- **view full command** opens a scrollable preview with the reason.
+- **ask assistant to modify** sends an inline revision. an empty revision field prepares a `modify:` draft in the main prompt, without sending it.
+- **reject** stops the requesting agent turn and cancels its tracked jobs. rejecting a manually selected block does not cancel unrelated work.
 
-a model request containing a template such as `<TARGET_IP_OR_HOST>` does not open approval. the model is instructed to ask for the missing value and use an ordinary shell block for examples. placeholder detection covers common forms, not every possible way to express a template; read commands before approving them.
+approval freezes the session, turn, directory, shell, timeout, private bindings and sharing policy. later setting changes cannot change that launch. an approval from a replaced session or turn cannot execute.
 
 ## ordinary blocks
 
-`<leader>b` or `/blocks` lists code blocks. enter on a command under the conversation cursor opens it directly in your editor. enter on an assistant message offers its blocks. each block has edit, run and view actions; run executes once and records the result.
+`<leader>b` or `/blocks` lists code blocks. enter on a command under the conversation cursor opens it in your editor; enter on an assistant message offers its blocks. selecting run authorizes a tracked run directly.
 
-saving a shell block stages its actual command text in the scratch shell. the first enter inserts it into shell input without a terminating newline; the next enter executes the shell input. multiline insertion requires bracketed paste support. `r` instead offers a tracked run, `e` edits again, and escape dismisses staging. source languages such as python and go use a saved file with their interpreter because they are not shell command text.
+saving a shell block stages its actual text in the scratch shell. enter inserts it into shell input without a newline; the next enter executes it. multiline insertion requires bracketed paste support. `r` offers a tracked run, `e` edits again, and escape dismisses staging. source languages such as python and go use a saved file and interpreter. private references in non-shell source require editor review before running; Wraith does not infer language-specific quoting.
 
-## output and history
+## background jobs and history
 
-tracked runs use the configured shell executable with `-c` in `terminal.directory`, or the launch directory when that setting is empty. each run starts a fresh shell. use a scratch pane when persistent variables or an interactive terminal are required.
+tracked jobs use the configured shell executable with `-c` in `terminal.directory`, or the launch directory when empty. each job starts a fresh shell with the active private bindings. use a scratch pane for persistent interactive state or programs needing a tty.
 
-`/history` opens compressed command records with timestamps, working directory, status, exit code and merged stdout/stderr. output capture is bounded at 8 mib per run and truncation is marked. the viewer supports vim motions and counts, `/` search, visual selection, `y`, `Y`, `ye` and `yf<char>`. `r` refreshes a frozen snapshot after more output arrives. clipboard copies also populate the prompt register.
+an agent may request a background job, labelled in approval. after approval it receives a start receipt and can keep working. `/jobs` or `<leader>j` shows current-session jobs; `/history` shows saved command records. open a job to view live output, status and exit code. `ctrl+x` cancels the selected job, configurable as `keys.job_cancel`.
 
-output is **not shared with the model by default**. press `ctrl+g` in the output viewer to share it. this binding is configurable as `keys.output_share`. sharing adds a bounded excerpt to the conversation and continues the model; sharing the same record twice in a session does not duplicate it. cancelled runs can be shared without automatically continuing.
+output readers support vim motions, counts, `/` search, visual selection and yanks. selection freezes the visible snapshot so incoming output does not move it. `r` refreshes it. live views show the recent tail; completed views include the retained prefix and tail with gap offsets.
 
-set `execution.auto_share: true` to share completed tracked runs automatically. the manual share hint disappears. excerpts are limited by `execution.output_context` and the current context budget; full captured output stays in history.
+completion evidence waits while you edit, type a draft, select text, use a shell or review a popup. it joins the next safe request without replacing your draft. session delivery ids prevent duplicate insertion after resume. jobs from an older turn do not independently restart that turn.
 
-in a scratch terminal's triple-escape copy mode, the same share binding sends the visual selection or the snapshot. automatic sharing includes changed terminal snapshots before the next model request. terminal snapshots do not reliably identify command boundaries, exit status or text already lost from bounded scrollback, so they are labelled accordingly. use tracked runs for complete command records.
+## output access
 
-`execution.max_steps` limits model-requested runs in a user turn. every step still needs approval. shared output is treated as untrusted evidence. the model cannot treat instructions printed by a command as new user instructions.
+agent-mode tracked runs share by default. blocks-mode runs share only through `ctrl+g` in the output viewer or `execution.auto_share: true`. explicitly hidden output remains private until you choose to share it. the manual binding appears only when sharing is needed. sharing a record twice does not duplicate evidence; cancelled runs can be shared without automatically continuing.
+
+completion evidence uses a bounded excerpt, reserving space for the retained tail when capture overflowed. the model can poll new lines or search authorized output by literal text or regular expression, then read bounded pages with source line numbers. tools only access shared jobs in the current session. matching occurs after private-value redaction. withheld jobs cannot be queried.
+
+read pages contain at most 200 lines and 16 kib before the smaller configured context budget applies. queries allow at most ten context lines before/after a match and a 512-byte pattern. oversized lines are marked omitted so polling still advances. polls are limited to one per second per job; their cursor advances only after the result is saved. full retained output remains available locally.
+
+`execution.max_steps` limits approved model commands per user turn; `execution.max_reads` limits output queries. reaching either pauses continuation. a new prompt resets these budgets. all command output is untrusted evidence, not new instructions.
+
+in scratch copy mode, `ctrl+g` shares the selection or snapshot. `execution.auto_share` includes changed snapshots before the next request. snapshots cannot reliably identify command boundaries, exit status or discarded scrollback; use tracked jobs when those matter.
+
+## limits and recovery
+
+| setting | default | accepted values |
+| --- | --- | --- |
+| `execution.max_jobs` | `4` | 1–32 concurrent jobs |
+| `execution.command_timeout` | `10m` | positive Go duration |
+| `execution.capture_bytes` | `8388608` | 64 kib–256 mib retained prefix |
+| `execution.tail_bytes` | `65536` | 4 kib–1 mib, no larger than the prefix limit |
+| `execution.output_context` | `8192` | 256–65536 bytes, further bounded by context |
+| `execution.max_steps` | `8` | 1–100 model commands per turn |
+| `execution.max_reads` | `16` | 1–256 output queries per turn |
+
+jobs drain output after the prefix fills, keeping an independent recent tail. initial intent is saved before spawning. live journals checkpoint each second or 256 kib, then finalize into compressed history. a crash can lose output since the last checkpoint. recovered incomplete jobs are marked interrupted and never rerun automatically. another running instance's locked journals are left alone.
+
+quitting, cancellation and timeout terminate owned process groups; background jobs do not survive a normal app exit. commands that deliberately detach can escape process-group cleanup. a failed final save leaves the result visible in memory with a persistence error. compression and private file permissions do not encrypt history.
