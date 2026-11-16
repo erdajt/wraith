@@ -86,7 +86,7 @@ func Default() Config {
 		Editor: []string{"nvim"}, Shell: []string{"zsh", "-i"}, KeepAlive: "2m", Timeout: "10m",
 		Terminal: Terminal{Background: "inherit", Foreground: "inherit", OverlayWidth: 0.7, OverlayHeight: 0.6, SplitWidth: 0.4, Scrollback: 5000},
 		Compact:  Compact{Mode: "ask", Threshold: 0.9, KeepTurns: 2, Budget: 1536},
-		Keys:     map[string]string{"output_share": "ctrl+g", "setting_help": "?", "pin_edit": "e", "pin_remove": "d", "thinking_toggle": "za", "send": "ctrl+s", "editor": "ctrl+e", "focus": "tab", "cancel": "ctrl+c", "quit": "ctrl+q", "terminal_overlay": "alt+e", "terminal_split": "alt+s", "terminal_unfocus": "ctrl+\\"}, Animations: true}
+		Keys:     map[string]string{"env_new": "n", "env_edit": "e", "env_remove": "d", "env_scope": "g", "output_share": "ctrl+g", "setting_help": "?", "pin_edit": "e", "pin_remove": "d", "thinking_toggle": "za", "send": "ctrl+s", "editor": "ctrl+e", "focus": "tab", "cancel": "ctrl+c", "quit": "ctrl+q", "terminal_overlay": "alt+e", "terminal_split": "alt+s", "terminal_unfocus": "ctrl+\\"}, Animations: true}
 }
 
 func Locations() (Paths, error) {
@@ -162,6 +162,14 @@ func (c Config) Validate() error {
 	}
 	if c.Keys["setting_help"] == "" || c.Keys["pin_edit"] == "" || c.Keys["pin_remove"] == "" || c.Keys["pin_edit"] == c.Keys["pin_remove"] || c.Keys["thinking_toggle"] == "" {
 		return errors.New("pin and thinking bindings must be nonempty and pin bindings distinct")
+	}
+	seenEnv := map[string]bool{}
+	for _, name := range []string{"env_new", "env_edit", "env_remove", "env_scope"} {
+		binding := c.Keys[name]
+		if binding == "" || seenEnv[binding] {
+			return errors.New("environment bindings must be nonempty and distinct")
+		}
+		seenEnv[binding] = true
 	}
 	if !slices.Contains([]string{"agent", "blocks"}, c.Execution.Mode) || c.Execution.MaxSteps < 1 || c.Execution.MaxSteps > 100 || c.Execution.OutputContext < 256 || c.Execution.OutputContext > 65536 {
 		return errors.New("execution requires agent or blocks mode, 1-100 steps and 256-65536 output bytes")

@@ -37,6 +37,11 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 			return cmd
 		}
 	}
+	if m.Kind == "environment" && !m.Searching {
+		if cmd, ok := a.environmentKey(k); ok {
+			return cmd
+		}
+	}
 	if len(key) == 1 && key[0] >= '0' && key[0] <= '9' {
 		if len(m.Count) < 6 {
 			m.Count += key
@@ -117,6 +122,14 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 			}
 		case "leader":
 			return a.runCommand(choice.Value)
+		case "environment":
+			a.variableDetails(choice.Value)
+		case "env-global":
+			pending := a.envPending
+			a.envPending = ""
+			if choice.Value == "continue" {
+				return a.environmentCommand(pending, true)
+			}
 		case "history":
 			record, err := a.history().Load(choice.Value)
 			if err != nil {

@@ -22,6 +22,14 @@ func (a *App) submit() tea.Cmd {
 		a.Prompt = vim.New()
 		return a.runCommand(strings.TrimPrefix(text, "/"))
 	}
+	if name, _, assignment := strings.Cut(text, "="); assignment && !strings.ContainsAny(strings.TrimSpace(name), " \t\n") {
+		if a.busy {
+			a.notice = "finish the current operation before changing variables"
+			return nil
+		}
+		a.Prompt = vim.New()
+		return a.environmentCommand("set "+text, false)
+	}
 	if a.loading {
 		a.notice = "model is loading · draft retained"
 		return nil
@@ -34,9 +42,13 @@ func (a *App) submit() tea.Cmd {
 		a.notice = "demo mode does not send prompts"
 		return nil
 	}
+	if err := a.refreshVariables(); err != nil {
+		a.notice = err.Error()
+		return nil
+	}
 	probe := a.Session.Clone()
 	probe.Messages = append(probe.Messages, session.Message{Role: "user", Content: text})
-	if err := contextual.Fits(probe, a.runtimeConfig(), a.Instructions); err != nil {
+	if err := contextual.Fits(probe, a.runtimeConfig(), a.chatInstructions()); err != nil {
 		a.notice = err.Error()
 		a.pendingPrompt = text
 		if a.Config.Compact.Mode == "auto" {
@@ -71,6 +83,10 @@ func (a *App) startChat() tea.Cmd {
 	if a.demo {
 		return nil
 	}
+	if err := a.refreshVariables(); err != nil {
+		a.notice = err.Error()
+		return nil
+	}
 	if a.Config.Execution.AutoShare {
 		if err := a.syncTerminalEvidence(); err != nil {
 			a.notice = err.Error()
@@ -82,7 +98,7 @@ func (a *App) startChat() tea.Cmd {
 		a.notice = err.Error() + "; /retry after changing /think"
 		return nil
 	}
-	if err = contextual.Fits(a.Session, a.runtimeConfig(), a.Instructions); err != nil {
+	if err = contextual.Fits(a.Session, a.runtimeConfig(), a.chatInstructions()); err != nil {
 		a.notice = err.Error()
 		a.pendingAgent = true
 		if a.Config.Compact.Mode == "auto" {
@@ -99,7 +115,7 @@ func (a *App) startChat() tea.Cmd {
 	a.follow = true
 	a.partial = session.Message{Role: "assistant"}
 	a.phase = "connecting"
-	req := ollama.Request{Model: a.Session.Model, Messages: contextual.ForChat(a.Session, a.Config, a.Instructions), Think: think, KeepAlive: a.Config.KeepAlive, Options: ollama.Options{Context: a.contextLimit(), Predict: a.Config.Predict, Temperature: a.Config.Temperature, Threads: a.Config.Threads}}
+	req := ollama.Request{PrivateInventory: true, Model: a.Session.Model, Messages: contextual.ForChat(a.Session, a.Config, a.Instructions), Think: think, KeepAlive: a.Config.KeepAlive, Options: ollama.Options{Context: a.contextLimit(), Predict: a.Config.Predict, Temperature: a.Config.Temperature, Threads: a.Config.Threads}}
 	client := a.Client
 	go func() {
 		defer cancel()
@@ -141,7 +157,7 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 		a.Session.Messages = append(a.Session.Messages, a.partial)
 		a.selected = len(a.Session.Messages) - 1
 	}
-	a.Session.Usage = m.Chunk.Usage(contextual.Estimate(contextual.ForChat(a.SessionWithoutLastAssistant(), a.Config, a.Instructions)))
+	a.Session.Usage = m.Chunk.Usage(contextual.Estimate(contextual.ForChat(a.SessionWithoutLastAssistant(), a.Config, a.chatInstructions())))
 	a.partial = session.Message{}
 	if err := a.Store.Save(a.Session); err != nil {
 		a.notice = "save failed: " + err.Error()
@@ -164,7 +180,7 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 			a.proposal = &proposal{Command: request.Command, Reason: request.Reason, Text: request.Command, Language: "sh", Source: "model", Continue: true}
 		}
 	}
-	switch contextual.Decision(a.Config.Compact.Mode, a.Session.Declines, contextual.NeedsCompact(a.Session, a.runtimeConfig(), a.Instructions)) {
+	switch contextual.Decision(a.Config.Compact.Mode, a.Session.Declines, contextual.NeedsCompact(a.Session, a.runtimeConfig(), a.chatInstructions())) {
 	case "compact":
 		return a.startCompact()
 	case "ask":

@@ -18,6 +18,7 @@ import (
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/store"
 	"github.com/erdajt/wraith/internal/terminal"
+	"github.com/erdajt/wraith/internal/variables"
 	"github.com/erdajt/wraith/internal/vim"
 )
 
@@ -77,6 +78,10 @@ type terminalMsg struct {
 }
 
 type App struct {
+	Variables                                  variables.Snapshot
+	variableInventory, envRevision, envPending string
+	envGlobal                                  bool
+
 	inputHistory                       []string
 	inputIndex, inputDraftPosition     int
 	inputDraft                         string
@@ -160,6 +165,9 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 	}
 	a := &App{inputIndex: -1, Directory: dir, Config: c, Paths: p, Store: store.Store{Root: p.Data}, Session: s, Client: provider.New(c), Instructions: string(instructions), Prompt: vim.New(), width: 100, height: 30, chatCursor: -1, focus: "prompt", follow: true, events: make(chan tea.Msg, 128), done: make(chan struct{}), demo: demo, notice: "/help commands · ctrl+s send · ctrl+e editor"}
 	if !demo {
+		if err := a.refreshVariables(); err != nil {
+			return nil, err
+		}
 		entries, e := a.Store.Inputs(a.Directory)
 		if e != nil {
 			a.notice = "input history: " + e.Error()

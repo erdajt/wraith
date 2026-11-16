@@ -25,6 +25,10 @@ func (a *App) startCompact() tea.Cmd {
 		a.notice = "compaction is disabled in demo mode"
 		return nil
 	}
+	if err := a.refreshVariables(); err != nil {
+		a.notice = err.Error()
+		return nil
+	}
 	s := a.Session.Clone()
 	c := a.runtimeConfig()
 	c.Model = s.Model

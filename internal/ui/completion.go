@@ -8,6 +8,7 @@ type commandSpec struct {
 }
 
 var commandSpecs = []commandSpec{
+	{"env", "manage private variables and descriptions", false},
 	{"provider", "switch the model backend", false},
 	{"providers", "choose a configured provider", false},
 	{"history", "browse approved commands and saved output", false},

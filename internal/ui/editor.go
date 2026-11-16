@@ -29,6 +29,8 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 	}
 	ext := ".md"
 	switch kind {
+	case "environment":
+		ext = ".env"
 	case "prompt":
 		text = a.Prompt.String()
 	case "instructions":
@@ -99,6 +101,22 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 		return nil
 	}
 	switch m.Kind {
+	case "environment":
+		_, err = a.variableStore().Save(a.Directory, a.envGlobal, a.envRevision, text)
+		if err != nil {
+			a.notice = err.Error()
+			return nil
+		}
+		if err = a.refreshVariables(); err != nil {
+			a.notice = err.Error()
+			return nil
+		}
+		applied = true
+		prefix := ""
+		if a.envGlobal {
+			prefix = "global"
+		}
+		return a.environmentCommand(prefix, true)
 	case "prompt":
 		a.Prompt.Set(text)
 		a.focus = "prompt"
