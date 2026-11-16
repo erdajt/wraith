@@ -158,3 +158,41 @@ func TestPreparationOwnsJournalBeforeSavingIntent(t *testing.T) {
 		t.Fatalf("orphan intent: %v %v", recovered, err)
 	}
 }
+
+func TestRecoveryIgnoresUnpublishedInitialization(t *testing.T) {
+	t.Parallel()
+	h := History{Root: t.TempDir()}
+	parent := filepath.Join(h.Root, "live")
+	if err := os.MkdirAll(parent, 0700); err != nil {
+		t.Fatal(err)
+	}
+	staging, err := os.MkdirTemp(parent, ".starting-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner := filepath.Join(staging, "owner.lock")
+	if err = os.WriteFile(owner, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if records, err := h.Recover(); err != nil || len(records) != 0 {
+		t.Fatalf("initializing journal recovered: %v", err)
+	}
+	if _, err = os.Stat(owner); err != nil {
+		t.Fatal("initializing journal deleted")
+	}
+	record := Record{ID: session.ID(), Status: "starting"}
+	live, err := h.openLive(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer live.close()
+	if _, err := h.openLive(record); err == nil {
+		t.Fatal("existing journal replaced")
+	}
+	if records, err := h.Recover(); err != nil || len(records) != 0 {
+		t.Fatalf("published owner lost: %v", err)
+	}
+	if _, err = os.Stat(filepath.Join(live.directory, "record.json")); err != nil {
+		t.Fatal("published checkpoint missing")
+	}
+}

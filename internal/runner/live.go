@@ -21,13 +21,20 @@ func (h History) openLive(record Record) (*liveRun, error) {
 	if !validID.MatchString(record.ID) {
 		return nil, errors.New("invalid command id")
 	}
-	directory := filepath.Join(h.Root, "live", record.ID)
-	if err := os.MkdirAll(filepath.Dir(directory), 0700); err != nil {
+	parent := filepath.Join(h.Root, "live")
+	if err := os.MkdirAll(parent, 0700); err != nil {
 		return nil, err
 	}
-	if err := os.Mkdir(directory, 0700); err != nil {
+	directory, err := os.MkdirTemp(parent, ".starting-")
+	if err != nil {
 		return nil, err
 	}
+	published := false
+	defer func() {
+		if !published {
+			_ = os.RemoveAll(directory)
+		}
+	}()
 	lock, err := os.OpenFile(filepath.Join(directory, "owner.lock"), os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
 		return nil, err
@@ -43,6 +50,22 @@ func (h History) openLive(record Record) (*liveRun, error) {
 		return nil, err
 	}
 	if err = live.checkpoint(record, &capture{}); err != nil {
+		live.close()
+		return nil, err
+	}
+	destination := filepath.Join(parent, record.ID)
+	if err = unix.Renameat2(unix.AT_FDCWD, directory, unix.AT_FDCWD, destination, unix.RENAME_NOREPLACE); err != nil {
+		live.close()
+		return nil, err
+	}
+	published = true
+	live.directory = destination
+	parentFile, err := os.Open(parent)
+	if err == nil {
+		err = parentFile.Sync()
+		parentFile.Close()
+	}
+	if err != nil {
 		live.close()
 		return nil, err
 	}
