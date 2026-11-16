@@ -85,3 +85,21 @@ func TestRecoveryRejectsCorruptMetadataWithoutRemovingEvidence(t *testing.T) {
 		t.Fatal("corrupt recovery evidence removed")
 	}
 }
+
+func TestRunningCommandCheckpointsOutputAndRemovesJournalAtCompletion(t *testing.T) {
+	t.Parallel()
+	h := History{Root: t.TempDir()}
+	id := session.ID()
+	record, err := h.Run(t.Context(), Record{ID: id, Shell: "/bin/sh", Command: "printf ready"}, func(string) {
+		recovered, err := h.Recover()
+		if err != nil || len(recovered) != 0 {
+			t.Errorf("live command recovered: %v", err)
+		}
+	})
+	if err != nil || record.Output != "ready" {
+		t.Fatalf("run failed: %+v %v", record, err)
+	}
+	if _, err := os.Stat(filepath.Join(h.Root, "live", id)); !os.IsNotExist(err) {
+		t.Fatal("final command retained live journal")
+	}
+}
