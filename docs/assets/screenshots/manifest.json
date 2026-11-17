@@ -1,186 +1,268 @@
 {
-  "binary_sha256": "6e4ec91bcf21a01e760ebef4b76f9dc71a6acf07dbe74d2714603b1dca92f7d2",
-  "commit": "0b0fc8c06e2776800e212375d8bb806a30ec2b8b",
-  "columns": 140,
-  "rows": 48,
+  "binary_sha256": "382a14816049e88bc3a725617e7b6aa78a4424abd7ff8835cb54de41bad883d8",
+  "commit": "fca613e807a156b90f2209b2565eef8a5d2bde17",
+  "columns": 130,
+  "rows": 36,
   "content": "scripted local fixtures; no provider credentials or network requests",
-  "capture": "grim capture of ghostty running wraith",
+  "capture": "grim capture of ghostty running wraith; exact pixel crops",
   "scenes": [
     {
+      "file": "welcome.png",
+      "caption": "responsive hooded mark in rose-pine",
+      "source_sha256": "e69c0516874385562c956d93505008920a382e3be4f962a88c35af36a8beee75",
+      "sha256": "508ff12492479c17be4340abc2161d648ce38027a110812743dbcb483b2dd1a4"
+    },
+    {
       "file": "conversation.png",
-      "caption": "sample response; markdown, table and locally resolved private variable",
-      "source_sha256": "f14b3cfcd93e006d0a24fb0868ef3f27c7e853347e592017655e348ca2d219eb",
-      "sha256": "264e6827cb7c9e9236d9208da0d1c48defbba30e89c64e80d48b1621cbe021fd"
+      "caption": "rendered header review with private substitution and a suggested command",
+      "source_sha256": "4ddb840dd0af860dd890fa756dac87261ad1327165ae1c641a71054c716e4f72",
+      "sha256": "61ace66ec863d3dfcbbb343abd103e61a1648f7675ce2289d606b5ad0e835e79"
     },
     {
       "file": "thinking.png",
-      "caption": "expanded sample reasoning in the conversation",
-      "source_sha256": "68c5627b45ccd2a391a144bca7c32be5e19369b9e7d512523a1f6930875b3b03",
-      "sha256": "fa100491f313f06e6c79d3de059e5aef7581e2137ad11be8b26550929900c528"
+      "caption": "expanded reasoning and the conversation cursor",
+      "source_sha256": "48a9e18d95ac2b1d2c41a5859da13b1ee613e2d53a769fd07ff3352cbe0cbc25",
+      "sha256": "c5e5ef3f4b0df39a7e69e07ccb011d7f77b772b2b23daf7c8cee9790c6accdd7"
+    },
+    {
+      "file": "search.png",
+      "caption": "highlighted conversation matches with the cursor at a result",
+      "source_sha256": "dfbbc85458321db576e4453afe1f835140fbb4f8efbaff9ad49ce0df09bf7fe8",
+      "sha256": "24ead762a8dfc60c0630710ab4f15e31a73831a80824b6843c380f8e362efff9"
+    },
+    {
+      "file": "selection.png",
+      "caption": "character selection in the conversation",
+      "source_sha256": "4ccadf1fcba56e4f41fb2c7e9c2fdd1720bb71b186d56eba9c051fecb7fcd946",
+      "sha256": "1f3d7170ae113c9db11a3ac02238f659559ce551113b58a4131e3d03472048e7"
+    },
+    {
+      "file": "leader.png",
+      "caption": "leader sequences for workspace actions",
+      "source_sha256": "4929afa256e61e4f289a2ecbafef29c6f1916efdc825b95a7eefb6b19dc781e7",
+      "sha256": "63d8efada4a674f3c4f65a4be41e5db4371f580b187a6e2775603add96ebeb26"
+    },
+    {
+      "file": "blocks.png",
+      "caption": "suggested commands remain available for editing or tracked runs",
+      "source_sha256": "8dae166eb5e7ec4576521cb0cec93a897c6392fd3f45f447df4446dc28dde4d8",
+      "sha256": "26492c47528fc5c7ec9242390e5c8340c3638da4a3349045b6a9a4e3f102e7c4"
+    },
+    {
+      "file": "editor.png",
+      "caption": "actual neovim editing the prompt",
+      "source_sha256": "8a54fbb9477f08734135e5c343deb8e9cc68fe7b6a76a83896c3442d2ac08f01",
+      "sha256": "423b40b2f151bd8eda648c8c8259d0bc966d369938fd880f65649334dd3fd054"
     },
     {
       "file": "approval.png",
-      "caption": "approval for a real local printf and sleep command",
-      "source_sha256": "8817b8b4cdbf2124757f8ef20656f2233864c72ae518e8d7ad4389e4dc2c5ce6",
-      "sha256": "793710cc185b21ab7f6dafaef926cb3c6daf1833d6cac79ce1d318226781d989"
+      "caption": "command, reason and six explicit approval choices",
+      "source_sha256": "9f908da96c6cb5a72e5d0d287a7db10a77589025025f7e4ab5a902d53b2012c9",
+      "sha256": "e8d51c40df6bc8a749f23799e0eb9d5cf6045d5699c147de9d05b0307dd64041"
+    },
+    {
+      "file": "modify.png",
+      "caption": "inline command revision with a modal editor",
+      "source_sha256": "7b6498ed921836d38ec13d248830630d973bfbb798c71e7964abf01959e16ab4",
+      "sha256": "4d04a9c138f8fc9291893738e9790bd618915e1e26f4ff5abccfe6a2c1cb759c"
     },
     {
       "file": "jobs.png",
-      "caption": "running background job with status and id",
-      "source_sha256": "cccf6ce0076c7b47120a03fa1520b89391267363cdb1104cd5fea9fcfbd71768",
-      "sha256": "2cd8c92fbc5cb6ed91564c6567e4134884eeddcf44ab2bfa1bd2bfdef7db5215"
+      "caption": "background status and stable job id",
+      "source_sha256": "e51984693e6fd621db6609880c42f3b3e06c201ed5dee6cc56736f3a5a98902f",
+      "sha256": "54302d5f187a12a3fa111d4ebfcd5ba18e0ef403990b0916ab86d6dd187c88f4"
     },
     {
       "file": "output.png",
-      "caption": "live output from the local job",
-      "source_sha256": "2ac5c63c4bbc2ab73989000a8470fe9486f2b9d9124e00ce5e1a79cffec69354",
-      "sha256": "536ec5f2ce8eda14122d820902854d09ca06e1f8906ce8936de5fa7d8cdca842"
+      "caption": "live job output with a highlighted search result",
+      "source_sha256": "95e405e397093e24c019e8277525dc8dda5c9800a0e6073fd29d8b70a5327677",
+      "sha256": "ed898f444eee1f3f0c83a83f18320968bf321b9bd6a466f36239c9607568b59b"
     },
     {
       "file": "variables.png",
-      "caption": "directory variables with attached comments",
-      "source_sha256": "360ab39c1f553b239363f372f200a0307a38b40638405283952a0e06920ecbe2",
-      "sha256": "e9b53535921d09121fb0b79b041e8b6ee3e1b1a60e1834275133d88ed23e06dc"
+      "caption": "private names, local values and shared comments",
+      "source_sha256": "26b1a9a8d87bed35fd17c2dc50b90290ed6f8df2c12973cdc33e55f94e5dfbaa",
+      "sha256": "d179f7c50e5fa145b68f6a3ff7ffa581779ffb4eefa084d394946c1c711688a0"
     },
     {
       "file": "pins.png",
-      "caption": "exact conversation facts",
-      "source_sha256": "e7e192b06cd3affe166c4e927c54b98169b2edc870a01ed7409bb101379ffb3a",
-      "sha256": "a402c6e3b630b4296929df4f2a242582df1924de22dff64fefb44f5aa768f969"
-    },
-    {
-      "file": "context.png",
-      "caption": "context usage and compaction policy",
-      "source_sha256": "51ffa89a9a4c02b11e8ee7d78e3f84c18a5a1c0ec26ab5539f380cdcc5045a7e",
-      "sha256": "7a826aaa58a29b4c7bbeaf2761ad32fbd47a046d657df600a6e55ec8d939c01e"
+      "caption": "exact scope fact with edit and remove controls",
+      "source_sha256": "b691b4d20a389b4d163b7e630ab61b1ff12dcea56806a0baf5b63edf70dce1b6",
+      "sha256": "41b51c7abdc986b5ff80953978d28c9393b28b85ad930a9445c70fb32f4d5601"
     },
     {
       "file": "models.png",
       "caption": "configured sample model catalog",
-      "source_sha256": "ff2ff7363478e512170d9dde30c328a4e627b11acd555226b066bb9d2047628b",
-      "sha256": "5c5d760d447f8d2efd3d5dc5e800279684959530b431f25bf803f4cbd167a210"
+      "source_sha256": "9340899e27d802345db3a1d40112404f822ec8ee83ec64fdb46ea4ea30b35291",
+      "sha256": "f10660c2a55e611aa46737e12c6d5aa26196c7d56d2126d24bfc554099f020c6"
     },
     {
       "file": "providers.png",
-      "caption": "configured provider picker",
-      "source_sha256": "151f467308ad6f6eaa43e4074fd241cb9d81498d68a475e5ca17377b9b47dbdc",
-      "sha256": "1cff519c74fcd9cd2d08606c2863e96612805b795437d99711111c7ee21fe437"
+      "caption": "local, api and cli profiles",
+      "source_sha256": "8b5d8f1b17f691170860df7648c090a600e7a023a623ce70f1c679c7f81144ec",
+      "sha256": "12384f59d695e2e707f31c97cc829e07c9dfbadc82d0bd751587deec3e948634"
     },
     {
       "file": "settings.png",
       "caption": "settings categories",
-      "source_sha256": "7a9ccb26f3e2a06e34fd57544ecc694b8fa8565fb59c513eae42d51004fa47f7",
-      "sha256": "aa0b175995cb9f028eb8e325d417bef5ccfedb46b55e3aa719e7cdc46699b3f8"
+      "source_sha256": "d46521e65ca3ae5276a9427808e18b254e76741fd69c72e52f2b8f4349426e2d",
+      "sha256": "28d27fc56ce8d07e1d520069ec8bd8704c7775d09ddd49697fd7538118a29a0e"
     },
     {
       "file": "appearance.png",
-      "caption": "appearance settings",
-      "source_sha256": "033721c0d7a99ed59645c5fe35aabe57562d617283586d86ee9577829588795f",
-      "sha256": "21c70f0773c42a24765610231e4eb12de871fee2fc20a8be59653844d0a2ffe0"
+      "caption": "appearance controls",
+      "source_sha256": "f36aa4d61a5f3d7dd15da1b7255fa7cfacd33ce48ff0195432ee2faebccf0174",
+      "sha256": "904a210c68b7443c73fa32427440431c367a0a5185afd2c63f2d2677368fec62"
+    },
+    {
+      "file": "context-settings.png",
+      "caption": "model capacity and compaction policy",
+      "source_sha256": "ad16e60a416e896b4825396a3c78ee068a029ef0012fbe95b8c9a08f26418ee3",
+      "sha256": "535b78abc0ada807ee89b6f6d75bcd8bb2f95a6d7cf27e7bf0f769890e45da2a"
     },
     {
       "file": "setting-help.png",
-      "caption": "per-setting explanation",
-      "source_sha256": "8cac79517aedb5237b1c1a354950218996d437935030f5976c1f70d3064b5646",
-      "sha256": "ccee3b4029935580f5d96e842595812a52566922b09ed0199fdc01af222e43a3"
+      "caption": "searchable per-setting explanation",
+      "source_sha256": "8bf440dda1d76f3a1ca65aca09b28aba50e991f502f581615a6e40c4d0869a91",
+      "sha256": "e70c254600589f7a1078d7b32731a760dff7ef5df3203728a863ee52d71cd19b"
     },
     {
       "file": "completion.png",
-      "caption": "category completion after an exact command and dot",
-      "source_sha256": "245047f12eada4d181da64da6222f137036f6d45a874412f201de4c2e8e996d4",
-      "sha256": "084795659190adec2858db4c7ff95b09df7ad5425ee480dc069a66a26ffb1391"
-    },
-    {
-      "file": "side-shell.png",
-      "caption": "independent bash pane alongside the conversation",
-      "source_sha256": "2f63ed85f0505fdbcf78799e48e8af6235fa87e56ca1188b104a2f28c052f882",
-      "sha256": "f97b1afaefc39501d1ee0ccbd4d70d22a044599e4bfe08da03cbd55052b47ef4"
-    },
-    {
-      "file": "scratch-shell.png",
-      "caption": "centered bash pane",
-      "source_sha256": "16c99bb633b08a91145a0c4623a39daee5ba82fa4293a6f5dbd35610e3dd1c84",
-      "sha256": "c306b097c8f813dcdcd50ee17707b73b7f873ee7992992ed6f3ded24d2679b88"
-    },
-    {
-      "file": "terminal-copy.png",
-      "caption": "terminal copy mode with vim cursor",
-      "source_sha256": "336c11360760532adce030021fff6df84fe24542070fb7a9eeb0dc29003c3ff8",
-      "sha256": "b8c3433806e6740d36d36c0b94b547337c5d7cbafabdb850d78af05352ce997b"
+      "caption": "dotted category completion",
+      "source_sha256": "7e23fd22e187bc31e7fbd90a5f960f6dffa8cc6907722c1bc22bfede04e8aa70",
+      "sha256": "dee78c9383e56b8d67da2ef9357d935a8cd79b5d7290ec3b6e7a6d26043d4994"
     },
     {
       "file": "sessions.png",
       "caption": "directory-scoped session picker",
-      "source_sha256": "26bf7c9b146f3611cc6aa55b0ed196631378127a0cdb3bc785879c033079fe3a",
-      "sha256": "a0599072cd591cf59ebe6e3cb3ea39e44bd3319d4113a721733e29970648d3fa"
+      "source_sha256": "95d07014aee17885cc656e3dad052bd0bfff96398224ad5a9d322bc7a0bd46c9",
+      "sha256": "356a209784eb753352d27c55284fd2e48d2ac103ec928fe5b4bd87e79aae2d48"
+    },
+    {
+      "file": "workspace.png",
+      "caption": "populated workspace with search, private values, markdown and an independent shell",
+      "source_sha256": "dc18851cccaaebbc84a984431354058e1e2e4c0e7f22990cfacdbd2f5cf32d70",
+      "sha256": "94f4c9669e1def55040d27a505e1015af6028e624a2fa9567a6c2c34ddb7c9e8"
     },
     {
       "file": "theme-phosphor.png",
-      "caption": "phosphor welcome screen",
-      "source_sha256": "5968a898ceb37f7d3af14af9d4906d991e712402631ee98949b9ed844416991f",
-      "sha256": "ea9102e2bc004a0dfd1d12244d8c147162362b8c310dc515a499ff0e94c7b056"
+      "caption": "phosphor with the same populated workspace and search",
+      "source_sha256": "fcfa619232ebfc1f8df8ac86c54a4b16135203d50e413f4d08939cf115b2d1eb",
+      "sha256": "631a89615c6464aad64350558d7a04b843c1cbda0e7feed8654de636532b778d"
     },
     {
       "file": "theme-rose-pine.png",
-      "caption": "rose-pine welcome screen",
-      "source_sha256": "04e29015cf4f2082f83fc2bcb2e1651e0787a7fad3eabeb316eba828c4f5c8a6",
-      "sha256": "be2625349ff432d9644b99266c8c019de978c1990f5eba4a036422f682fb5f1b"
+      "caption": "rose-pine with the same populated workspace and search",
+      "source_sha256": "dc18851cccaaebbc84a984431354058e1e2e4c0e7f22990cfacdbd2f5cf32d70",
+      "sha256": "efa18552688d443653ae07e573bb1883592c89c9a9874d2e173522ca309c1744"
     },
     {
       "file": "theme-dracula.png",
-      "caption": "dracula welcome screen",
-      "source_sha256": "228178349b7ec29a08c15fbadf90bb393bc3783fd798fa23fe62c08184c722a4",
-      "sha256": "75dd2f9ed670b8d80d95105bd9d1aa6cbb371f681a6bf8cfe604526d784fd223"
+      "caption": "dracula with the same populated workspace and search",
+      "source_sha256": "90d494cc185db8bad2718954cd12ed13b6bd08258beadc7d938394acd6d048d3",
+      "sha256": "cfa3c1f0965edfc9f1f2adaf84b51d34644d20c17e369c37957289622784a845"
     },
     {
       "file": "theme-everforest.png",
-      "caption": "everforest welcome screen",
-      "source_sha256": "55b4f2d2a6e1c4f88b18b17c5f69dceecc7bb3e4b7ef6c40b421cd862ec56f4e",
-      "sha256": "5a260c4ac2cf060da83322b108f84e455caca4b6263f509fa507e7afe4b1a2b3"
+      "caption": "everforest with the same populated workspace and search",
+      "source_sha256": "5fa6ec64dd3a0007131ba3b00014b569e1af1dad5d5ac1d864dede311bae4339",
+      "sha256": "d83658f322a99986564db7b40704f380ed8862c7b4441ae8b18f8d69474d7788"
     },
     {
       "file": "theme-nord.png",
-      "caption": "nord welcome screen",
-      "source_sha256": "c615a76e35271f7f98bbbb45c198cd03cb0aee002f0bb04bbeed2e1d8751dc9d",
-      "sha256": "30b49c8ea59440c50da657a096899639b7cca2a676740f1f3812386f44a30f99"
+      "caption": "nord with the same populated workspace and search",
+      "source_sha256": "451de9b01ccad27e7a90b94b5eb305bdbabb88053a0cb5ae343ad76f2b875126",
+      "sha256": "ae0834c32aea1bb932e945d01550f26a027bad69242610d49beab884aa27c890"
     },
     {
       "file": "theme-catppuccin-mocha.png",
-      "caption": "catppuccin-mocha welcome screen",
-      "source_sha256": "dc6f26c3500137c8a2c37aa41596fca70cc21761bd203836de36ecb889b64506",
-      "sha256": "29843b17daadbcb62b3cae642cba8f34825bf66f0a221c997a40a41a30b286e4"
+      "caption": "catppuccin-mocha with the same populated workspace and search",
+      "source_sha256": "d441e2a34d20d3cfa8e7959a5c4bac9bf6709c4b328855b584ce7ff0cbca369b",
+      "sha256": "7127f8074c219e43fc24a1ed0a134fc5393c3bd682ea4e199d76bd8169dec85f"
     },
     {
       "file": "theme-tokyo.png",
-      "caption": "tokyo welcome screen",
-      "source_sha256": "6bbf70ff5592e7c6e458fa3b6eb032f48a55adfd5782e2dc7c9a40d816bf3495",
-      "sha256": "f57cecfeb7ccc141d685c8389f63ceb87b7b74d20091f8075ecdebc36e7827f0"
+      "caption": "tokyo with the same populated workspace and search",
+      "source_sha256": "105c28e9b7761b9a083b82809230e03fd6308c61727530c21ccb389ca21cd84c",
+      "sha256": "6da6d7ece40dda8bb3792664c5cf9fb00c20924581ea2bc56ba30676eb928823"
     },
     {
       "file": "theme-ember.png",
-      "caption": "ember welcome screen",
-      "source_sha256": "0947b2b55c0230bf0c74642abc21b48311b2200ef12f64f547c7677d9ae1d286",
-      "sha256": "712d8f69974d24f6042af940238215dc81be6122bc2b15c154b735bec65410ed"
+      "caption": "ember with the same populated workspace and search",
+      "source_sha256": "2dd2600deb8cce8c4d121b7161c3829a3f2d99e50e3cf979fd3a18229c95ca7b",
+      "sha256": "36d918f0a914d4f9e11ca2f1f2381e2692b7f272830489dd19b49101479600fb"
     },
     {
       "file": "theme-ice.png",
-      "caption": "ice welcome screen",
-      "source_sha256": "0375f60638898603928359ad5915ff9ccf7eaf85775e055e41dc2e262df168db",
-      "sha256": "a1d1c5c3a4c61ee1cacb822d832bcf4d09c6d5cc7e65f2c18ccbd823aaaf7dca"
+      "caption": "ice with the same populated workspace and search",
+      "source_sha256": "c6d46ce6cd38d44cfa239fdb67fc6313a8e434fb5e4d2fa109b4a02c45c1c8fd",
+      "sha256": "853b5430f81f741934caae640a1018b10920522c08568440cb1b339680ddcc30"
     },
     {
       "file": "theme-mono.png",
-      "caption": "mono welcome screen",
-      "source_sha256": "c4f36ba2b8d762ac8a52075856f76fc9f68b9fbc3c98784c616917395b8ccb20",
-      "sha256": "ced911830a60bed59568476fe70462a889d1c059c3bd2f6e846da24b4e5faa50"
+      "caption": "mono with the same populated workspace and search",
+      "source_sha256": "df2709601ee04dd7c680b2dbc697529fc825dfafd3605b4fbbc5aa7c96943672",
+      "sha256": "bc597ec31c584d1c4ac0d62e02fd93e39b49ccf84fd66e081f2c84a5a58609f1"
+    },
+    {
+      "file": "scratch-shell.png",
+      "caption": "centered shell with saved local evidence",
+      "source_sha256": "1a570c5d362d2b1ebc50e10e3534703946d0b914dede817e44bad23a489147c6",
+      "sha256": "24421c4f0dd4573da38182d5ced5f0d9766679793c41ca952ec28e327fc2da7c"
+    },
+    {
+      "file": "terminal-copy.png",
+      "caption": "search and visual selection in terminal scrollback",
+      "source_sha256": "f71b1c5e9a4ff602bb858507a743fabef128f78bfb2df45c4eeece200d89d916",
+      "sha256": "d9b4b7f76a9c9cf1318de2f8112f3ed90616df43a2d5c79cba964ac00762e059"
+    },
+    {
+      "file": "fork.png",
+      "caption": "user-message editing asks to fork while preserving the original",
+      "source_sha256": "e3df572622bea926ec12b272dc6dec2fd7c8f4df17abb8e428adef774f8c10f4",
+      "sha256": "d905fcdb03dc59647a10c79848ebdd194c1758c36ef46261380ed0f2603ccd11"
+    },
+    {
+      "file": "context.png",
+      "caption": "active context estimate and output reservation",
+      "source_sha256": "0eb38c11b59ec5930c4bbc6280c201bf29fa844dd7f27176ff4b6be999a31d6f",
+      "sha256": "65315c45f6a61377ffe221ca690e9d62453cf518938b03b83f3c33b02d782446"
+    },
+    {
+      "file": "approval-detail.png",
+      "source": "approval.png",
+      "crop": [170, 237, 1090, 426],
+      "caption": "detail crop of the actual approval panel; full capture retained",
+      "source_sha256": "9f908da96c6cb5a72e5d0d287a7db10a77589025025f7e4ab5a902d53b2012c9",
+      "sha256": "8e067b0d56aa07523d32cf1d46e087876ad7b8f110ec0cdef0e777f256c4d343"
+    },
+    {
+      "file": "variables-detail.png",
+      "source": "variables.png",
+      "crop": [225, 362, 980, 151],
+      "caption": "detail crop of the actual variables panel; full capture retained",
+      "source_sha256": "26b1a9a8d87bed35fd17c2dc50b90290ed6f8df2c12973cdc33e55f94e5dfbaa",
+      "sha256": "5b7fdc9749aa9200bd971a3b9d4c9cb71896339706ca6587a0fbdbf838cfcb47"
+    },
+    {
+      "file": "output-detail.png",
+      "source": "output.png",
+      "crop": [225, 212, 980, 451],
+      "caption": "detail crop of the actual output panel; full capture retained",
+      "source_sha256": "95e405e397093e24c019e8277525dc8dda5c9800a0e6073fd29d8b70a5327677",
+      "sha256": "9307ebca41a64f0ec14658bf4a2cd6e1d010f0ed7593c6e83bf9944842e0fcc5"
+    },
+    {
+      "file": "modify-detail.png",
+      "source": "modify.png",
+      "crop": [225, 162, 980, 551],
+      "caption": "detail crop of the actual modify panel; full capture retained",
+      "source_sha256": "7b6498ed921836d38ec13d248830630d973bfbb798c71e7964abf01959e16ab4",
+      "sha256": "4e0c2d9ba42ed179e3de8e4ece5318d48efc96c775372930e595a00aee7665b8"
     }
   ],
-  "terminal": "ghostty; requested font-family JetBrains Mono at 12 pt; host font fallback applies; opaque background",
-  "crop": {
-    "x": 16,
-    "y": 16,
-    "width": 1400,
-    "height": 912,
-    "purpose": "remove host terminal padding; preserve the complete 140 by 48 app grid"
-  }
+  "font": "JetBrainsMono Nerd Font Mono, 14 pt",
+  "source_size": [1440, 900],
+  "grid_crop": [0, 0, 1430, 900],
+  "source_dirty": true
 }
