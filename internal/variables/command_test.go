@@ -10,6 +10,9 @@ func TestCommandReferencesCatchBarePrivateArguments(t *testing.T) {
 	s := NewSnapshot([]Entry{{Name: "TARGET_DOMAIN", Value: "private.example"}}, nil)
 	for _, command := range []string{
 		"dig +short TARGET_DOMAIN | xargs -I {} printf '%s' {}",
+		"env -u TARGET_DOMAIN dig TARGET_DOMAIN",
+		"env -C TARGET_DOMAIN printf done",
+		"unset TARGET_DOMAIN; dig TARGET_DOMAIN",
 		"curl 'TARGET_DOMAIN'",
 		`curl "TARGET_DOMAIN"`,
 		"target=TARGET_DOMAIN; printf '%s' \"$target\"",
@@ -26,6 +29,15 @@ func TestCommandReferencesKeepShellSyntaxAndUnrelatedNames(t *testing.T) {
 	s := NewSnapshot([]Entry{{Name: "TARGET_DOMAIN", Value: "private.example"}}, nil)
 	for _, command := range []string{
 		"dig +short wraith::TARGET_DOMAIN",
+		"unset TARGET_DOMAIN",
+		"builtin unset TARGET_DOMAIN",
+		"printenv TARGET_DOMAIN",
+		"command printenv TARGET_DOMAIN",
+		"/usr/bin/printenv 'TARGET_DOMAIN'",
+		"env -u TARGET_DOMAIN printf done",
+		"env --unset TARGET_DOMAIN printf done",
+		"env --unset=TARGET_DOMAIN printf done",
+		"export TARGET_DOMAIN",
 		`curl "$TARGET_DOMAIN"`,
 		`curl "${TARGET_DOMAIN}"`,
 		"TARGET_DOMAIN=host.test; curl \"$TARGET_DOMAIN\"",
