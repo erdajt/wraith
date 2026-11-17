@@ -17,6 +17,7 @@ import sys
 import tempfile
 import termios
 import time
+import tty
 
 ROOT = Path(__file__).resolve().parents[1]
 TITLE = "wraith documentation capture"
@@ -193,7 +194,14 @@ def main():
         return
     output = args.output.resolve()
     if args.drive or args.record:
-        drive(output, args.record)
+        attributes = termios.tcgetattr(sys.stdin.fileno()) if sys.stdin.isatty() else None
+        try:
+            if attributes is not None:
+                tty.setraw(sys.stdin.fileno())
+            drive(output, args.record)
+        finally:
+            if attributes is not None:
+                termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, attributes)
         return
     for name in ("ghostty", "hyprctl", "grim"):
         if not shutil.which(name):
