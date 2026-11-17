@@ -19,25 +19,10 @@ import termios
 import time
 import tty
 
+from showcase import HEADERS, provider, walkthrough
+
 ROOT = Path(__file__).resolve().parents[1]
 TITLE = "wraith documentation capture"
-
-
-def provider():
-    messages = json.loads(sys.stdin.read().split("Conversation JSON:\n", 1)[1])
-    prompt = messages[-1]["content"]
-    if "command result" in prompt or "background command" in prompt:
-        answer = "the job is tracked in `/jobs`. keep working here while it finishes; its output stays available in `/history`."
-    elif "run the local report" in prompt:
-        command = "printf 'service report\\n443/tcp  open  https\\ncertificate: lab fixture\\n'; sleep 20; printf 'report complete\\n'"
-        answer = "collect a local sample report without contacting a target.\n\n```wraith-run\n" + json.dumps({"command": command, "reason": "print the documentation fixture and demonstrate live background output"}) + "\n```"
-    else:
-        answer = "## inspect the certificate\n\ncheck **wraith::TARGET_DOMAIN** and record the negotiated protocol, issuer and expiration.\n\n```sh\nopenssl s_client -connect wraith::TARGET_DOMAIN:443 \\\n  -servername wraith::TARGET_DOMAIN -brief </dev/null\n```\n\n| observation | follow-up |\n| --- | --- |\n| expired certificate | verify renewal and deployment |\n| unexpected issuer | inspect the served chain |\n| successful handshake | compare against your tls policy |\n\nthis is a suggested command. open the block to edit it before running."
-    print(json.dumps({"type": "stream_event", "event": {"delta": {"thinking": "start with a read-only certificate check. record evidence before drawing conclusions; a successful handshake does not prove the full configuration is correct."}}}), flush=True)
-    for start in range(0, len(answer), 48):
-        print(json.dumps({"type": "stream_event", "event": {"delta": {"text": answer[start:start + 48]}}}), flush=True)
-        time.sleep(0.01)
-    print(json.dumps({"type": "result", "usage": {"input_tokens": 1450, "output_tokens": 240}}), flush=True)
 
 
 def drive(output, record):
@@ -47,14 +32,16 @@ def drive(output, record):
         for name in ("config", "data", "cache", "lab"):
             (workspace / name).mkdir()
         config = {
-            "provider": "sample", "model": "documentation-fixture", "animations": False,
-            "providers": {"sample": {"kind": "claude-cli", "model": "documentation-fixture",
-                "models": ["documentation-fixture", "alternate-fixture"],
+            "provider": "sample", "model": "offline-showcase", "theme": "rose-pine", "animations": False,
+            "editor": ["nvim", "-u", "NONE", "-n", "+set laststatus=0 noruler noshowmode"],
+            "providers": {"sample": {"kind": "claude-cli", "model": "offline-showcase", "context": 32768,
+                "models": ["offline-showcase", "alternate-fixture"],
                 "command": [sys.executable, str(Path(__file__).resolve()), "--provider"]}},
             "shell": ["bash", "--noprofile", "--norc", "-i"], "clipboard": [],
             "terminal": {"background": "theme"},
         }
         (workspace / "config/config.yaml").write_text(json.dumps(config))
+        (workspace / "lab/headers.txt").write_text(HEADERS)
         binary = ROOT / "bin/wraith"
         argv = [str(binary), "--config-dir", str(workspace / "config"),
                 "--data-dir", str(workspace / "data"), "--cache-dir", str(workspace / "cache")]
@@ -104,67 +91,7 @@ def drive(output, record):
             scenes.append({"file": name + (".ansi" if record else ".png"), "caption": caption})
 
         try:
-            pump(2)
-            capture("welcome", "new conversation; animated mark paused by configuration")
-            command("/env set TARGET_DOMAIN=lab.example # isolated documentation target")
-            send("\x1b")
-            command("/pin scope: local documentation fixtures only")
-            command("review the certificate on our lab service and list what to record")
-            pump(1)
-            capture("conversation", "sample response; markdown, table and locally resolved private variable")
-            send("\t]za")
-            capture("thinking", "expanded sample reasoning in the conversation")
-            send("za\t")
-            command("run the local report")
-            pump(1)
-            capture("approval", "approval for a real local printf and sleep command")
-            send("\r", 1)
-            command("/jobs")
-            capture("jobs", "running background job with status and id")
-            send("\r")
-            capture("output", "live output from the local job")
-            send("\x1b")
-            for name, cmd, caption in [
-                ("variables", "/env", "directory variables with attached comments"),
-                ("pins", "/pins", "exact conversation facts"),
-                ("context", "/context", "context usage and compaction policy"),
-                ("models", "/models", "configured sample model catalog"),
-                ("providers", "/providers", "configured provider picker"),
-                ("settings", "/settings", "settings categories"),
-                ("appearance", "/settings.appearance", "appearance settings"),
-            ]:
-                command(cmd)
-                capture(name, caption)
-                if name != "context":
-                    send("\x1b")
-            command("/settings.execution")
-            send("?")
-            capture("setting-help", "per-setting explanation")
-            send("\x1b")
-            send("\x1b")
-            send("/settings.")
-            capture("completion", "category completion after an exact command and dot")
-            send("\x1b")
-            send("ddi")
-            send("\x1bs", 0.7)
-            send("printf 'local shell\\n'; pwd\r")
-            capture("side-shell", "independent bash pane alongside the conversation")
-            send("\x1bs")
-            send("\x1be", 0.7)
-            send("printf 'scratch shell\\nready for edited commands\\n'\r")
-            capture("scratch-shell", "centered bash pane")
-            for _ in range(3):
-                send("\x1b", 0.15)
-            capture("terminal-copy", "terminal copy mode with vim cursor")
-            send("i")
-            send("\x1be")
-            command("/resume")
-            capture("sessions", "directory-scoped session picker")
-            send("\x1b")
-            command("/clear")
-            for theme in ("phosphor", "rose-pine", "dracula", "everforest", "nord", "catppuccin-mocha", "tokyo", "ember", "ice", "mono"):
-                command("/theme " + theme)
-                capture("theme-" + theme, theme + " welcome screen")
+            walkthrough(send, command, capture, pump)
             os.write(master, b"\x11")
             os.waitpid(pid, 0)
             pid = 0
@@ -203,17 +130,17 @@ def main():
             if attributes is not None:
                 termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, attributes)
         return
-    for name in ("ghostty", "hyprctl", "grim"):
+    for name in ("ghostty", "hyprctl", "grim", "nvim"):
         if not shutil.which(name):
             parser.error(name + " is required for desktop capture")
     subprocess.run(["make", "build"], cwd=ROOT, check=True)
     output.mkdir(parents=True, exist_ok=True)
     command = ["ghostty", "--config-default-files=false", "--gtk-single-instance=false",
-               "--title=" + TITLE, "--font-family=JetBrains Mono", "--font-size=12",
+               "--title=" + TITLE, "--font-family=JetBrainsMono Nerd Font Mono", "--font-size=14",
                "--background=#101419", "--background-opacity=1", "--window-decoration=false",
-               "--window-padding-x=12", "--window-padding-y=12", "-e", sys.executable,
+               "--window-padding-x=0", "--window-padding-y=0", "--window-padding-balance=false", "-e", sys.executable,
                str(Path(__file__).resolve()), "--drive", "--output", str(output)]
-    subprocess.run(["hyprctl", "dispatch", "exec", "[float; size 1440 960; center] " + shlex.join(command)], check=True)
+    subprocess.run(["hyprctl", "dispatch", "exec", "[float; size 1440 900; center] " + shlex.join(command)], check=True)
     print("capture window opened; keep it visible until it closes. files: " + str(output))
 
 
