@@ -51,6 +51,7 @@ this is a modal editor, not a complete embedded neovim instance. macros, plugins
 
 | commands | purpose |
 | --- | --- |
+| `/help`, `/h`, `/?` | show commands and current bindings |
 | `/providers`, `/provider name` | select a backend |
 | `/models`, `/model [id]` | choose or directly set a model |
 | `/think [value]`, `/thinking` | native effort controls and reasoning visibility |
@@ -65,7 +66,7 @@ this is a modal editor, not a complete embedded neovim instance. macros, plugins
 | `/resume [id]`, `/chats`, `/sessions` | resume from the current directory |
 | `/archives`, `/restore filename` | recover an archived source into a new chat |
 | `/export [path]`, `/retry` | export markdown or retry interrupted generation |
-| `/terminal-restart 1\|2`, `/quit` | restart a shell or exit |
+| `/terminal-restart 1\|2`, `/quit`, `/q` | restart a shell or exit |
 
 ## sessions and launch arguments
 

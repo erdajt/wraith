@@ -10,7 +10,7 @@ bindings depend on focus and mode. the header shows both. the footer uses your c
 | enter | insert a newline; choose a visible slash completion |
 | escape | enter normal mode |
 | `i`, `a` | insert before or after the cursor |
-| `I`, `A` | insert at the first nonblank character or line end |
+| `I`, `A` | insert at the line start or line end |
 | `o`, `O` | open a line below or above |
 | `v`, `V` | character or line visual selection |
 | `:w` in normal mode | send the draft |

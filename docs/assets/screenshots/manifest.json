@@ -175,7 +175,7 @@
       "sha256": "ced911830a60bed59568476fe70462a889d1c059c3bd2f6e846da24b4e5faa50"
     }
   ],
-  "terminal": "ghostty; jetbrains mono; 12 pt; opaque background",
+  "terminal": "ghostty; requested font-family JetBrains Mono at 12 pt; host font fallback applies; opaque background",
   "crop": {
     "x": 16,
     "y": 16,
