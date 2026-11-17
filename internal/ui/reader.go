@@ -114,6 +114,9 @@ func (r *reader) lines(width, height int, p palette) []string {
 				}
 			}
 			if i == row {
+				if b.Mode == "insert" && column == ansi.StringWidth(styled) {
+					styled += " "
+				}
 				styled = cursorText(styled, column, p)
 			}
 			horizontal := 0
