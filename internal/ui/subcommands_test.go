@@ -35,7 +35,7 @@ func TestTabOpensAvailableSubcommands(t *testing.T) {
 	a.Prompt.Set("/settings")
 	a.key(tea.KeyMsg{Type: tea.KeyTab})
 	choices, _, visible := a.completions()
-	if a.Prompt.String() != "/settings." || !visible || len(choices) != 6 {
+	if a.Prompt.String() != "/settings." || !visible || len(choices) != len(subcommands["settings"]) {
 		t.Fatal("tab did not expose categories")
 	}
 }

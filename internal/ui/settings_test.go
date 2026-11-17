@@ -62,3 +62,30 @@ func TestFilteredSettingsSelectWithOneEnter(t *testing.T) {
 		t.Fatal("first enter did not choose filtered setting")
 	}
 }
+
+func TestEnvironmentScopeSettingHasPickerHelpAndCompletion(t *testing.T) {
+	a := fixture(t)
+	a.runCommand("settings.environment")
+	if a.popup == nil || a.popup.Items[0].Value != "environment.scope" {
+		t.Fatal("environment category missing")
+	}
+	a.menuKey(key("?"))
+	if a.popup.Kind != "setting-help" {
+		t.Fatal("scope help missing")
+	}
+	a.settingMenu("environment.scope")
+	if len(a.popup.Items) != 3 {
+		t.Fatal("scope choices missing")
+	}
+	a.menuKey(tea.KeyMsg{Type: tea.KeyEnter})
+	if a.Config.Environment.Scope != "conversation" {
+		t.Fatal("scope selection did not apply")
+	}
+	a.set("environment.scope", "invalid")
+	if a.Config.Environment.Scope != "conversation" {
+		t.Fatal("invalid scope replaced setting")
+	}
+	if choices := matchingCommands("settings.env"); len(choices) != 1 || choices[0].Name != "settings.environment" {
+		t.Fatal("scope category completion missing")
+	}
+}

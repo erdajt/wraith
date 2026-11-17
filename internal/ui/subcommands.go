@@ -7,6 +7,7 @@ var subcommands = map[string][]commandSpec{
 		{"settings.model", "model, thinking, context and startup", false},
 		{"settings.execution", "agent or blocks mode and command budgets", false},
 		{"settings.context", "compaction policy and limits", false},
+		{"settings.environment", "variable persistence across chats and directories", false},
 		{"settings.appearance", "themes, transparency, thinking and mouse", false},
 		{"settings.terminals", "pane geometry, colors and shell", false},
 		{"settings.keys", "leader, bindings and editor", false},

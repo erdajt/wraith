@@ -11,6 +11,7 @@ import (
 func (a *App) settingsMenu() tea.Cmd {
 	a.popup = &menu{Kind: "settings", Title: "settings · e edits config.yaml", Items: []item{
 		{"model", "category.model", "model, thinking, context, startup"},
+		{"environment", "category.environment", "variable persistence across chats and directories"},
 		{"execution", "category.execution", "agent or blocks, step budget, output"},
 		{"context", "category.context", "capacity, compaction policy and threshold"},
 		{"appearance", "category.appearance", "themes, transparency, thinking, mouse"},
@@ -23,12 +24,13 @@ func (a *App) settingsMenu() tea.Cmd {
 
 func (a *App) settingsCategory(category string) {
 	groups := map[string][]string{
-		"model":      {"provider", "model", "thinking", "context", "predict", "threads", "auto_start", "providers"},
-		"execution":  {"execution.mode", "execution.auto_share", "execution.max_steps", "execution.max_jobs", "execution.max_reads", "execution.command_timeout", "execution.output_context", "execution.capture_bytes", "execution.tail_bytes"},
-		"context":    {"context", "compact.mode", "compact.threshold", "compact.keep_turns", "compact.budget"},
-		"appearance": {"theme", "appearance.background", "appearance.thinking", "appearance.mouse", "animations", "themes"},
-		"terminals":  {"terminal.overlay_width", "terminal.overlay_height", "terminal.split_width", "terminal.background", "terminal.foreground", "terminal.scrollback", "terminal.directory", "shell"},
-		"keys":       {"leader", "bindings", "keys", "editor", "clipboard"},
+		"environment": {"environment.scope"},
+		"model":       {"provider", "model", "thinking", "context", "predict", "threads", "auto_start", "providers"},
+		"execution":   {"execution.mode", "execution.auto_share", "execution.max_steps", "execution.max_jobs", "execution.max_reads", "execution.command_timeout", "execution.output_context", "execution.capture_bytes", "execution.tail_bytes"},
+		"context":     {"context", "compact.mode", "compact.threshold", "compact.keep_turns", "compact.budget"},
+		"appearance":  {"theme", "appearance.background", "appearance.thinking", "appearance.mouse", "animations", "themes"},
+		"terminals":   {"terminal.overlay_width", "terminal.overlay_height", "terminal.split_width", "terminal.background", "terminal.foreground", "terminal.scrollback", "terminal.directory", "shell"},
+		"keys":        {"leader", "bindings", "keys", "editor", "clipboard"},
 	}
 	encoded, _ := json.Marshal(a.Config)
 	var data map[string]any

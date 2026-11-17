@@ -115,3 +115,28 @@ func TestExecutionLimitsValidateAndSurvivePartialConfig(t *testing.T) {
 		t.Fatalf("old config lost defaults: %+v %v", c.Execution, err)
 	}
 }
+
+func TestEnvironmentScopePersistsAndRejectsUnknownValues(t *testing.T) {
+	for _, scope := range []string{"conversation", "directory", "global"} {
+		t.Run(scope, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "config.yaml")
+			c := Default()
+			c.Environment.Scope = scope
+			if err := Save(path, c); err != nil {
+				t.Fatal(err)
+			}
+			loaded, err := Load(path)
+			if err != nil || loaded.Environment.Scope != scope {
+				t.Fatalf("scope not persisted: %q, %v", loaded.Environment.Scope, err)
+			}
+		})
+	}
+	c := Default()
+	if c.Environment.Scope != "directory" {
+		t.Fatal("directory is not the default")
+	}
+	c.Environment.Scope = "unknown"
+	if c.Validate() == nil {
+		t.Fatal("unknown scope accepted")
+	}
+}

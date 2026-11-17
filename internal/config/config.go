@@ -31,6 +31,10 @@ type Execution struct {
 	OutputContext  int    `json:"output_context" yaml:"output_context"`
 }
 
+type Environment struct {
+	Scope string `json:"scope" yaml:"scope"`
+}
+
 type Appearance struct {
 	Background string `json:"background" yaml:"background"`
 	Mouse      bool   `json:"mouse" yaml:"mouse"`
@@ -38,6 +42,7 @@ type Appearance struct {
 }
 
 type Config struct {
+	Environment Environment         `json:"environment" yaml:"environment"`
 	Provider    string              `json:"provider" yaml:"provider"`
 	Providers   map[string]Provider `json:"providers" yaml:"providers"`
 	Clipboard   []string            `json:"clipboard" yaml:"clipboard"`
@@ -86,7 +91,7 @@ type Terminal struct {
 type Paths struct{ Config, Data, Cache string }
 
 func Default() Config {
-	return Config{Provider: "ollama", Providers: DefaultProviders(), Clipboard: []string{"wl-copy"}, Appearance: Appearance{Background: "theme", Mouse: true}, Execution: Execution{CaptureBytes: 8 << 20, TailBytes: 64 << 10, MaxJobs: 4, MaxReads: 16, CommandTimeout: "10m", Mode: "agent", MaxSteps: 8, OutputContext: 8192}, Leader: "space", Bindings: DefaultBindings(), AutoStart: true, Version: 1, Host: "http://127.0.0.1:11434", Model: DefaultModel,
+	return Config{Environment: Environment{Scope: "directory"}, Provider: "ollama", Providers: DefaultProviders(), Clipboard: []string{"wl-copy"}, Appearance: Appearance{Background: "theme", Mouse: true}, Execution: Execution{CaptureBytes: 8 << 20, TailBytes: 64 << 10, MaxJobs: 4, MaxReads: 16, CommandTimeout: "10m", Mode: "agent", MaxSteps: 8, OutputContext: 8192}, Leader: "space", Bindings: DefaultBindings(), AutoStart: true, Version: 1, Host: "http://127.0.0.1:11434", Model: DefaultModel,
 		Context: 8192, Predict: 2048, Threads: 6, Temperature: 0.3, Thinking: "auto", Theme: "phosphor",
 		Editor: []string{"nvim"}, Shell: []string{"zsh", "-i"}, KeepAlive: "2m", Timeout: "10m",
 		Terminal: Terminal{Background: "inherit", Foreground: "inherit", OverlayWidth: 0.7, OverlayHeight: 0.6, SplitWidth: 0.4, Scrollback: 5000},
@@ -159,6 +164,9 @@ func Save(path string, c Config) error {
 }
 
 func (c Config) Validate() error {
+	if !slices.Contains([]string{"conversation", "directory", "global"}, c.Environment.Scope) {
+		return errors.New("environment.scope must be conversation, directory or global")
+	}
 	if err := c.ValidateProviders(); err != nil {
 		return err
 	}
