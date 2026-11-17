@@ -29,7 +29,7 @@ func wraithEmblem(height, frame int, p palette) []string {
 		art = []string{
 			"       ▄██▄       ",
 			"    ▄██▀  ▀██▄    ",
-			"   ██  ▀▄  ▄▀ ██   ",
+			"   ██ ▀▄  ▄▀ ██   ",
 			"   ▐█▄      ▄█▌   ",
 			"    ▀██▄▄▄▄██▀    ",
 			"     ▀ ▀██▀ ▀     ",
@@ -51,7 +51,7 @@ func wraithEmblem(height, frame int, p palette) []string {
 		} else {
 			rows[i] = ink(shade, line)
 		}
-		rows[i] = fit(rows[i], 23)
+		rows[i] = fit(rows[i], ansi.StringWidth(art[0]))
 	}
 	return rows
 }

@@ -55,3 +55,31 @@ func TestDisabledWelcomeAnimationKeepsAStableFrame(t *testing.T) {
 		t.Fatal("disabled animation kept moving")
 	}
 }
+
+func TestWelcomeHoodStaysCenteredAtCompactThreshold(t *testing.T) {
+	p := fixture(t).Config.Palette()
+	for _, height := range []int{10, 14, 17, 18, 24} {
+		for frame := range 36 {
+			rows := wraithEmblem(height, frame, p)
+			width := ansi.StringWidth(rows[0])
+			for y, styled := range rows {
+				row := []rune(ansi.Strip(styled))
+				if len(row) != width {
+					t.Fatalf("height %d row %d changes grid width", height, y)
+				}
+				for x, cell := range row {
+					mirror := row[len(row)-1-x]
+					switch mirror {
+					case '▐':
+						mirror = '▌'
+					case '▌':
+						mirror = '▐'
+					}
+					if cell != mirror {
+						t.Fatalf("height %d row %d column %d breaks hood symmetry", height, y, x)
+					}
+				}
+			}
+		}
+	}
+}
