@@ -1,163 +1,194 @@
 <div align="center">
 
-![wraith](docs/assets/wraith.svg)
+<img src="docs/assets/mark.svg" width="88" alt="wraith hooded mark">
 
-**vim keys. your models. real shells.**
+# wraith
+
+**your models. vim keys. commands you approve.**
 
 a terminal workspace for cybersecurity research, code review and lab work.
 
-[usage](docs/usage.md) · [configuration](docs/configuration.md) · [providers](docs/providers.md) · [context](docs/context.md) · [private variables](docs/private-variables.md)
+[install](docs/getting-started.md) · [docs](docs/README.md) · [configuration](docs/configuration.md) · [screenshots](docs/screenshots.md)
 
 </div>
 
-![wraith's phosphor theme showing a local tls review and modal prompt](docs/assets/workspace.svg)
+![wraith rendering a sample conversation, command block, table and private variable](docs/assets/screenshots/conversation.png)
 
-*demo workspace · linux · go · neovim by default*
+*actual app capture in ghostty. sample provider content; displayed token rates are fixture timings. screenshots are cropped to the app grid. [capture details and full gallery](docs/screenshots.md).*
 
-## start
+## install
 
-with go 1.27+, ollama, neovim and zsh installed:
+linux, go 1.27+, and a model backend. defaults use ollama, neovim, zsh and `wl-copy`; each is configurable.
 
 ```sh
+git clone https://github.com/erdajt/wraith.git
+cd wraith
 make install
+export PATH="$HOME/.local/bin:$PATH"
 ollama pull hf.co/filvyb/Qwen3.5-9B-heretic-v2-GGUF:Q5_K_M
 wraith
 ```
 
-add `~/.local/bin` to `PATH`. wraith starts ollama on a refused local connection and preloads your selected model. `/models` lists installed models and loads your selection immediately. the shared server stays running when wraith exits.
+already have a model? use `wraith --model MODEL_ID` or `/models`. wraith starts a refused local ollama connection and preloads your selected model before the first prompt. switching models loads the selection immediately. it does not download weights or force gpu offload.
 
-configure the editor, shell and providers in `~/.config/wraith/config.yaml`. `wraith --demo` opens a sample workspace without connecting to a model.
+for api and cli backends, configure a profile in `~/.config/wraith/config.yaml`. [setup](docs/getting-started.md) · [providers](docs/providers.md) · [troubleshooting](docs/troubleshooting.md)
 
-## one workspace
+## features
 
-| feature | behavior |
+| area | included |
 | --- | --- |
-| modal prompts | insert, normal and visual modes, counts, operators, search, undo and clipboard yanks |
-| conversation cursor | navigate replies, highlight search matches, select prose and copy complete command blocks |
-| message editing | edit assistant text externally; fork a user message back into the prompt after confirmation |
-| command completion | type `/`, filter with your query, use arrows and enter; `/settings.` reveals categories |
-| command approval | review the command and its reason, run, edit, reject, or ask for a revision inline |
-| output history | compressed records of approved commands, exit status and output, with a vim reader |
-| output control | agent runs share bounded evidence; hide output per job, or use blocks mode for manual sharing |
-| background jobs | agent commands run in the background by default; keep chatting, search output by job id, inspect live output and receive completion evidence |
-| targeted output reads | model polls, searches and pages authorized output without filling context |
-| private variables | conversation/directory/global annotated bindings, green local substitution and provider redaction |
-| real terminals | centered `alt+e` scratch shell and independent `alt+s` side shell with configurable sizes |
-| terminal copy mode | triple escape exposes a cursor, visual selection, clipboard yanks and `/` search |
-| context management | persistent instructions, exact pins, automatic or prompted compaction and original archives |
-| model backends | ollama, openai-compatible APIs, anthropic, deepseek, codex cli and claude cli |
-| reasoning | supported thinking controls, streamed reasoning and expandable thinking sections |
-| saved sessions | directory-scoped resume picker, compressed storage, recovery and markdown export |
-| appearance | ten built-in themes, custom palettes, themed cursors and an animated hooded Wraith emblem and ASCII wordmark |
+| prompts | insert, normal and visual modes; counts, motions, operators, undo, search, clipboard yanks and directory-scoped input recall |
+| conversation | themed cursor, highlighted search, visual selection, complete-command yanks, user-message forks and archived assistant edits |
+| rendering | markdown headings, emphasis, tables, code blocks, streamed replies and expandable thinking |
+| commands | live slash completion, dotted settings categories, searchable pickers, configurable leader sequences and action-colored key hints |
+| execution | command and reason approval; run, hide output, edit, modify or reject; no second approval after selecting run |
+| background work | job ids, live status/output, completion evidence, cancellation, timeouts and per-turn command/read budgets |
+| output | compressed history, retained prefix and tail, bounded literal/regex searches, line windows and explicit sharing |
+| private variables | conversation, directory or global scope; comments, editor management, green substitution and provider-bound redaction |
+| context | per-model capacity, persistent instructions, exact pins, prompted/automatic/manual compaction, corrective retries and original archives |
+| shells | centered and side panes, configurable dimensions, real ptys, persistent shell state and vim scrollback copy mode |
+| providers | ollama, openai-compatible apis, anthropic, deepseek, codex cli and claude cli; configurable profiles and model catalogs |
+| sessions | compressed storage, directory-scoped resume/search, interrupted-response retry, archive restore and markdown export |
+| appearance | ten themes, custom palettes, inherited backgrounds, themed cursors, an animated hooded mark and reduced motion |
 
-## stay on the keyboard
+## work from the keyboard
 
-| binding | action |
+| key | action |
 | --- | --- |
 | `ctrl+s`, normal-mode `:w` | send the draft |
-| `enter` | newline in the prompt; choose a completion or popup item |
-| `esc`, `i`, `v`, `V` | normal, insert and visual modes |
-| `ctrl+e` | open the focused draft or message in your editor |
-| `tab` | switch prompt/conversation focus |
-| `h j k l`, `w b e`, `{ }`, `^ $`, `gg G` | move the cursor |
-| `10j`, `100k`, `ye`, `yf,`, `df(`, `Y` | counted motions, operators and line yanks |
-| `/`, `n`, `N` | search the focused prompt or conversation and repeat matches |
-| up/down in insert mode | recall prompts and slash commands; restore your unsent draft |
-| `[` / `]`, `za` | select messages; expand or collapse thinking |
-| `<leader>j`, `/jobs` | inspect current-session jobs and live output |
-| `ctrl+x` in job output | cancel a tracked job |
-| `<leader>b` | open blocks; default leader is space, with hints and configurable sequences |
-| `alt+e`, `alt+s` | toggle scratch and side shells |
-| `ctrl+\` | leave live shell focus |
-| triple escape inside a shell | enter terminal copy mode; `i` returns to live input |
-| `ctrl+g` in output | share evidence when that job is private |
-| `q` in normal mode, `ctrl+q` | save and exit |
+| enter | newline, or choose a completion/menu item |
+| escape, `i`, `v`, `V` | normal, insert and visual modes |
+| `ctrl+e` | edit the focused draft or message externally |
+| tab | switch prompt/conversation focus |
+| `h j k l`, `w b e`, `{ }`, `^ $`, `gg G` | navigate |
+| `10j`, `100k`, `ye`, `yf,`, `df(`, `Y` | counts, operators and yanks |
+| `/`, `n`, `N` in normal mode | search the focused buffer and jump between highlighted matches |
+| up/down in insert mode | recall input; choose slash completions when active |
+| `[` / `]`, `za` | select messages; toggle thinking |
+| space | leader hints; sequences are configurable |
+| space `b`, space `j` | blocks or jobs |
+| `alt+e`, `alt+s` | scratch shell or side shell |
+| `ctrl+\`, triple escape in a shell | return focus, or enter copy mode |
+| `q` in normal mode, `ctrl+q` | save and quit |
 
-pickers support arrows, `j/k` and `/` filtering. keybinding hints use red for quit/close, blue for refresh, and yellow for cancel/reject; custom palettes can override these colors. settings are grouped into categories; `?` explains the selected option. this modal editor implements the documented motions and operators; the external editor supplies full Neovim features. [complete keys and commands →](docs/usage.md)
+pickers accept arrows, `j/k`, `/` filtering and enter. `?` explains a selected setting. visual selection copies prose precisely; touching a command block copies the entire command. yanks also fill an internal register. [all keys and remapping](docs/keybindings.md) · [slash commands](docs/usage.md#commands)
 
-## commands you control
+## approve once, keep working
 
-the model distinguishes suggested code from a request to execute a concrete command. execution requests show the command and its **reason**, without exposing the internal protocol. placeholder targets remain suggestions. select run once to authorize execution, edit and save to run once, reject and stop the turn, or request a revision. an empty revision prompt prepares a `modify:` draft for your next message.
+![focused approval with a command, reason and execution choices](docs/assets/screenshots/approval.png)
 
-normal code blocks remain available through `/blocks` or enter on their command rows. saving a shell block stages its actual command in a terminal; enter inserts it into the shell input, and the next enter executes it. other languages use a saved file and interpreter. blocks mode keeps execution proposals and approvals while making output sharing optional.
+agent mode asks before executing a concrete command. choose **run**, **run with output hidden**, **edit**, **view full command**, **ask assistant to modify**, or **reject**. editing and saving authorizes that command once. an empty modification field prepares a `modify:` draft for your next prompt. unresolved placeholders remain suggestions.
 
-`/jobs` shows current-session jobs; `/history` opens saved command records. agent mode returns the approved command, status and bounded output automatically, then continues. choose **run · hide output from agent** to withhold that job’s output. blocks mode shares only on request unless `execution.auto_share` is enabled. raw scratch-shell output can be shared from copy mode; automatic terminal sharing captures changed snapshots before the next request. it does not infer command boundaries in an interactive shell. [approval and output details →](docs/execution.md)
+approved agent commands run in the background. the chat stays available. `/jobs` shows current jobs and live output; `/history` keeps saved commands, status and results. the agent receives a job id, can search or page authorized output, and gets completion evidence when the chat is ready. empty polls pause automatic calls instead of looping.
 
-background requests show their mode in approval. the agent receives a start receipt, can poll or search authorized output, and receives completion evidence at a safe point without replacing your draft. configurable concurrency, timeouts, capture sizes and per-turn budgets bound the work.
+| execution mode | default output behavior |
+| --- | --- |
+| `agent` | approved commands run in the background and share bounded evidence |
+| `blocks` | approval remains available; output shares only on request or with auto sharing enabled |
+| either, explicit hide-output approval | command/status can be shared; output reads are denied until you share it |
 
-shells preserve their cwd, jobs and scrollback while hidden. exiting restarts the shell, with a restart limit for repeatedly failing configurations. the side pane ends above the footer. inherited backgrounds expose the host terminal's background; font, actual alpha and blur are host-terminal settings. [terminal configuration →](docs/terminals.md)
+ordinary markdown blocks never execute just by appearing. `/blocks` or enter on a command opens editing/run actions. saving a shell suggestion stages its actual text; enter inserts it into the shell input, and the next enter executes it. tracked jobs use a fresh noninteractive shell. use a pane for tty programs or persistent shell state.
 
-## keep target values local
+output readers support vim motions, search, selection, copying, refresh and cancellation. large output retains a bounded prefix and recent tail; the agent gets bounded excerpts and queries. rejecting stops the requesting turn. quitting ends owned jobs and shells. [execution and recovery](docs/execution.md)
+
+## keep values local
 
 ```text
+/set environment.scope directory
+/env set TARGET_DOMAIN=lab.example # isolated lab service
 /env edit
-/env set TARGET_DOMAIN=lab.example
-/env global edit
 ```
 
-choose persistence through `/settings.environment`: conversation, directory (default), or global. conversation variables return on resume; global writes show a warning. changing the default does not move existing bindings. attach `#`, `//` or `/* */` comments to explain each name; the model receives names and comments, not values. it writes `wraith::TARGET_DOMAIN`, which Wraith resolves locally and highlights in green. approved shells receive literal values; provider-bound conversation and shared output use redacted markers. invalid references trigger up to three visible streaming retries. exact-value redaction has limits for arbitrary encodings and partial selections; [variable syntax and privacy details](docs/private-variables.md) explain the boundary.
+choose **conversation**, **directory** or **global** persistence. global changes warn first. comments can use `#`, `//` or `/* */` on the same line or directly above a binding. the picker renders them; the model receives names and descriptions, not raw values.
+
+the model writes `wraith::TARGET_DOMAIN`. wraith resolves it locally, highlights it in green, and substitutes markers back into provider-bound text and shared output. shell substitution treats values as literals. invalid references trigger up to three visible corrective retries. exact-value redaction has limits for arbitrary encodings and partial values. [syntax, precedence and privacy](docs/private-variables.md)
 
 ## keep the context that matters
 
 ```text
-/remember prefer concise answers with reproducible verification steps
-/pin scope: the isolated lab service at lab.internal:443
+/remember keep answers concise and include verification steps
+/pin scope: the isolated lab only
 /context
+/set context 32768
 /compact
 ```
 
-`/instructions` edits preferences shared by all chats. `/pins` supports editing and removing individual facts. pins stay verbatim. compaction retains recent turns, extracts older facts in bounded fragments, audits omissions and preserves the existing fact ledger. dedicated compaction instructions receive the relevant source fragment, independently of the normal chat prompt.
+`/instructions` edits preferences shared by all chats. `/pins` lets you edit or remove exact facts for this chat. capacity follows the selected provider and model; any positive integer is accepted, while native limits and available memory still apply. `/set context auto` restores automatic capacity selection.
 
-current sessions, archived originals and recovery caches are compressed separately. failed compaction leaves the active context unchanged. corrective retries include the failed result and validation error, with up to three retries. exact archives are lossless; model summaries cannot guarantee every semantic detail. pin critical facts and use `/archives` when exact wording matters.
+compaction uses dedicated extraction and omission-audit requests, preserves recent turns and protected facts, and archives the original before replacement. active sessions, originals and recovery caches are compressed separately. failed candidates get up to three retries with the validation failure, then leave the original active.
 
-by default, wraith asks at 90% estimated context usage. declining postpones the question until the next qualifying response; the third decline compacts automatically. select `auto` or `manual` to change this policy. any positive integer is accepted for context capacity; your provider and hardware determine what can actually run. [compaction and recovery →](docs/context.md)
+by default, the app asks at 90% estimated usage. the third decline compacts automatically. choose `auto` or `manual` to change the policy. summaries cannot guarantee every semantic detail; pins preserve exact facts and `/archives` retains exact originals. [context and recovery](docs/context.md)
 
-## your models and appearance
+## two shells in the workspace
+
+![independent side shell beside the conversation](docs/assets/screenshots/side-shell.png)
+
+`alt+e` opens a centered scratch shell. `alt+s` opens an independent side shell above the footer. hidden panes retain their process, cwd and scrollback. `exit` restarts the pane, with a limit for repeated startup failures.
+
+three escapes expose a stable vim cursor for scrolling, `/` search, visual selection and yanks. `i` returns to live input. `ctrl+g` shares the selected output when sharing is manual. sizes, shell, cwd, colors and scrollback are configurable. font, opacity and blur belong to the host terminal; inherited backgrounds can expose its transparency. [terminal configuration](docs/terminals.md)
+
+## configure the workspace
 
 ```text
-/providers
-/provider openai
-/model MODEL_ID
-/think
 /settings.appearance
 /theme rose-pine
 /set editor ["nvim"]
-/set shell ["zsh", "-i"]
-/set context 32768
+/set shell ["bash", "-i"]
+/set terminal.split_width 0.45
 /set compact.mode auto
 ```
 
-API profiles support base URLs, environment or inline keys, headers, model lists, thinking modes and custom chat instructions. CLI profiles launch codex or claude as isolated child processes and stream their replies; they do not attach to an existing interactive CLI session. Codex discovers its native model catalog for `/models`, including supported thinking levels. context capacity follows the selected provider and model; edit it through `/settings.context` or `/set context`, and use `/set context auto` to restore its default. configured model catalogs support backends without discovery. [setup and provider limits →](docs/providers.md)
+settings are grouped into model, environment, execution, context, appearance, terminals, and keys/editor. `/settings.` completes categories; `?` explains an option. edit the full yaml with `e`. invalid saved values leave the active configuration intact and retain a recovery file.
 
-choose **phosphor**, **tokyo**, **ember**, **ice**, **mono**, **rose-pine**, **dracula**, **everforest**, **nord** or **catppuccin-mocha**, or define a palette in YAML. background inheritance, animations, pane dimensions, leader sequences and global bindings are configurable. [themes](docs/themes.md) · [complete configuration](docs/config.example.yaml)
+```yaml
+leader: space
+bindings:
+  b: blocks
+  j: jobs
+  s a: settings.appearance
+  s e: settings.execution
+keys:
+  send: ctrl+s
+  quit: ctrl+q
+  output_share: ctrl+g
+```
 
-## chats and diagnostics
+an explicit `bindings` map replaces default leader sequences. direct action keys live under `keys`. quit hints are red, refresh blue, and cancel yellow; custom palettes can override them. [configuration reference](docs/configuration.md) · [complete default yaml](docs/config.example.yaml)
+
+| phosphor | rose-pine |
+| --- | --- |
+| [![phosphor welcome screen](docs/assets/screenshots/theme-phosphor.png)](docs/assets/screenshots/theme-phosphor.png) | [![rose-pine welcome screen](docs/assets/screenshots/theme-rose-pine.png)](docs/assets/screenshots/theme-rose-pine.png) |
+
+also included: **dracula**, **everforest**, **nord**, **catppuccin-mocha**, **tokyo**, **ember**, **ice** and **mono**. define your own palette in `themes`; turn animation off with `animations: false`. [custom themes](docs/themes.md) · [all theme screenshots](docs/screenshots.md#themes)
+
+## models and sessions
 
 ```sh
 wraith a prompt to prepare
 wraith --resume
 wraith --resume SESSION_ID
+wraith --provider codex
 wraith --provider openai --model MODEL_ID
 wraith sessions
-wraith doctor
 wraith export SESSION_ID > chat.md
+wraith doctor
 ```
 
-plain `wraith` opens a fresh conversation. `--resume` and `/resume` open the same searchable picker, restricted to the current directory. supplying an id resumes directly; an invalid or different-directory id shows an error and starts a new conversation. `/clear` starts fresh while preserving the old session. `/export`, `/archives`, `/restore`, `/retry` and `/cancel` cover recovery.
+plain `wraith` opens a new conversation. positional text becomes an unsent draft. `/resume` and `--resume` open the same searchable, directory-scoped picker; an id resumes directly. invalid or different-directory ids report an error and start fresh. `/clear` retains the old chat. editing a user message forks at that point while preserving the original. [sessions, export and backups](docs/sessions.md)
 
-storage is private to your user and configurable through directory flags. compression is not encryption. the cybersecurity prompt asks for evidence, precise scope, reproducible checks and explicit uncertainty; execution remains a user decision.
+`/providers` switches backends; `/models` selects an installed or configured model. `/think` changes supported native effort; `/thinking` toggles returned reasoning. profiles configure endpoints, credentials, model catalogs, per-model context, thinking and custom instructions. codex discovers its native model catalog. cli providers start isolated child processes with native tools disabled so wraith owns execution approval; they do not attach to an existing interactive session. [provider setup and limits](docs/providers.md)
 
-## build and verify
+## build, test and contribute
 
 ```sh
 make build
 make check
 ```
 
-checks cover race detection, private-value boundaries, shell quoting, concurrent jobs, output pagination, recovery journals, provider streams, cancellation, corrective compaction, compressed recovery, real ptys, editor handoff, command approval, output sharing, search and modal editing. tests use local fixtures without a model or GPU. fuzz targets exercise terminal parsing and prompt edits.
+checks cover formatting, vet and race tests. suites exercise real ptys, editor handoff, privacy, approval, concurrent jobs, output queries, provider streams, compaction, recovery, search and modal editing. fixtures need no model credentials or gpu.
 
-[ci](.github/workflows/ci.yml) runs on every push to main and on pull requests, verifies modules, fuzzes parsers and cross-builds linux amd64/arm64. [tagged releases](.github/workflows/release.yml) run checks before creating checksummed draft packages. [architecture](docs/architecture.md) · [development](docs/development.md)
+[ci](.github/workflows/ci.yml) runs on pushes to `main` and pull requests, fuzzes parsers and cross-builds linux amd64/arm64. [release checks](.github/workflows/release.yml) precede checksummed draft packages. [architecture](docs/architecture.md) · [development](docs/development.md) · [documentation index](docs/README.md)
 
-## freedom
+## license
 
-wraith is free software under the [GNU GPL, version 3 or later](LICENSE). see [NOTICE](NOTICE) for the project copyright and grant.
+free software under the [gnu gpl, version 3 or later](LICENSE). copyright and grant: [NOTICE](NOTICE).
