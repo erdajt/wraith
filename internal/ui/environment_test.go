@@ -70,7 +70,7 @@ func TestRemoveRefreshesPickerAndRevealsGlobalBinding(t *testing.T) {
 	a.environmentCommand("set TARGET=local.example", false)
 	a.environmentCommand("", false)
 	a.environmentKey(key("d"))
-	if a.popup == nil || len(a.popup.Items) != 0 || !strings.Contains(a.notice, "global binding is now active") {
+	if a.popup == nil || len(a.popup.Items) != 0 || !strings.Contains(a.notice, "another scoped binding remains active") {
 		t.Fatalf("stale variable picker: %s", a.notice)
 	}
 }
@@ -99,5 +99,19 @@ func TestVariablePickerUsesConfiguredBindings(t *testing.T) {
 	}
 	if _, handled := a.environmentKey(key("x")); !handled || len(a.popup.Items) != 0 {
 		t.Fatal("configured remove binding did not remove variable")
+	}
+}
+
+func TestRemovingDirectoryBindingKeepsConversationOverride(t *testing.T) {
+	a := fixture(t)
+	a.environmentCommand("global set TARGET=global.example", true)
+	a.environmentCommand("directory set TARGET=directory.example", false)
+	a.environmentCommand("conversation set TARGET=conversation.example", false)
+	a.environmentCommand("directory unset TARGET", false)
+	if got, _ := a.Variables.Expand("wraith::TARGET"); got != "conversation.example" {
+		t.Fatal("conversation override lost")
+	}
+	if strings.Contains(a.notice, "global binding") || !strings.Contains(a.notice, "another scoped binding remains active") {
+		t.Fatalf("incorrect remaining scope: %s", a.notice)
 	}
 }

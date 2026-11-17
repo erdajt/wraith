@@ -105,11 +105,7 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 		if operation == "unset" {
 			notice = "removed private variable " + name
 			if _, err := a.Variables.Validate("wraith::"+name, true); !global && err == nil {
-				if scope == variables.Directory {
-					notice += " · global binding is now active"
-				} else {
-					notice += " · inherited binding is now active"
-				}
+				notice += " · another scoped binding remains active"
 			}
 		}
 		index := 0
