@@ -163,3 +163,40 @@ func TestCompactionSchemaSurvivesPrivateWordCollisions(t *testing.T) {
 		})
 	}
 }
+
+func TestExecutionModeSwitchRebuildsOneSelfContainedPolicy(t *testing.T) {
+	t.Parallel()
+	c := config.Default()
+	client := New(c)
+	client.Variables = variables.NewSnapshot([]variables.Entry{{Name: "TARGET_DOMAIN", Value: "private.example"}}, nil)
+	s := session.New("test")
+	s.Messages = []session.Message{{Role: "user", Content: "inspect private.example"}}
+	for _, mode := range []string{"agent", "blocks", "agent"} {
+		c.Execution.Mode = mode
+		request := ollama.Request{ExecutionMode: mode, PrivateInventory: true, Messages: contextual.ForChat(s, c, "")}
+		_, prepared, err := client.privateRequest(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		policy, other := contextual.AgentPrompt, contextual.BlocksPrompt
+		if mode == "blocks" {
+			policy, other = other, policy
+		}
+		system := prepared.Messages[0].Content
+		if strings.Count(system, policy) != 1 || strings.Contains(system, other) {
+			t.Fatalf("%s policy missing, duplicated or mixed", mode)
+		}
+		if !strings.Contains(system, `{"command":"the exact shell command","reason":`) {
+			t.Fatalf("%s request schema missing", mode)
+		}
+		if mode == "blocks" && strings.Contains(system, `"tool":"poll"`) {
+			t.Fatal("agent polling schema leaked into blocks policy")
+		}
+		if !strings.Contains(system, "wraith::TARGET_DOMAIN") || strings.Contains(system, "private.example") || strings.Contains(prepared.Messages[1].Content, "private.example") {
+			t.Fatal("private reference instructions or redaction lost")
+		}
+		if s.Messages[0].Content != "inspect private.example" {
+			t.Fatal("preparation mutated the conversation")
+		}
+	}
+}

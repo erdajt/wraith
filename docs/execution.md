@@ -70,3 +70,9 @@ quitting, cancellation and timeout terminate owned process groups; background jo
 approval opens a focused panel with a bright border, a filled selection row, and separate command and reason sections. the chat and scratch panes are hidden behind it while the decision is pending. the panel respects inherited terminal backgrounds. long commands remain available through **view full command**, and all actions remain reachable with `j/k` or arrow keys at the minimum supported terminal size.
 
 if the model sends an output query through the command channel, wraith rejects it without executing anything and supplies a specific correction on retry. the same applies to a command sent as an output query. internal block names appear only in model-facing feedback, while the status explains the mismatch in plain language. the existing three-retry limit still applies.
+
+## mode instructions
+
+wraith builds each request with one execution policy selected from the current setting. switching modes replaces that policy on the next request, including in an existing conversation. both policies include their own command-request format. only agent mode includes the output-query and polling protocol.
+
+agent mode tells the model to request approval when the user asks it to perform a task. requests to explain or show a command still produce suggestions. blocks mode favors inspectable shell blocks and permits explicit approval requests, without autonomous output polling. configured private references count as available inputs in either mode.

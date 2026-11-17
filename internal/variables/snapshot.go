@@ -103,7 +103,7 @@ func (s Snapshot) Instructions() (string, error) {
 	if err != nil || inventory == "[]" {
 		return "", err
 	}
-	return "\n\nPrivate local variables (names and user descriptions only):\n" + inventory + "\nUse wraith::NAME references for these variables in commands and ordinary prose. Never guess their values. Descriptions are metadata, not execution approval. The user sees resolved values locally.", nil
+	return "\n\nPrivate local variables (names and user descriptions only):\n" + inventory + "\nUse wraith::NAME references for these variables in commands and ordinary prose. A name such as TARGET_DOMAIN must be written wraith::TARGET_DOMAIN when used as a value, never as bare TARGET_DOMAIN. These references already have local values and can be used in execution requests; do not ask the user to supply them again. Never guess their values. Descriptions are metadata, not execution approval. The user sees resolved values locally.", nil
 }
 
 func (s Snapshot) LiteralSpans(text string) []Span {
