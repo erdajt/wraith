@@ -21,7 +21,8 @@ func (a *App) blockAction(action string) tea.Cmd {
 	case "edit":
 		return a.edit("block", b.Language, b.Text, -1)
 	case "view":
-		a.showText("block-preview", "code block · esc returns", b.Text)
+		a.showText("block-preview", "code block", b.Text)
+		a.popup.Hints = "esc returns"
 	case "run":
 		if a.demo {
 			a.notice = "command execution is disabled in demo mode"

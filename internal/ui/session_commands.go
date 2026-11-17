@@ -70,7 +70,7 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 			}
 			items = append(items, item{filepath.Base(p), filepath.Base(p), info.ModTime().Local().Format("jan 02 15:04:05")})
 		}
-		a.popup = &menu{Kind: "archives", Title: "archives · enter forks the original into a new chat", Items: items}
+		a.popup = &menu{Kind: "archives", Title: "archives", Hints: "enter forks the original into a new chat", Items: items}
 	case "restore":
 		return a.restore(arg)
 	case "export":

@@ -19,7 +19,8 @@ func (a *App) approvalAction(action string) tea.Cmd {
 		return a.edit("run", "sh", a.proposal.Resolved, -1)
 	case "view":
 		reason, _ := a.proposal.Variables.Expand(a.proposal.Reason)
-		a.showText("command-preview", "full command · esc returns to approval", a.proposal.Resolved+"\n\nreason: "+reason)
+		a.showText("command-preview", "full command", a.proposal.Resolved+"\n\nreason: "+reason)
+		a.popup.Hints = "esc returns to approval"
 	case "modify":
 		a.openModification()
 	case "cancel":

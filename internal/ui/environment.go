@@ -129,7 +129,7 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 	}
 	label := string(scope)
 	a.envScope = scope
-	a.popup = &menu{Kind: "environment", Title: "private variables · " + label + " · " + a.Config.Keys["env_new"] + "/" + a.Config.Keys["env_edit"] + " editor · " + a.Config.Keys["env_scope"] + " scope · " + a.Config.Keys["env_remove"] + " remove", Items: items}
+	a.popup = &menu{Kind: "environment", Title: "private variables · " + label, Hints: a.Config.Keys["env_new"] + "/" + a.Config.Keys["env_edit"] + " editor · " + a.Config.Keys["env_scope"] + " scope · " + a.Config.Keys["env_remove"] + " remove", Items: items}
 	return nil
 }
 

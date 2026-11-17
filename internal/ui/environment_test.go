@@ -94,8 +94,8 @@ func TestVariablePickerUsesConfiguredBindings(t *testing.T) {
 	a.Config.Keys["env_remove"] = "x"
 	a.environmentCommand("set TARGET=local.example", false)
 	a.environmentCommand("", false)
-	if !strings.Contains(a.popup.Title, "a/o editor · s scope · x remove") {
-		t.Fatalf("stale binding hints: %s", a.popup.Title)
+	if !strings.Contains(a.popup.Hints, "a/o editor · s scope · x remove") {
+		t.Fatalf("stale binding hints: %s", a.popup.Hints)
 	}
 	if _, handled := a.environmentKey(key("x")); !handled || len(a.popup.Items) != 0 {
 		t.Fatal("configured remove binding did not remove variable")

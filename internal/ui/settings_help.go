@@ -69,6 +69,7 @@ func (a *App) settingHelp(k tea.KeyMsg) bool {
 		description = "Edit this value in config.yaml. Changes are validated before being applied."
 	}
 	a.helpReturn = m
-	a.showText("setting-help", key+" · esc returns", description+"\n\nUse / to search this explanation; j/k or arrows to scroll.")
+	a.showText("setting-help", key, description+"\n\nUse / to search this explanation; j/k or arrows to scroll.")
+	a.popup.Hints = "esc returns"
 	return true
 }

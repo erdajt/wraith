@@ -43,7 +43,7 @@ func (a *App) selectProvider(name string) tea.Cmd {
 	client := provider.New(c)
 	a.catalogSerial++
 	serial := a.catalogSerial
-	a.popup = &menu{Kind: "provider-loading", Title: "loading " + name + " models · esc closes"}
+	a.popup = &menu{Kind: "provider-loading", Title: "loading " + name + " models", Hints: "esc closes"}
 	a.notice = "loading models for " + name
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

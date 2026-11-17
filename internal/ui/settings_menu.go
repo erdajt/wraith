@@ -9,7 +9,7 @@ import (
 )
 
 func (a *App) settingsMenu() tea.Cmd {
-	a.popup = &menu{Kind: "settings", Title: "settings · e edits config.yaml", Items: []item{
+	a.popup = &menu{Kind: "settings", Title: "settings", Hints: "e edits config.yaml", Items: []item{
 		{"model", "category.model", "model, thinking, context, startup"},
 		{"environment", "category.environment", "variable persistence across chats and directories"},
 		{"execution", "category.execution", "agent or blocks, step budget, output"},
@@ -51,5 +51,5 @@ func (a *App) settingsCategory(category string) {
 		items = append(items, item{Label: key, Value: key, Detail: string(b)})
 	}
 	items = append(items, item{"edit config.yaml", "edit", "all values, custom palettes and key bindings"})
-	a.popup = &menu{Kind: "settings", Title: "settings · " + category, Items: items}
+	a.popup = &menu{Kind: "settings", Title: "settings · " + category, Hints: "e edits config.yaml", Items: items}
 }

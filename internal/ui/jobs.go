@@ -52,7 +52,7 @@ func (a *App) openJobs() tea.Cmd {
 		}
 		items = append(items, item{Label: r.Command, Value: r.ID, Detail: fmt.Sprintf("%s · %s · %s · %s", r.Status, location, policy, r.ID[:8])})
 	}
-	a.popup = &menu{Kind: "jobs", Title: "session jobs · enter output · " + a.Config.Keys["job_cancel"] + " cancel · r refresh", Items: items}
+	a.popup = &menu{Kind: "jobs", Title: "session jobs", Hints: "enter output · " + a.Config.Keys["job_cancel"] + " cancel · r refresh", Items: items}
 	return nil
 }
 

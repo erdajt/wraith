@@ -53,7 +53,7 @@ func (a *App) memoryCommand(name, arg string) tea.Cmd {
 		for i, p := range a.Session.Pins {
 			items = append(items, item{fmt.Sprintf("%d · %s", i+1, p), strconv.Itoa(i), ""})
 		}
-		a.popup = &menu{Kind: "pins", Title: "exact pins · " + a.Config.Keys["pin_edit"] + " edit · " + a.Config.Keys["pin_remove"] + " unpin", Items: items}
+		a.popup = &menu{Kind: "pins", Title: "exact pins", Hints: a.Config.Keys["pin_edit"] + " edit · " + a.Config.Keys["pin_remove"] + " unpin", Items: items}
 	case "blocks":
 		items := []item{}
 		for mi := range a.Session.Messages {
@@ -65,7 +65,7 @@ func (a *App) memoryCommand(name, arg string) tea.Cmd {
 				items = append(items, item{fmt.Sprintf("%d · %s · %s", len(items)+1, b.Language, first), fmt.Sprintf("%d:%d", mi, bi), fmt.Sprintf("message %d", mi+1)})
 			}
 		}
-		a.popup = &menu{Kind: "blocks", Title: "code blocks · enter chooses edit or run", Items: items}
+		a.popup = &menu{Kind: "blocks", Title: "code blocks", Hints: "enter chooses edit or run", Items: items}
 		if len(items) > 0 {
 			a.popup.Index = len(items) - 1
 		}

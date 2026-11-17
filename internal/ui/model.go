@@ -31,7 +31,7 @@ type menu struct {
 	All                  []item
 	Query, Prefix, Count string
 	Searching            bool
-	Kind, Title          string
+	Kind, Title, Hints   string
 	Items                []item
 	Index                int
 }

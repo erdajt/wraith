@@ -30,6 +30,13 @@ func (a *App) menuFrame() []string {
 		return frame(content, w, p, false, "", "")
 	}
 	content := []string{bold(p.Accent, clean(m.Title)), keyHints("j/k move · / search · enter select · esc close", p), ""}
+	if m.Hints != "" {
+		content[2] = keyHints(m.Hints, p)
+	}
+	if m.Kind == "modify-command" {
+		content[1] = keyHints("enter sends · esc normal/return", p)
+		content[2] = ink(p.Muted, "empty revision defers to the next prompt")
+	}
 	if m.Kind == "context-input" {
 		content[1] = keyHints("enter saves · ctrl+u clears · esc normal/cancel", p)
 		content[2] = ink(p.Second, "positive integer or auto · "+clean(a.Config.Provider+" / "+a.Session.Model))
@@ -81,6 +88,9 @@ func (a *App) menuFrame() []string {
 		label := clean(it.Label)
 		if it.Detail != "" {
 			label += "  ·  " + clean(it.Detail)
+		}
+		if (m.Kind == "leader" || m.Kind == "help") && it.Value != "" {
+			label = bold(hintColor(it.Value, p), clean(it.Label)) + ink(p.Muted, "  ·  "+clean(it.Detail))
 		}
 		label = ansi.Truncate(label, w-6, "…")
 		if i == m.Index {

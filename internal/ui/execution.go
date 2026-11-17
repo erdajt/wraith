@@ -213,7 +213,7 @@ func (a *App) openHistory() tea.Cmd {
 	for _, r := range records {
 		items = append(items, item{Label: r.Command, Value: r.ID, Detail: fmt.Sprintf("%s · %s · exit %d", r.Started.Local().Format("jan 02 15:04"), r.Status, r.ExitCode)})
 	}
-	a.popup = &menu{Kind: "history", Title: "approved commands · enter opens saved output", Items: items}
+	a.popup = &menu{Kind: "history", Title: "approved commands", Hints: "enter opens saved output", Items: items}
 	return nil
 }
 

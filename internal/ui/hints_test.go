@@ -98,3 +98,51 @@ func assertHintColors(t *testing.T, view string, want map[string]string) {
 		}
 	}
 }
+
+func TestPickerAndHelpHintsUseActionColors(t *testing.T) {
+	for _, kind := range []string{"jobs", "pins", "environment", "help", "leader", "filter"} {
+		t.Run(kind, func(t *testing.T) {
+			a := fixture(t)
+			p := a.Config.Palette()
+			want := map[string]string{}
+			switch kind {
+			case "jobs":
+				a.openJobs()
+				want["r refresh"], want[a.Config.Keys["job_cancel"]+" cancel"] = p.HintRefresh, p.HintCancel
+			case "pins":
+				a.memoryCommand("pins", "")
+				want[a.Config.Keys["pin_remove"]+" unpin"] = p.HintCancel
+			case "environment":
+				a.environmentCommand("", false)
+				want[a.Config.Keys["env_remove"]+" remove"] = p.HintCancel
+			case "help":
+				a.memoryCommand("help", "")
+				a.popup.Index = len(a.popup.Items) - 1
+				want["normal: q · "+a.Config.Keys["quit"]] = p.HintQuit
+			case "leader":
+				a.Config.Bindings = map[string]string{"x": "quit", "c": "cancel", "r": "terminal-restart 1"}
+				a.openLeader("")
+				want["x"], want["c"], want["r"] = p.HintQuit, p.HintCancel, p.HintRefresh
+				view := strings.Join(a.menuFrame(), "\n")
+				for _, it := range a.popup.Items {
+					found := false
+					for _, row := range strings.Split(view, "\n") {
+						if strings.Contains(ansi.Strip(row), "  ·  /"+it.Value) {
+							found = true
+							assertHintColors(t, row, map[string]string{it.Label: want[it.Label]})
+						}
+					}
+					if !found {
+						t.Fatalf("leader binding %q missing", it.Label)
+					}
+				}
+				return
+			case "filter":
+				a.settingsMenu()
+				a.popup.Searching, a.popup.Query = true, "appearance"
+				want["esc resets"] = p.HintCancel
+			}
+			assertHintColors(t, strings.Join(a.menuFrame(), "\n"), want)
+		})
+	}
+}

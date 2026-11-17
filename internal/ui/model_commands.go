@@ -20,7 +20,7 @@ func (a *App) modelCommand(name, arg string) tea.Cmd {
 		}
 		a.catalogSerial++
 		serial, client := a.catalogSerial, a.Client
-		a.popup = &menu{Kind: "models-loading", Title: "loading models · esc closes"}
+		a.popup = &menu{Kind: "models-loading", Title: "loading models", Hints: "esc closes"}
 		return func() tea.Msg {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()

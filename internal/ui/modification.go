@@ -8,7 +8,7 @@ import (
 )
 
 func (a *App) openModification() {
-	a.popup = &menu{Kind: "modify-command", Title: "modify command · enter sends · empty defers · esc returns", Input: vim.New()}
+	a.popup = &menu{Kind: "modify-command", Title: "modify command", Input: vim.New()}
 }
 
 func (a *App) modificationKey(k tea.KeyMsg) tea.Cmd {
