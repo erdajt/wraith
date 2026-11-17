@@ -7,69 +7,51 @@ import (
 )
 
 var wraithWordmark = []string{
-	` _       ______  ___    __________________`,
-	`| |     / / __ \/   |  /  _/_  __/ / / /`,
-	`| | /| / / /_/ / /| |  / /  / / / /_/ /`,
-	`| |/ |/ / _, _/ ___ |_/ /  / / / __  /`,
-	`|__/|__/_/ |_/_/  |_/___/ /_/ /_/ /_/`,
+	"█   █  █▀▀▄  ▄▀▀▄  ▀█▀  ▀▀█▀▀  █   █",
+	"█ ▄ █  █▄▄▀  █▄▄█   █     █    █▄▄▄█",
+	"█▀ ▀█  █  █  █  █  ▄█▄    █    █   █",
 }
 
 func wraithEmblem(height, frame int, p palette) []string {
 	art := []string{
-		`          /\`,
-		`        _/  \_`,
-		`       / .--. \`,
-		`      / /    \ \`,
-		`     | | \  / | |`,
-		`     |  \    /  |`,
-		`      \_/'--'\_/`,
-		`        / /\ \`,
+		"         ▄██▄         ",
+		"      ▄████████▄      ",
+		"    ▄███▀    ▀███▄    ",
+		"   ███▀        ▀███   ",
+		"   ██▌  ▀▄  ▄▀  ▐██   ",
+		"   ██▌          ▐██   ",
+		"   ▐██▄        ▄██▌   ",
+		"    ▀███▄    ▄███▀    ",
+		"     ██▀██▄▄██▀██     ",
+		"     ▀   ▀██▀   ▀     ",
 	}
-	if height >= 20 {
+	if height < 18 {
 		art = []string{
-			`           /\`,
-			`          /  \`,
-			`        _/    \_`,
-			`       /  .--.  \`,
-			`      /  /    \  \`,
-			`     |  | \  / |  |`,
-			`     |  |      |  |`,
-			`     |   \    /   |`,
-			`      \   '--'   /`,
-			`       \_/|  |\_/`,
-			`         / /\ \`,
-			`        /_/  \_\`,
-		}
-	} else if height < 14 {
-		art = []string{
-			`         /\`,
-			`       /    \`,
-			`      | \  / |`,
-			`      |      |`,
-			`       \_/\_/`,
+			"       ▄██▄       ",
+			"    ▄██▀  ▀██▄    ",
+			"   ██  ▀▄  ▄▀ ██   ",
+			"   ▐█▄      ▄█▌   ",
+			"    ▀██▄▄▄▄██▀    ",
+			"     ▀ ▀██▀ ▀     ",
 		}
 	}
-	phase := frame / 3 % 8
+	phase := frame / 3 % 12
 	rows := make([]string, len(art))
 	for i, line := range art {
-		line = fit(line, 25)
-		if i >= len(art)-3 {
-			left, right := byte(' '), byte(' ')
-			if i == len(art)-1-phase%3 {
-				left = []byte{'.', ':', '\'', ' '}[phase%4]
-				right = []byte{' ', '.', ':', '\''}[phase%4]
-			}
-			line = string(left) + line[1:24] + string(right)
+		shade := p.Second
+		if i == phase || i == phase-1 {
+			shade = p.Accent
 		}
-		if before, after, ok := strings.Cut(line, `\  /`); ok {
+		if before, after, ok := strings.Cut(line, "▀▄  ▄▀"); ok {
 			eyes := p.Accent
-			if phase == 3 || phase == 4 {
+			if phase == 5 || phase == 6 {
 				eyes = p.FG
 			}
-			rows[i] = ink(p.Second, before) + bold(eyes, `\  /`) + ink(p.Second, after)
+			rows[i] = ink(shade, before) + bold(eyes, "▀▄  ▄▀") + ink(shade, after)
 		} else {
-			rows[i] = ink(p.Second, line)
+			rows[i] = ink(shade, line)
 		}
+		rows[i] = fit(rows[i], 23)
 	}
 	return rows
 }
@@ -80,13 +62,13 @@ func (a *App) welcome(width, height int, p palette) []string {
 		frame = 0
 	}
 	var rows []string
-	if height >= 9 {
+	if height >= 10 {
 		rows = append(rows, wraithEmblem(height, frame, p)...)
 		rows = append(rows, "")
 	}
 	if width >= 48 && height >= 18 {
 		for _, line := range wraithWordmark {
-			rows = append(rows, bold(p.Accent, fit(line, 41)))
+			rows = append(rows, bold(p.Accent, line))
 		}
 	} else {
 		rows = append(rows, bold(p.Accent, "W R A I T H"))
