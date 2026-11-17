@@ -69,3 +69,5 @@ corrective requests include the original task, a bounded rejected excerpt, the f
 superseded attempts are compressed under `~/.cache/wraith/repairs/archives/`, separate from accepted chat history. they are not automatically pruned. variables live under `~/.config/wraith/variables/`: `global.env`, `directories/<directory-hash>.env`, `conversations/<session-id>.env` and `state.json` for accepted/retained bindings. back up this directory together; a missing or corrupt journal stops outbound requests until repaired so forgotten values are not silently exposed.
 
 approvals display the frozen, shell-quoted command and its reason. changing a variable while approval is open does not change the displayed or executed binding.
+
+if the model uses a configured name such as `TARGET_DOMAIN` as a bare shell word, response validation requests a correction to `wraith::TARGET_DOMAIN`. this applies to shell suggestions and execution requests, with the same three-retry limit. ordinary prose, source-code examples and existing shell expansions are not rewritten. a suggestion remains a suggestion; variable repair does not authorize execution.

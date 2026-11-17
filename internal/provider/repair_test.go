@@ -141,3 +141,50 @@ func TestRepairCorrectsOutputQueryChannelOnNextAttempt(t *testing.T) {
 		t.Fatalf("corrected output request lost: %+v, %v", request, err)
 	}
 }
+
+func TestRepairCorrectsBarePrivateNamesInSuggestionsAndRequests(t *testing.T) {
+	t.Parallel()
+	for _, actionable := range []bool{false, true} {
+		t.Run(fmt.Sprint(actionable), func(t *testing.T) {
+			t.Parallel()
+			client := New(config.Default())
+			client.Variables = variables.NewSnapshot([]variables.Entry{{Name: "TARGET_DOMAIN", Value: "private.example"}}, nil)
+			calls := 0
+			client.HTTP.Transport = transport(func(r *http.Request) (*http.Response, error) {
+				calls++
+				var req ollama.Request
+				if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+					t.Fatal(err)
+				}
+				reference := "TARGET_DOMAIN"
+				if calls > 1 {
+					feedback := req.Messages[len(req.Messages)-1].Content
+					if !strings.Contains(feedback, "bare private variable TARGET_DOMAIN") || strings.Contains(feedback, "private.example") {
+						t.Fatal("repair omitted correction or leaked the value")
+					}
+					reference = "wraith::TARGET_DOMAIN"
+				}
+				command := "dig +short " + reference
+				content := "```bash\n" + command + "\n```"
+				if actionable {
+					data, _ := json.Marshal(contextual.CommandRequest{Command: command, Reason: "inspect the configured target"})
+					content = "```wraith-run\n" + string(data) + "\n```"
+				}
+				data, _ := json.Marshal(ollama.Response{Done: true, Message: session.Message{Role: "assistant", Content: content}})
+				return response(string(data)), nil
+			})
+			result, err := client.ChatWithRepair(t.Context(), ollama.Request{ExecutionMode: "agent", PrivateInventory: true}, nil)
+			if err != nil || calls != 2 || !strings.Contains(result.Message.Content, "wraith::TARGET_DOMAIN") {
+				t.Fatalf("bare name did not recover: calls=%d result=%q err=%v", calls, result.Message.Content, err)
+			}
+			request, err := contextual.RequestedCommand(result.Message.Content)
+			if err != nil || (request != nil) != actionable {
+				t.Fatal("repair changed a suggestion into an execution request")
+			}
+			expanded, _ := client.Variables.Expand(result.Message.Content)
+			if !strings.Contains(expanded, "private.example") {
+				t.Fatal("corrected reference did not resolve locally")
+			}
+		})
+	}
+}

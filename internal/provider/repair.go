@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/erdajt/wraith/internal/contextual"
+	"github.com/erdajt/wraith/internal/editor"
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/session"
 )
@@ -78,6 +79,21 @@ func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emi
 				}
 				if command != nil && rejected == nil {
 					_, rejected = c.Variables.Validate(command.Command+"\n"+command.Reason, true)
+					if rejected == nil {
+						rejected = c.Variables.CheckCommand(command.Command)
+					}
+				}
+			}
+		}
+
+		if rejected == nil {
+			for _, block := range editor.Blocks(result.Message.Content) {
+				switch block.Language {
+				case "sh", "bash", "shell", "zsh":
+					rejected = c.Variables.CheckCommand(block.Text)
+				}
+				if rejected != nil {
+					break
 				}
 			}
 		}

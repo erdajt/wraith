@@ -142,3 +142,44 @@ func TestOrdinaryApprovedRunFollowsExecutionMode(t *testing.T) {
 		})
 	}
 }
+
+func TestBarePrivateTargetRepairReachesResolvedApproval(t *testing.T) {
+	a := fixture(t)
+	a.environmentCommand("set TARGET_DOMAIN=private.example", false)
+	a.popup = nil
+	calls := 0
+	a.Client.HTTP.Transport = transport(func(r *http.Request) (*http.Response, error) {
+		var req ollama.Request
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatal(err)
+		}
+		calls++
+		for _, message := range req.Messages {
+			if strings.Contains(message.Content, "private.example") {
+				t.Error("private target reached provider")
+			}
+		}
+		target := "TARGET_DOMAIN"
+		if calls > 1 {
+			if !strings.Contains(req.Messages[len(req.Messages)-1].Content, "bare private variable TARGET_DOMAIN") {
+				t.Error("missing corrective feedback")
+			}
+			target = "wraith::TARGET_DOMAIN"
+		}
+		content := "```wraith-run\n{\"command\":\"printf %s " + target + "\",\"reason\":\"inspect configured target\"}\n```"
+		data, _ := json.Marshal(ollama.Response{Done: true, Message: session.Message{Role: "assistant", Content: content}})
+		return response(string(data)), nil
+	})
+	a.Prompt.Set("inspect the configured target")
+	a.submit()
+	drain(t, a)
+	if calls != 2 || a.popup == nil || a.popup.Kind != "approval" || a.proposal == nil {
+		t.Fatalf("corrected request lost approval: calls=%d notice=%s", calls, a.notice)
+	}
+	if a.proposal.Resolved != "printf %s private.example" || !strings.Contains(a.View(), "private.example") || !strings.Contains(a.View(), "inspect configured target") {
+		t.Fatal("approval omitted resolved target or reason")
+	}
+	if len(a.jobs.Snapshot()) != 0 {
+		t.Fatal("repair executed before approval")
+	}
+}
