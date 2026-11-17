@@ -12,6 +12,7 @@ import (
 	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/runner"
+	"github.com/erdajt/wraith/internal/session"
 )
 
 func TestAgentRunLeavesDraftAndChatAvailable(t *testing.T) {
@@ -143,6 +144,52 @@ func TestBackgroundReceiptRespectsInteractiveBarriers(t *testing.T) {
 			a.runApproved()
 			if a.busy || a.executing || a.popup != nil || len(a.Session.Messages) != 1 {
 				t.Fatal("background receipt interrupted an interactive action")
+			}
+			calls := 0
+			a.Client.HTTP.Transport = transport(func(*http.Request) (*http.Response, error) {
+				calls++
+				return response(`{"done":true,"message":{"role":"assistant","content":"working independently"}}`), nil
+			})
+			a.editing, a.visualMode, a.focus = false, "", "prompt"
+			a.syncJobs()
+			drain(t, a)
+			a.syncJobs()
+			if calls != 1 || a.receiptSession != "" {
+				t.Fatalf("deferred receipt lost or repeated: calls=%d", calls)
+			}
+		})
+	}
+}
+
+func TestDeferredReceiptInvalidatesOrCoalesces(t *testing.T) {
+	for _, action := range []string{"cancel", "session", "turn", "completion"} {
+		t.Run(action, func(t *testing.T) {
+			a := fixture(t)
+			a.generation, a.agentStopped = session.ID(), false
+			a.receiptSession, a.receiptGeneration = a.Session.ID, a.generation
+			calls := 0
+			a.Client.HTTP.Transport = transport(func(*http.Request) (*http.Response, error) {
+				calls++
+				return response(`{"done":true,"message":{"role":"assistant","content":"observed"}}`), nil
+			})
+			want := 0
+			switch action {
+			case "cancel":
+				a.stopAgent()
+			case "session":
+				a.Session = session.New("other")
+			case "turn":
+				a.generation = session.ID()
+			case "completion":
+				r := runner.Record{ID: session.ID(), Session: a.Session.ID, Generation: a.generation, Agent: true, ShareOutput: true, Status: "completed", Finished: time.Now()}
+				a.pendingRuns[r.ID] = r
+				want = 1
+			}
+			a.deliverRuns()
+			drain(t, a)
+			a.deliverRuns()
+			if calls != want || a.receiptSession != "" || len(a.Session.DeliveredRuns) != want {
+				t.Fatalf("deferred receipt resumed incorrectly: calls=%d want=%d", calls, want)
 			}
 		})
 	}

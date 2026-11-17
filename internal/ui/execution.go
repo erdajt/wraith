@@ -105,6 +105,7 @@ func (a *App) runApproved() tea.Cmd {
 			if a.canContinue() {
 				return a.continueEvidence()
 			}
+			a.receiptSession, a.receiptGeneration = record.Session, record.Generation
 		}
 		return nil
 	}
@@ -151,11 +152,17 @@ func (a *App) syncJobs() tea.Cmd {
 }
 
 func (a *App) deliverRuns() tea.Cmd {
+	if a.receiptSession != a.Session.ID || a.receiptGeneration != a.generation || a.agentStopped {
+		a.receiptSession, a.receiptGeneration = "", ""
+	}
 	if !a.canContinue() {
 		return nil
 	}
 	candidate, continueAgent := a.pendingEvidence()
 	if len(candidate.DeliveredRuns) == len(a.Session.DeliveredRuns) {
+		if a.receiptSession != "" {
+			return a.continueEvidence()
+		}
 		return nil
 	}
 	if err := a.Store.Save(candidate); err != nil {
@@ -166,7 +173,7 @@ func (a *App) deliverRuns() tea.Cmd {
 	for _, id := range candidate.DeliveredRuns {
 		delete(a.pendingRuns, id)
 	}
-	if continueAgent {
+	if continueAgent || a.receiptSession != "" {
 		return a.continueEvidence()
 	}
 	return nil

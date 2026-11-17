@@ -61,6 +61,7 @@ func (a *App) shareRun(r runner.Record) tea.Cmd {
 }
 
 func (a *App) continueEvidence() tea.Cmd {
+	a.receiptSession, a.receiptGeneration = "", ""
 	a.popup = nil
 	return a.startChat()
 }

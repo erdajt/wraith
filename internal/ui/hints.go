@@ -46,7 +46,7 @@ func (a *App) noticeText(text string, p palette) string {
 		{"enter executes", "run"}, {"esc returns to normal mode", "return"},
 		{"press esc", "return"}, {":w", "send"},
 		{"/retry", "retry"}, {"/terminal-restart", "terminal-restart"},
-		{"/cancel", "cancel"}, {"/help", "help"}, {"/resume", "resume"}, {"/think", "think"},
+		{"/cancel", "cancel"}, {"/help", "help"}, {"/resume", "resume"}, {"/think", "think"}, {"/jobs", "jobs"},
 	}
 	replacements := make([]string, 0, len(phrases)*2)
 	for _, phrase := range phrases {

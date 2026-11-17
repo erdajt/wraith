@@ -96,10 +96,11 @@ type App struct {
 	streamSerial  uint64
 	jobs          *runner.Manager
 
-	pendingRuns  map[string]runner.Record
-	generation   string
-	agentStopped bool
-	editing      bool
+	pendingRuns                       map[string]runner.Record
+	generation                        string
+	agentStopped                      bool
+	editing                           bool
+	receiptSession, receiptGeneration string
 
 	pendingTool *contextual.ToolRequest
 	agentReads  int
