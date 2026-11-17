@@ -49,11 +49,13 @@ func (a *App) runPendingTool() tea.Cmd {
 	r, err := a.jobRecord(request.ID)
 	text := "output tool denied: command is not in this session"
 	var evidence *session.Evidence
+	waiting := false
 	if err == nil && r.Session == a.Session.ID {
 		if !r.ShareOutput || r.OutputHidden {
 			text = "output tool denied: output withheld by user"
-		} else if request.Tool == "poll" && time.Since(a.lastPoll[r.ID]) < time.Second {
-			text = "output tool: not ready; next_poll_ms: 1000"
+		} else if request.Tool == "poll" && r.Finished.IsZero() && time.Since(a.lastPoll[r.ID]) < time.Second {
+			waiting = true
+			evidence = &session.Evidence{ID: r.ID, Kind: "waiting", Status: r.Status}
 		} else {
 			if request.Tool == "poll" {
 				request.Limit = 20
@@ -86,6 +88,9 @@ func (a *App) runPendingTool() tea.Cmd {
 					}
 				}
 				evidence = &session.Evidence{ID: r.ID, Kind: "output", Status: r.Status, ExitCode: r.ExitCode, Page: &page}
+				if request.Tool == "poll" && r.Finished.IsZero() && len(page.Lines) == 0 {
+					waiting, evidence.Kind = true, "waiting"
+				}
 			}
 		}
 	}
@@ -110,6 +115,10 @@ func (a *App) runPendingTool() tea.Cmd {
 		a.lastPoll[request.ID] = time.Now()
 	}
 	a.Session = candidate
+	if waiting {
+		a.notice = "waiting for background job " + r.ID + " · /jobs shows live output"
+		return nil
+	}
 	return a.continueEvidence()
 }
 

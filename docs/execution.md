@@ -33,6 +33,8 @@ agent mode runs every approved command as a tracked background job, even if the 
 
 `/jobs` or `<leader>j` shows current-session jobs; `/history` shows saved command records. open a job to view live output, status and exit code. `ctrl+x` cancels the selected job, configurable as `keys.job_cancel`. completion evidence waits while you type, edit or select output. it stays in its original conversation and is delivered once.
 
+a start receipt means the job was accepted; process startup may still fail and produce a failed result. polls include status and new complete output lines. an empty or throttled poll saves a waiting status and pauses automatic model calls, leaving the chat available. completion or a new user prompt resumes work. hidden-output receipts do not offer polling.
+
 output readers support vim motions, counts, `/` search, visual selection and yanks. selection freezes the visible snapshot so incoming output does not move it. `r` refreshes it. live views show the recent tail; completed views include the retained prefix and tail with gap offsets.
 
 completion evidence waits while you edit, type a draft, select text, use a shell or review a popup. it joins the next safe request without replacing your draft. session delivery ids prevent duplicate insertion after resume. jobs from an older turn do not independently restart that turn.

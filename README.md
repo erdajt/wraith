@@ -39,7 +39,7 @@ configure the editor, shell and providers in `~/.config/wraith/config.yaml`. `wr
 | command approval | review the command and its reason, run, edit, reject, or ask for a revision inline |
 | output history | compressed records of approved commands, exit status and output, with a vim reader |
 | output control | agent runs share bounded evidence; hide output per job, or use blocks mode for manual sharing |
-| background jobs | approve tracked background work, inspect live output, cancel jobs and receive completion evidence |
+| background jobs | agent commands run in the background by default; keep chatting, search output by job id, inspect live output and receive completion evidence |
 | targeted output reads | model polls, searches and pages authorized output without filling context |
 | private variables | conversation/directory/global annotated bindings, green local substitution and provider redaction |
 | real terminals | centered `alt+e` scratch shell and independent `alt+s` side shell with configurable sizes |

@@ -73,7 +73,7 @@ func TestBackgroundApprovalReturnsReceiptAndDenialStopsItsTurn(t *testing.T) {
 			t.Error(err)
 		}
 		last := req.Messages[len(req.Messages)-1].Content
-		if !strings.Contains(last, "background command started") || !strings.Contains(last, "id:") {
+		if !strings.Contains(last, "background command accepted") || !strings.Contains(last, "id:") {
 			t.Errorf("missing start receipt: %s", last)
 		}
 		return response(`{"done":true,"message":{"role":"assistant","content":"waiting for the result"}}`), nil

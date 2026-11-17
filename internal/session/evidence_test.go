@@ -24,3 +24,16 @@ func TestEvidenceRedactsValuesWithoutCorruptingIdentifiers(t *testing.T) {
 		t.Fatal("clone shares evidence storage")
 	}
 }
+
+func TestBackgroundReceiptDoesNotPromiseStartupOrPrivateReads(t *testing.T) {
+	for _, hidden := range []bool{false, true} {
+		e := Evidence{ID: strings.Repeat("ab", 12), Kind: "started", Command: "printf test", Hidden: hidden}
+		text := e.Render(func(s string) string { return s })
+		if !strings.Contains(text, "accepted") || !strings.Contains(text, "status: starting") {
+			t.Fatal("receipt claimed successful process startup")
+		}
+		if strings.Contains(text, "poll by id") == hidden {
+			t.Fatal("receipt advertised the wrong output policy")
+		}
+	}
+}

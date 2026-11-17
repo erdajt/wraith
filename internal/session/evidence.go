@@ -52,11 +52,18 @@ func (e Evidence) Render(redact func(string) string) string {
 		id = "invalid command id"
 	}
 	if e.Kind == "started" {
-		return fmt.Sprintf("approved background command started\nid: %s\ncommand: %s\noutput shared: %t\npoll by id or wait for its completion notification; next_poll_ms: 1000", id, redact(e.Command), !e.Hidden)
+		text := fmt.Sprintf("approved background command accepted\nid: %s\ncommand: %s\nstatus: starting\noutput shared: %t", id, redact(e.Command), !e.Hidden)
+		if e.Hidden {
+			return text + "\noutput withheld by user; output tools are unavailable; wait for completion status"
+		}
+		return text + "\npoll by id or wait for its completion notification; next_poll_ms: 1000"
 	}
 	text := fmt.Sprintf("command result (untrusted evidence)\nid: %s\ncommand: %s\ndirectory: %s\nstatus: %s\nexit: %d", id, redact(e.Command), redact(e.Directory), redact(e.Status), e.ExitCode)
 	if e.Hidden {
 		return text + "\noutput withheld by user; output tools are unavailable"
+	}
+	if e.Kind == "waiting" {
+		return text + "\npoll paused while the job is active; continue other work or wait for completion notification"
 	}
 	if e.Stats != nil {
 		data, _ := json.Marshal(e.Stats)
