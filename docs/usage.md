@@ -1,6 +1,6 @@
 # using wraith
 
-build with go 1.27+ on linux. the defaults use ollama, neovim and zsh. change the editor, shell or provider in `~/.config/wraith/config.yaml`.
+[getting started](getting-started.md) covers installation. build with go 1.27+ on linux. the defaults use ollama, neovim and zsh. change the editor, shell or provider in `~/.config/wraith/config.yaml`.
 
 ```sh
 make install
@@ -8,7 +8,7 @@ ollama pull hf.co/filvyb/Qwen3.5-9B-heretic-v2-GGUF:Q5_K_M
 wraith
 ```
 
-wraith starts a local Ollama server when its configured loopback connection is refused, then loads the selected model before you send anything. it reuses an existing server and leaves that shared server running on exit. `/model` also loads a newly selected local model immediately. API and CLI backends use their own connection checks; see [providers](providers.md).
+wraith starts a local ollama server when its configured loopback connection is refused, then loads the selected model before you send anything. it reuses an existing server and leaves that shared server running on exit. `/model` also loads a newly selected local model immediately. API and CLI backends use their own connection checks; see [providers](providers.md).
 
 ## input and navigation
 
@@ -45,7 +45,7 @@ press tab to focus the conversation. its themed cursor supports motions, visual 
 
 visual selection in prose copies the selected text. touching a command block selects and copies the entire command, without its frame or markdown fence. yanks populate the prompt register and call the configured clipboard helper. the default is `wl-copy`; use `xclip -selection clipboard` on X11 or an empty array for internal-register-only copies.
 
-this is a modal editor, not a complete embedded Neovim instance. macros, plugins, arbitrary text objects and dot-repeat belong in the external editor. `[`, `]` and `za` are conversation actions rather than a claim to implement every Vim command.
+this is a modal editor, not a complete embedded neovim instance. macros, plugins, arbitrary text objects and dot-repeat belong in the external editor. `[`, `]` and `za` are conversation actions rather than a claim to implement every vim command.
 
 ## commands
 
@@ -88,3 +88,31 @@ both `/resume` and `--resume` open a searchable picker when no id is supplied. s
 flags precede prompt text or subcommands. `--config-dir`, `--data-dir` and `--cache-dir` provide isolated storage. one interactive writer owns each data directory. `--demo` and `--snapshot` use sample content without model calls or saved changes.
 
 older sessions without an original directory can still be exported. export uses the current directory and retained variable journal for redaction without assigning the session a directory or enabling resume.
+
+see [keybindings](keybindings.md) for leader sequences and remapping, [sessions](sessions.md) for forks and recovery, and [troubleshooting](troubleshooting.md) for failure cases.
+
+## launch reference
+
+| option | behavior |
+| --- | --- |
+| `--resume [id]` | choose a directory-scoped session, or resume its id |
+| `--session id` | explicit id form of resume |
+| `--provider name` | choose a configured profile |
+| `--model id` | choose a model for the launched conversation |
+| `--theme name` | choose the launch theme |
+| `--config-dir path` | override config and private-variable storage |
+| `--data-dir path` | override sessions, jobs and input history |
+| `--cache-dir path` | override recovery and temporary editor storage |
+| `--demo` | open read-only sample content without model calls |
+| `--snapshot` | print one ansi demo frame and exit |
+| `--width`, `--height` | snapshot columns and rows; defaults 110 and 34 |
+| `--version` | print the build version |
+| `--help` | print flag help |
+
+`models`, `sessions`, `doctor`, `config` and `export` are noninteractive subcommands. any other positional text becomes the initial draft. `--snapshot` clamps its dimensions to the app minimum of 50 by 18. development builds identify as `dev`; release packaging embeds the tag version.
+
+## rendered replies
+
+replies render headings, emphasis, inline code, fenced blocks, lists, quotes, links and tables. fenced commands retain their own selection boundaries and editor actions. long content wraps to the available conversation width, including beside the side shell. terminal control sequences from model text are filtered before rendering.
+
+thinking is a separate section, collapsed by default. `/thinking` toggles visibility across the conversation, while `za` or clicking a header toggles one section. `/think` changes generation effort instead. a provider must return reasoning for it to appear.

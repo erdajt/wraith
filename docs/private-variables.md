@@ -1,6 +1,6 @@
 # private variables
 
-private variables let a model refer to a target by name while Wraith keeps the value local. the model receives names and attached descriptions, uses `wraith::NAME` in prose or commands, and sees the same markers in shared command output. the local transcript and approval preview substitute values in green.
+private variables let a model refer to a target by name while wraith keeps the value local. the model receives names and attached descriptions, uses `wraith::NAME` in prose or commands, and sees the same markers in shared command output. the local transcript and approval preview substitute values in green.
 
 ## create and manage
 

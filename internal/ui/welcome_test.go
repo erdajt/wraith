@@ -14,7 +14,7 @@ func TestWelcomeKeepsItsSilhouetteAndLayoutAcrossFrames(t *testing.T) {
 		var previous []string
 		var silhouette string
 		changed := false
-		for frame := range 24 {
+		for frame := range 36 {
 			a.frame = frame
 			rows := a.welcome(size[0], size[1], p)
 			if len(rows) > size[1] {

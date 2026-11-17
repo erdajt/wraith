@@ -105,7 +105,7 @@ the script builds wraith, opens one floating ghostty window, drives the app thro
 
 `--record` records pty output without accessing the desktop. it validates the interaction sequence, but does not create screenshots. `.ansi` files contain the accumulated terminal stream at each checkpoint.
 
-[manifest.json](assets/screenshots/manifest.json) records the binary hash, source commit, fixture description, grid dimensions, raw capture hashes, cropped hashes and crop geometry. the committed pngs preserve the original pixels within that rectangle. the first welcome capture was excluded because keyboard echo appeared in its footer; the theme captures show the same empty-conversation view.
+[manifest.json](assets/screenshots/manifest.json) records the binary hash, source commit, fixture description, grid dimensions, raw capture hashes, cropped hashes and crop geometry. the committed pngs preserve the original pixels within that rectangle.
 
 for this capture's 1440 by 960 host window, the app grid starts at `(16, 16)` and measures 1400 by 912 pixels. reproduce its padding crop with:
 

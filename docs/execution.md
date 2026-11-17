@@ -23,7 +23,7 @@ approval freezes the session, turn, directory, shell, timeout, private bindings 
 
 `<leader>b` or `/blocks` lists code blocks. enter on a command under the conversation cursor opens it in your editor; enter on an assistant message offers its blocks. selecting run authorizes a tracked run directly.
 
-saving a shell block stages its actual text in the scratch shell. enter inserts it into shell input without a newline; the next enter executes it. multiline insertion requires bracketed paste support. `r` offers a tracked run, `e` edits again, and escape dismisses staging. source languages such as python and go use a saved file and interpreter. private references in non-shell source require editor review before running; Wraith does not infer language-specific quoting.
+saving a shell block stages its actual text in the scratch shell. enter inserts it into shell input without a newline; the next enter executes it. multiline insertion requires bracketed paste support. `r` offers a tracked run, `e` edits again, and escape dismisses staging. source languages such as python and go use a saved file and interpreter. private references in non-shell source require editor review before running; wraith does not infer language-specific quoting.
 
 ## background jobs and history
 
@@ -69,4 +69,4 @@ quitting, cancellation and timeout terminate owned process groups; background jo
 
 approval opens a focused panel with a bright border, a filled selection row, and separate command and reason sections. the chat and scratch panes are hidden behind it while the decision is pending. the panel respects inherited terminal backgrounds. long commands remain available through **view full command**, and all actions remain reachable with `j/k` or arrow keys at the minimum supported terminal size.
 
-if the model sends an output query through the command channel, Wraith rejects it without executing anything and supplies a specific correction on retry. the same applies to a command sent as an output query. internal block names appear only in model-facing feedback, while the status explains the mismatch in plain language. the existing three-retry limit still applies.
+if the model sends an output query through the command channel, wraith rejects it without executing anything and supplies a specific correction on retry. the same applies to a command sent as an output query. internal block names appear only in model-facing feedback, while the status explains the mismatch in plain language. the existing three-retry limit still applies.

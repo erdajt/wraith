@@ -22,9 +22,9 @@ wraith is a single go binary. bubble tea owns terminal lifecycle and the event l
 
 ## requests and cancellation
 
-Ollama uses `/api/chat`, `/api/tags`, `/api/show` and an empty `/api/generate` preload. cloud adapters normalize server-sent events; CLI adapters consume JSONL from isolated child processes. requests have context deadlines. streamed content and reasoning are accumulated separately. an incomplete stream is an error, and received text is saved with an interrupted marker. requests use native thinking values, not synthetic reasoning instructions.
+ollama uses `/api/chat`, `/api/tags`, `/api/show` and an empty `/api/generate` preload. cloud adapters normalize server-sent events; CLI adapters consume JSONL from isolated child processes. requests have context deadlines. streamed content and reasoning are accumulated separately. an incomplete stream is an error, and received text is saved with an interrupted marker. requests use native thinking values, not synthetic reasoning instructions.
 
-agent mode distinguishes execution requests from ordinary code suggestions. a validated request stops at approval. only an explicit run action creates a tracked process. agent jobs return bounded evidence unless hidden; blocks-mode output requires sharing or auto_share. immutable launch records freeze approvals. the runner manager coalesces updates, and only the event loop appends durable results to the originating session. CLI providers act as text backends with native tools disabled; Wraith owns the execution flow. see [execution](execution.md) and [providers](providers.md).
+agent mode distinguishes execution requests from ordinary code suggestions. a validated request stops at approval. only an explicit run action creates a tracked process. agent jobs return bounded evidence unless hidden; blocks-mode output requires sharing or auto_share. immutable launch records freeze approvals. the runner manager coalesces updates, and only the event loop appends durable results to the originating session. CLI providers act as text backends with native tools disabled; wraith owns the execution flow. see [execution](execution.md) and [providers](providers.md).
 
 `/models` retains the transcript while selecting a new model and probing its capabilities. selections arriving during an active generation are dismissed. shell reads identify their originating pty, so events from a replaced shell cannot update its replacement.
 
@@ -38,7 +38,7 @@ compaction first creates recovery copies, then asks the model for a replacement.
 
 model text passes through control-sequence filtering before display. shell output goes through the vt parser instead of being forwarded directly to the host terminal. clipboard escape strings and terminal control payloads from a model cannot become host-terminal commands through the transcript renderer.
 
-ordinary terminal text, including dedicated space events and bracketed paste, is forwarded to the selected pty. the centered pane clears covered cells to the default host background when inheritance is selected. a separate screen and scrollback belong to each pty. triple escape snapshots these cells into a read-only Vim buffer, keeping selections stable while the shell continues. normal shell exit schedules a replacement with a rapid-failure restart limit.
+ordinary terminal text, including dedicated space events and bracketed paste, is forwarded to the selected pty. the centered pane clears covered cells to the default host background when inheritance is selected. a separate screen and scrollback belong to each pty. triple escape snapshots these cells into a read-only vim buffer, keeping selections stable while the shell continues. normal shell exit schedules a replacement with a rapid-failure restart limit.
 
 the renderer is intentionally text-only. sixel/kitty graphics, arbitrary terminal extensions, full vim emulation, font selection and independent pane opacity are not implemented. platform support currently targets linux amd64 and arm64; only the native architecture's tests execute locally.
 

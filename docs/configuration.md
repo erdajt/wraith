@@ -13,7 +13,7 @@ settings live in `~/.config/wraith/config.yaml`, or `$XDG_CONFIG_HOME/wraith/con
 /set appearance.background inherit
 ```
 
-`/settings.context` → context opens a number editor immediately. `ctrl+u` clears it; enter saves. escape enters Vim normal mode, where `cc` replaces the number; a second escape cancels. `/set context 1000000` saves an override for the active provider and model. `/set context auto` removes that override. settings show the effective capacity and its model.
+`/settings.context` → context opens a number editor immediately. `ctrl+u` clears it; enter saves. escape enters vim normal mode, where `cc` replaces the number; a second escape cancels. `/set context 1000000` saves an override for the active provider and model. `/set context auto` removes that override. settings show the effective capacity and its model.
 
 context accepts any positive integer representable by the binary. model architecture, provider limits and available memory determine what can actually be used. output reservations and source fragments still have to fit before a request is sent. [default resolution and overrides](context.md#capacity) explain how budgets follow model switches.
 
@@ -22,15 +22,15 @@ context accepts any positive integer representable by the binary. model architec
 | `version` | `1` | configuration schema version; keep the supported version |
 | `provider` | `ollama` | active backend profile |
 | `providers` | six named profiles | endpoints, credentials, cli commands and model options; [details](providers.md) |
-| `host` | `http://127.0.0.1:11434` | fallback Ollama endpoint |
-| `auto_start` | `true` | start a refused local Ollama endpoint |
+| `host` | `http://127.0.0.1:11434` | fallback ollama endpoint |
+| `auto_start` | `true` | start a refused local ollama endpoint |
 | `model` | qwen3.5 heretic 9b q5 | initial model |
 | `context` / `predict` | `8192` / `2048` | automatic local-inference context budget and generated-token budget |
 | `providers.<name>.context` | `0` | provider capacity override; zero uses automatic defaults |
 | `providers.<name>.model_contexts` | empty | capacity overrides keyed by exact model id |
 | `thinking` | `auto` | native model default or supported effort value |
-| `threads` / `temperature` | `6` / `0.3` | Ollama inference options; API-specific options belong in provider `extra` |
-| `keep_alive` / `timeout` | `2m` / `10m` | Ollama idle retention and request/compaction deadline |
+| `threads` / `temperature` | `6` / `0.3` | ollama inference options; API-specific options belong in provider `extra` |
+| `keep_alive` / `timeout` | `2m` / `10m` | ollama idle retention and request/compaction deadline |
 | `environment.scope` | `directory` | default private-variable storage: `conversation`, `directory`, or `global`; existing bindings stay in their scopes |
 | `execution.mode` | `agent` | request approval when execution is useful; `blocks` keeps approvals with optional sharing |
 | `execution.auto_share` | `false` | share blocks-mode output and scratch snapshots automatically |
@@ -70,7 +70,7 @@ keys:
   setting_help: '?'
 ```
 
-[config.example.yaml](config.example.yaml) is generated from the defaults. [terminal settings](terminals.md) cover pane dimensions, colors, shell and scrollback. fonts, numerical opacity and blur belong to the host terminal; Wraith can inherit its background but cannot assign independent pane alpha.
+[config.example.yaml](config.example.yaml) is generated from the defaults. [terminal settings](terminals.md) cover pane dimensions, colors, shell and scrollback. fonts, numerical opacity and blur belong to the host terminal; wraith can inherit its background but cannot assign independent pane alpha.
 
 ## storage
 
@@ -89,7 +89,7 @@ keys:
 
 roots default to `~/.config/wraith`, `~/.local/share/wraith` and `~/.cache/wraith`. absolute XDG environment paths and CLI directory overrides are supported. new directories use 0700 and new files use 0600. gzip is compression, not encryption. archives and command records are not automatically deleted.
 
-Wraith does not reserve VRAM or control GPU offload. for Ollama, inspect `ollama ps` during generation and adjust model/context size to leave space for desktop work. cloud requests use the selected account and endpoint; CLI backends use their installed authentication.
+wraith does not reserve VRAM or control GPU offload. for ollama, inspect `ollama ps` during generation and adjust model/context size to leave space for desktop work. cloud requests use the selected account and endpoint; CLI backends use their installed authentication.
 
 [private variables](private-variables.md) documents scoped bindings, comments, editor management and provider redaction. agent mode shares tracked evidence by default unless explicitly hidden; `execution.auto_share` controls blocks and scratch snapshots.
 

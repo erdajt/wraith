@@ -36,9 +36,9 @@ providers:
 
 set the named environment variable before launching wraith. `api_key` can hold a key directly in the private config file; HTTP profiles prefer a nonempty environment value over an inline key. `headers` supports provider-specific headers. credentials are not shown in settings summaries or copied into conversation context. protect exports and config backups yourself; compression is not encryption.
 
-`extra` adds endpoint-specific request fields, such as temperature or supported reasoning settings. it cannot replace model, messages, system, streaming or tool-control fields. `token_field` chooses `max_tokens` or `max_completion_tokens` for compatible endpoints. the app's context capacity governs local budgeting; cloud APIs enforce their own model limits and do not receive Ollama's `num_ctx` option.
+`extra` adds endpoint-specific request fields, such as temperature or supported reasoning settings. it cannot replace model, messages, system, streaming or tool-control fields. `token_field` chooses `max_tokens` or `max_completion_tokens` for compatible endpoints. the app's context capacity governs local budgeting; cloud APIs enforce their own model limits and do not receive ollama's `num_ctx` option.
 
-`thinking` lists supported picker values for a profile. `thinking_mode` can be `reasoning_effort`, `thinking`, or `adaptive` where the backend supports it. do not list values unsupported by the selected model. an empty list leaves `auto` available. Ollama discovers these values from the model instead. Codex discovers its reasoning values from native catalog metadata when no explicit thinking list is configured.
+`thinking` lists supported picker values for a profile. `thinking_mode` can be `reasoning_effort`, `thinking`, or `adaptive` where the backend supports it. do not list values unsupported by the selected model. an empty list leaves `auto` available. ollama discovers these values from the model instead. codex discovers its reasoning values from native catalog metadata when no explicit thinking list is configured.
 
 `system_prompt` adds provider-specific instructions to ordinary chat requests. compaction uses its dedicated extraction and audit instructions without this chat prompt. global user preferences remain in `instructions.md`.
 
@@ -49,17 +49,17 @@ wraith --provider codex
 
 ## cli profiles
 
-install and authenticate the CLI separately. the default profiles reuse its saved login. `command` is an executable-and-arguments array, allowing an absolute path or your own wrapper. `/models` opens the Codex catalog and supports `j`/`k`, arrows, filtering and enter. choosing a model saves it as that provider's default and refreshes its context and thinking settings. `/model exact-model-id` also selects directly.
+install and authenticate the CLI separately. the default profiles reuse its saved login. `command` is an executable-and-arguments array, allowing an absolute path or your own wrapper. `/models` opens the codex catalog and supports `j`/`k`, arrows, filtering and enter. choosing a model saves it as that provider's default and refreshes its context and thinking settings. `/model exact-model-id` also selects directly.
 
-Codex discovery reads `$CODEX_HOME/models_cache.json`, or `~/.codex/models_cache.json`. hidden models are excluded. when the cache is absent or unusable, Wraith starts the native app server for a bounded `model/list` request; it does not start a conversation or generation. cached entries reflect the last Codex catalog refresh and do not guarantee current account access. run Codex itself to refresh stale metadata.
+codex discovery reads `$CODEX_HOME/models_cache.json`, or `~/.codex/models_cache.json`. hidden models are excluded. when the cache is absent or unusable, wraith starts the native app server for a bounded `model/list` request; it does not start a conversation or generation. cached entries reflect the last codex catalog refresh and do not guarantee current account access. run codex itself to refresh stale metadata.
 
-an explicit nonempty `models` list replaces discovery. an old Codex list containing only `default` now enables discovery; `default` remains available through `/model default`, where it omits the model flag. Claude continues to use configured ids, or `default` when none are configured. custom Codex wrappers need the app-server protocol for discovery without a cache; otherwise configure their model list.
+an explicit nonempty `models` list replaces discovery. an old codex list containing only `default` now enables discovery; `default` remains available through `/model default`, where it omits the model flag. claude continues to use configured ids, or `default` when none are configured. custom codex wrappers need the app-server protocol for discovery without a cache; otherwise configure their model list.
 
-wraith launches an isolated, noninteractive child for each request, sends the active conversation through stdin and reads structured response events. it does not attach to another interactive terminal or import an unrelated CLI conversation. Wraith owns session persistence and compaction, so archived turns do not silently return through an independent CLI history.
+wraith launches an isolated, noninteractive child for each request, sends the active conversation through stdin and reads structured response events. it does not attach to another interactive terminal or import an unrelated CLI conversation. wraith owns session persistence and compaction, so archived turns do not silently return through an independent CLI history.
 
-Codex uses an ephemeral, read-only invocation with shell tools disabled and without user config. Claude uses safe mode with built-in and MCP tools disabled. both start in a temporary directory, and Wraith supplies its system instructions. this keeps command execution in Wraith's approval flow; it is not a replacement for the native CLI's full agent interface. custom wrappers must preserve the expected event format and these execution boundaries.
+codex uses an ephemeral, read-only invocation with shell tools disabled and without user config. claude uses safe mode with built-in and MCP tools disabled. both start in a temporary directory, and wraith supplies its system instructions. this keeps command execution in wraith's approval flow; it is not a replacement for the native CLI's full agent interface. custom wrappers must preserve the expected event format and these execution boundaries.
 
-streamed text and exposed reasoning appear in the same conversation UI as Ollama. private reasoning that a provider does not return cannot be displayed. cancellation terminates the child process group. CLI flags evolve; unsupported versions report errors rather than falling back to unstructured terminal scraping.
+streamed text and exposed reasoning appear in the same conversation UI as ollama. private reasoning that a provider does not return cannot be displayed. cancellation terminates the child process group. CLI flags evolve; unsupported versions report errors rather than falling back to unstructured terminal scraping.
 
 ## protocol references
 
@@ -72,3 +72,31 @@ streamed text and exposed reasoning appear in the same conversation UI as Ollama
 - [claude code cli options](https://code.claude.com/docs/en/cli-reference)
 
 for compatible APIs, `reasoning_effort` mode maps `off` to `none` and `on` to `medium`; explicit strings pass through. `thinking` mode sends an enabled/disabled object and includes `reasoning_effort` when a graded value is selected. advertise only values supported by the selected model. [deepseek thinking configuration](https://api-docs.deepseek.com/guides/thinking_mode/)
+
+## profile reference
+
+| field | purpose |
+| --- | --- |
+| `kind` | `ollama`, `openai`, `anthropic`, `codex-cli` or `claude-cli` |
+| `base_url` | endpoint for http backends; ollama falls back to the root `host` |
+| `model` | saved default selected when activating this profile |
+| `models` | explicit model ids; a nonempty list replaces discovery |
+| `key_env` | process environment variable containing the api key |
+| `api_key` | inline key when environment credentials are not used |
+| `headers` | extra http headers |
+| `command` | executable and arguments for cli profiles |
+| `context` | provider budget override; zero uses automatic resolution |
+| `model_contexts` | exact model ids mapped to positive capacities |
+| `thinking` | supported values offered by the picker |
+| `thinking_mode` | backend request mapping for the configured effort |
+| `token_field` | compatible-api token budget field |
+| `system_prompt` | additional instructions for ordinary chat |
+| `extra` | permitted endpoint-specific request fields |
+
+profile names are local labels. for example, two compatible endpoints can use different names with the same `kind: openai`. changing providers preserves the conversation, so the next request sends the retained context to that provider after privacy filtering. changing a model resets thinking to `auto`; its own capacity override is restored if configured.
+
+## thinking and display
+
+`/think` lists values supported by the active model/profile. `auto` leaves the backend default intact. `/thinking` and `appearance.thinking` control visibility, independently of generation effort. `za` or a click expands a returned thinking section. reasoning streams separately from the answer and is saved for local display; it is not replayed as ordinary conversation text.
+
+local startup and model switches run discovery/capability checks and preload the selected ollama model. api and cli profiles check their configured backend without downloading local weights. authenticated provider calls are not exercised by the offline fixture tests.

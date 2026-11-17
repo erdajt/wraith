@@ -37,7 +37,7 @@ actions are pinned to commit hashes, dependency updates are scheduled through de
 
 ## visual review
 
-`wraith --demo` opens a read-only sample workspace. `wraith --snapshot --width 110 --height 32` emits one ansi frame for layout inspection. the readme preview is an svg rendering of that demo output, not a live model benchmark. test small dimensions, wide unicode, menus, both terminal panes, and each theme when changing layout code.
+`wraith --demo` opens a read-only sample workspace. `wraith --snapshot --width 110 --height 32` emits one ansi frame for layout inspection. the readme uses cropped captures of the running app in ghostty. [screenshots](screenshots.md) records the fixtures, capture script, binary hash and crop geometry. test small dimensions, wide unicode, menus, both terminal panes, and each theme when changing layout code.
 
 ## test coverage
 
