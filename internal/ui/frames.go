@@ -8,6 +8,9 @@ import (
 )
 
 func (a *App) menuFrame() []string {
+	if a.popup.Kind == "approval" && a.proposal != nil {
+		return a.approvalFrame()
+	}
 	p := a.Config.Palette()
 	m := a.popup
 	w := min(a.width-6, 90)

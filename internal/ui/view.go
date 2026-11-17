@@ -128,6 +128,12 @@ func (a *App) View() string {
 		}
 	}
 	if a.popup != nil {
+		if a.proposal != nil && (a.popup.Kind == "approval" || a.popup.Kind == "modify-command" || a.popup.Kind == "command-preview") {
+			for i := range rows {
+				rows[i] = base(p, "", w)
+			}
+			rows[0] = base(p, ink(p.Muted, "  WRAITH · "+a.Config.Provider), w)
+		}
 		box := a.menuFrame()
 		a.overlay(rows, box, (w-ansi.StringWidth(box[0]))/2, (a.height-len(box))/2)
 	}
