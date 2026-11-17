@@ -52,7 +52,7 @@ func (a *App) forkPrompt() tea.Cmd {
 	a.agentSteps, a.agentReads, a.pendingTool = 0, 0, nil
 	a.generation, a.agentStopped = "", true
 	a.proposal = nil
-	a.notice = "fork opened · edit the draft, then :w or ctrl+s sends · original is in /resume"
+	a.notice = "fork opened · edit the draft, then :w or " + a.Config.Keys["send"] + " sends · original is in /resume"
 	if err := a.refreshVariables(); err != nil {
 		a.notice = err.Error()
 	}

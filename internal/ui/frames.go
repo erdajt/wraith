@@ -145,7 +145,7 @@ func (a *App) terminalFrame(index, w, h int) []string {
 		lines[len(lines)-1] = ink(p.Accent, ansi.Truncate(pane.Pending, w-2, "…"))
 	}
 	if pane.Err != "" {
-		lines[len(lines)-1] = ink(p.Warn, pane.Err)
+		lines[len(lines)-1] = ink(p.Warn, a.noticeText(pane.Err, p))
 	}
 	fgArg, bgArg := "", ""
 	if fg != "" {
@@ -155,9 +155,9 @@ func (a *App) terminalFrame(index, w, h int) []string {
 		bgArg = ";" + bg
 	}
 	box := frame(lines, w, p, cfg.Background == "inherit", fgArg, bgArg)
-	label := " scratch shell · " + a.Config.Keys["terminal_overlay"] + " "
+	label := ink(p.Accent, " scratch shell · ") + keyHints(a.Config.Keys["terminal_overlay"]+" toggle", p) + " "
 	if index == 1 {
-		label = " side shell · " + a.Config.Keys["terminal_split"] + " "
+		label = ink(p.Accent, " side shell · ") + keyHints(a.Config.Keys["terminal_split"]+" toggle", p) + " "
 	}
 	label = ansi.Truncate(label, w-3, "…")
 	box[0] = reset + ink(p.Border, "╭─") + ink(p.Accent, label) + ink(p.Border, strings.Repeat("─", max(0, w-ansi.StringWidth(label)-3))+"╮") + reset

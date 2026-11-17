@@ -146,3 +146,33 @@ func TestPickerAndHelpHintsUseActionColors(t *testing.T) {
 		})
 	}
 }
+
+func TestNoticeHintsFollowRemappedKeysAndPreserveText(t *testing.T) {
+	a := fixture(t)
+	a.Config.Keys["send"], a.Config.Keys["cancel"] = "f7", "f8"
+	a.Config.Keys["terminal_unfocus"] = "f9"
+	p := a.Config.Palette()
+	for _, tc := range []struct{ text, hint, color string }{
+		{"prompt updated · f7 sends", "f7 sends", p.Accent},
+		{"wait for the current operation or press f8", "press f8", p.HintCancel},
+		{"shell active · f9 returns focus · shift+pgup scrolls", "f9 returns focus", p.Accent},
+		{"provider failed · /retry", "/retry", p.HintRefresh},
+		{"wait or use /cancel", "/cancel", p.HintCancel},
+		{"shell stopped · /terminal-restart 1", "/terminal-restart", p.HintRefresh},
+		{"no matching command · esc returns to normal mode", "esc returns to normal mode", p.Accent},
+	} {
+		t.Run(tc.text, func(t *testing.T) {
+			view := a.noticeText(tc.text, p)
+			if ansi.Strip(view) != tc.text {
+				t.Fatal("hint styling changed notice text")
+			}
+			assertHintColors(t, view, map[string]string{tc.hint: tc.color})
+		})
+	}
+	a.busy = true
+	a.Prompt.Set("keep working")
+	a.submit()
+	if !strings.Contains(a.notice, "press f8") || strings.Contains(a.notice, "ctrl+c") {
+		t.Fatalf("busy notice ignored cancel binding: %q", a.notice)
+	}
+}

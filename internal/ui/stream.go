@@ -3,7 +3,6 @@ package ui
 import (
 	"context"
 	"fmt"
-	"github.com/erdajt/wraith/internal/store"
 	"path/filepath"
 	"strings"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/provider"
 	"github.com/erdajt/wraith/internal/session"
+	"github.com/erdajt/wraith/internal/store"
 	"github.com/erdajt/wraith/internal/vim"
 )
 
@@ -38,7 +38,7 @@ func (a *App) submit() tea.Cmd {
 		return nil
 	}
 	if a.busy {
-		a.notice = "wait for the current operation or press ctrl+c"
+		a.notice = "wait for the current operation or press " + a.Config.Keys["cancel"]
 		return nil
 	}
 	if a.demo {

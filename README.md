@@ -73,7 +73,7 @@ configure the editor, shell and providers in `~/.config/wraith/config.yaml`. `wr
 | `ctrl+g` in output | share evidence when that job is private |
 | `q` in normal mode, `ctrl+q` | save and exit |
 
-pickers support arrows, `j/k` and `/` filtering. settings are grouped into categories; `?` explains the selected option. this modal editor implements the documented motions and operators; the external editor supplies full Neovim features. [complete keys and commands →](docs/usage.md)
+pickers support arrows, `j/k` and `/` filtering. keybinding hints use red for quit/close, blue for refresh, and yellow for cancel/reject; custom palettes can override these colors. settings are grouped into categories; `?` explains the selected option. this modal editor implements the documented motions and operators; the external editor supplies full Neovim features. [complete keys and commands →](docs/usage.md)
 
 ## commands you control
 

@@ -96,7 +96,7 @@ func (a *App) View() string {
 		rows[inputY+1+y] = base(p, ink(p.Border, "│")+" "+fit(text, mainW-4)+" "+ink(p.Border, "│"), mainW) + base(p, "", w-mainW)
 	}
 	rows[inputY+5] = base(p, ink(p.Border, "╰"+strings.Repeat("─", mainW-2)+"╯"), mainW) + base(p, "", w-mainW)
-	status := clean(a.notice)
+	status := a.noticeText(a.notice, p)
 	if a.loading {
 		frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 		status = frames[a.frame%len(frames)] + " loading model · " + a.Session.Model

@@ -91,6 +91,6 @@ func (a *App) welcome(width, height int, p palette) []string {
 	} else {
 		rows = append(rows, bold(p.Accent, "W R A I T H"))
 	}
-	rows = append(rows, "", ink(p.Muted, ansi.Truncate("write a prompt · /models to choose a model", max(1, width-4), "")))
+	rows = append(rows, "", ansi.Truncate(ink(p.Muted, "write a prompt · ")+keyHints("/models choose a model", p), max(1, width-4), ""))
 	return rows
 }

@@ -139,7 +139,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 		a.Prompt.Set(text)
 		a.focus = "prompt"
 		applied = true
-		a.notice = "prompt updated · ctrl+s sends"
+		a.notice = "prompt updated · " + a.Config.Keys["send"] + " sends"
 	case "instructions":
 		if len(text) > 64<<10 {
 			a.notice = "persistent instructions exceed 64 kib"
