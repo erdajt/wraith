@@ -12,9 +12,9 @@ a terminal workspace for cybersecurity research, code review and lab work.
 
 </div>
 
-![wraith rendering a sample conversation, command block, table and private variable](docs/assets/screenshots/conversation.png)
+![wraith with a markdown review, highlighted search, a private target and a side shell showing saved evidence](docs/assets/screenshots/workspace.png)
 
-*actual app capture in ghostty. sample provider content; displayed token rates are fixture timings. screenshots are cropped to the app grid. [capture details and full gallery](docs/screenshots.md).*
+*actual app in ghostty, using isolated sample content and a local header file. [full-size capture](docs/assets/screenshots/workspace.png) · [workflow gallery](docs/screenshots.md) · [all ten themes](docs/screenshots.md#themes).*
 
 ## install
 
@@ -35,6 +35,11 @@ for api and cli backends, configure a profile in `~/.config/wraith/config.yaml`.
 
 ## features
 
+edit prompts with vim motions or your own editor. search and yank conversations. approve commands, then keep working while they run. keep target values local and carry the facts you need between turns.
+
+<details>
+<summary>full feature map</summary>
+
 | area | included |
 | --- | --- |
 | prompts | insert, normal and visual modes; counts, motions, operators, undo, search, clipboard yanks and directory-scoped input recall |
@@ -51,7 +56,11 @@ for api and cli backends, configure a profile in `~/.config/wraith/config.yaml`.
 | sessions | compressed storage, directory-scoped resume/search, interrupted-response retry, archive restore and markdown export |
 | appearance | ten themes, custom palettes, inherited backgrounds, themed cursors, an animated hooded mark and reduced motion |
 
+</details>
+
 ## work from the keyboard
+
+![visual selection and a themed cursor in the conversation](docs/assets/screenshots/selection.png)
 
 | key | action |
 | --- | --- |
@@ -71,11 +80,13 @@ for api and cli backends, configure a profile in `~/.config/wraith/config.yaml`.
 | `ctrl+\`, triple escape in a shell | return focus, or enter copy mode |
 | `q` in normal mode, `ctrl+q` | save and quit |
 
+[leader hints](docs/assets/screenshots/leader.png) · [external editor](docs/assets/screenshots/editor.png) · [conversation search](docs/assets/screenshots/search.png)
+
 pickers accept arrows, `j/k`, `/` filtering and enter. `?` explains a selected setting. visual selection copies prose precisely; touching a command block copies the entire command. yanks also fill an internal register. [all keys and remapping](docs/keybindings.md) · [slash commands](docs/usage.md#commands)
 
 ## approve once, keep working
 
-![focused approval with a command, reason and execution choices](docs/assets/screenshots/approval.png)
+[![command approval with run, hide-output, edit, modify and reject choices](docs/assets/screenshots/approval-detail.png)](docs/assets/screenshots/approval.png)
 
 agent mode asks before executing a concrete command. choose **run**, **run with output hidden**, **edit**, **view full command**, **ask assistant to modify**, or **reject**. editing and saving authorizes that command once. an empty modification field prepares a `modify:` draft for your next prompt. unresolved placeholders remain suggestions.
 
@@ -87,11 +98,17 @@ approved agent commands run in the background. the chat stays available. `/jobs`
 | `blocks` | approval remains available; output shares only on request or with auto sharing enabled |
 | either, explicit hide-output approval | command/status can be shared; output reads are denied until you share it |
 
+[![live output with a search match, vim cursor and reader controls](docs/assets/screenshots/output-detail.png)](docs/assets/screenshots/output.png)
+
+[background jobs](docs/assets/screenshots/jobs.png) · [inline command revision](docs/assets/screenshots/modify.png) · [suggested blocks](docs/assets/screenshots/blocks.png)
+
 ordinary markdown blocks never execute just by appearing. `/blocks` or enter on a command opens editing/run actions. saving a shell suggestion stages its actual text; enter inserts it into the shell input, and the next enter executes it. tracked jobs use a fresh noninteractive shell. use a pane for tty programs or persistent shell state.
 
 output readers support vim motions, search, selection, copying, refresh and cancellation. large output retains a bounded prefix and recent tail; the agent gets bounded excerpts and queries. rejecting stops the requesting turn. quitting ends owned jobs and shells. [execution and recovery](docs/execution.md)
 
 ## keep values local
+
+[![private variables with local values, scope controls and descriptions](docs/assets/screenshots/variables-detail.png)](docs/assets/screenshots/variables.png)
 
 ```text
 /set environment.scope directory
@@ -121,7 +138,7 @@ by default, the app asks at 90% estimated usage. the third decline compacts auto
 
 ## two shells in the workspace
 
-![independent side shell beside the conversation](docs/assets/screenshots/side-shell.png)
+![vim search and selection inside terminal scrollback](docs/assets/screenshots/terminal-copy.png)
 
 `alt+e` opens a centered scratch shell. `alt+s` opens an independent side shell above the footer. hidden panes retain their process, cwd and scrollback. `exit` restarts the pane, with a limit for repeated startup failures.
 
@@ -155,11 +172,40 @@ keys:
 
 an explicit `bindings` map replaces default leader sequences. direct action keys live under `keys`. quit hints are red, refresh blue, and cancel yellow; custom palettes can override them. [configuration reference](docs/configuration.md) · [complete default yaml](docs/config.example.yaml)
 
-| phosphor | rose-pine |
-| --- | --- |
-| [![phosphor welcome screen](docs/assets/screenshots/theme-phosphor.png)](docs/assets/screenshots/theme-phosphor.png) | [![rose-pine welcome screen](docs/assets/screenshots/theme-rose-pine.png)](docs/assets/screenshots/theme-rose-pine.png) |
+## choose your colors
 
-also included: **dracula**, **everforest**, **nord**, **catppuccin-mocha**, **tokyo**, **ember**, **ice** and **mono**. define your own palette in `themes`; turn animation off with `animations: false`. [custom themes](docs/themes.md) · [all theme screenshots](docs/screenshots.md#themes)
+the same workspace in every palette: markdown, command blocks, a private target, search highlights and a running shell. click a capture to inspect it at full size.
+
+| rose-pine | dracula |
+| --- | --- |
+| [![rose-pine workspace](docs/assets/screenshots/theme-rose-pine.png)](docs/assets/screenshots/theme-rose-pine.png) | [![dracula workspace](docs/assets/screenshots/theme-dracula.png)](docs/assets/screenshots/theme-dracula.png) |
+
+| everforest | nord |
+| --- | --- |
+| [![everforest workspace](docs/assets/screenshots/theme-everforest.png)](docs/assets/screenshots/theme-everforest.png) | [![nord workspace](docs/assets/screenshots/theme-nord.png)](docs/assets/screenshots/theme-nord.png) |
+
+| catppuccin-mocha | phosphor |
+| --- | --- |
+| [![catppuccin-mocha workspace](docs/assets/screenshots/theme-catppuccin-mocha.png)](docs/assets/screenshots/theme-catppuccin-mocha.png) | [![phosphor workspace](docs/assets/screenshots/theme-phosphor.png)](docs/assets/screenshots/theme-phosphor.png) |
+
+also included: **tokyo**, **ember**, **ice** and **mono**. [see all ten](docs/screenshots.md#themes).
+
+make your own palette in `~/.config/wraith/config.yaml`:
+
+```yaml
+theme: dusk
+themes:
+  dusk:
+    bg: '#15131d'
+    fg: '#eee8f5'
+    muted: '#9a8fa8'
+    accent: '#c5a5ff'
+    second: '#80dfce'
+    border: '#42384e'
+    warn: '#ffc28b'
+```
+
+custom palettes appear in `/theme`. cursor, selection, thinking, borders and search use the selected colors. `appearance.background: inherit` uses your terminal background; opacity, font and blur stay under terminal/compositor control. `animations: false` freezes the welcome mark. [theme fields and hint colors](docs/themes.md) · [terminal appearance](docs/terminals.md)
 
 ## models and sessions
 

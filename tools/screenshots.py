@@ -43,6 +43,9 @@ def drive(output, record):
         (workspace / "config/config.yaml").write_text(json.dumps(config))
         (workspace / "lab/headers.txt").write_text(HEADERS)
         binary = ROOT / "bin/wraith"
+        binary_hash = hashlib.sha256(binary.read_bytes()).hexdigest()
+        source_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+        source_dirty = bool(subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT))
         argv = [str(binary), "--config-dir", str(workspace / "config"),
                 "--data-dir", str(workspace / "data"), "--cache-dir", str(workspace / "cache")]
         pid, master = pty.fork()
@@ -100,8 +103,7 @@ def drive(output, record):
                 os.kill(pid, 15)
                 os.waitpid(pid, 0)
             os.close(master)
-        manifest = {"binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
-                    "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+        manifest = {"binary_sha256": binary_hash, "commit": source_commit, "source_dirty": source_dirty,
                     "columns": size.columns, "rows": size.lines,
                     "content": "scripted local fixtures; no provider credentials or network requests",
                     "capture": "pty recording" if record else "grim capture of ghostty running wraith",

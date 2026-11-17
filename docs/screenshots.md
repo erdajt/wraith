@@ -1,14 +1,20 @@
 # screenshots
 
-these are captures of the running app in ghostty on hyprland. each image is cropped to the complete terminal grid: 140 columns by 48 rows. host padding is removed. the app content is not redrawn, recolored or rearranged.
+these are captures of the running app in ghostty on hyprland. full captures are cropped to the complete terminal grid: 130 columns by 36 rows. host padding is removed. panel details are tighter crops of those same captures. click a detail to open its full frame. app content is not redrawn, recolored or rearranged.
 
-the `sample` provider returns fixed documentation content. the report command really runs local `printf` and `sleep`; it does not contact a target. model names, reasoning, tables and report text are fixtures. displayed token rates are fixture timings, not model benchmarks. no api credentials or existing conversations are used.
+the `sample` provider returns fixed documentation content. the report command really runs local `cat`, `sleep` and `printf`; it does not contact a target. model names, reasoning, tables and report text are fixtures. the fixture reports no token usage; zero counters are not model benchmarks. no api credentials or existing conversations are used.
+
+## workspace
+
+![conversation search beside a shell showing the saved response](assets/screenshots/workspace.png)
+
+the side shell stays above the footer. the conversation shows markdown, a suggested command, locally resolved values and matching search terms.
 
 ## conversation and thinking
 
 ![conversation with markdown, a command block, a table and a resolved private variable](assets/screenshots/conversation.png)
 
-markdown headings, emphasis, inline code, fenced commands and tables render inside the conversation. `lab.example` is resolved locally from a private variable.
+markdown headings, emphasis, inline code, fenced commands and tables render inside the conversation. `app.lab.test` is resolved locally from a private variable.
 
 <details>
 <summary>expanded thinking</summary>
@@ -19,11 +25,30 @@ markdown headings, emphasis, inline code, fenced commands and tables render insi
 
 </details>
 
+## search, selection and editing
+
+| conversation search | visual selection |
+| --- | --- |
+| [![highlighted matches](assets/screenshots/search.png)](assets/screenshots/search.png) | [![vim cursor and selection](assets/screenshots/selection.png)](assets/screenshots/selection.png) |
+
+normal-mode `/` searches the focused buffer. `n` and `N` move between results. `v` selects characters and `y` copies them; selecting part of a command yanks the whole command.
+
+[leader hints](assets/screenshots/leader.png) show configured sequences. [neovim](assets/screenshots/editor.png) edits the draft through the configured editor command. [fork confirmation](assets/screenshots/fork.png) protects the original chat before editing a previous user message.
+
 ## command approval and jobs
 
-![approval panel with command, reason and run, hide, edit, modify and reject choices](assets/screenshots/approval.png)
+[![approval panel with command, reason and run, hide, edit, modify and reject choices](assets/screenshots/approval-detail.png)](assets/screenshots/approval.png)
 
-approval identifies the working directory and background mode before execution.
+approval identifies the working directory and background mode before execution. [suggested blocks](assets/screenshots/blocks.png) remain separate from explicit requests.
+
+<details>
+<summary>ask the assistant to revise a command</summary>
+
+[![inline command revision](assets/screenshots/modify-detail.png)](assets/screenshots/modify.png)
+
+type a revision here or leave it empty to prepare the next prompt.
+
+</details>
 
 | current jobs | live output |
 | --- | --- |
@@ -33,7 +58,7 @@ these views come from the local sample job. `/jobs` opens status; enter opens ou
 
 ## terminal panes
 
-![side shell with a separate prompt and conversation](assets/screenshots/side-shell.png)
+![side shell with a separate prompt and conversation](assets/screenshots/workspace.png)
 
 `alt+s` opens the side shell. it stops above the app footer.
 
@@ -49,7 +74,7 @@ these views come from the local sample job. `/jobs` opens status; enter opens ou
 | --- | --- |
 | [![directory variables with comments and scope controls](assets/screenshots/variables.png)](assets/screenshots/variables.png) | [![pins with edit and remove bindings](assets/screenshots/pins.png)](assets/screenshots/pins.png) |
 
-[context usage](assets/screenshots/context.png) appears in the status line after `/context`; the header keeps an estimated usage meter visible throughout the session.
+[context settings](assets/screenshots/context-settings.png) cover capacity, reserves and compaction policy. [context usage](assets/screenshots/context.png) appears in the status line after `/context`; the header keeps an estimated usage meter visible throughout the session.
 
 ## settings and completion
 
@@ -71,7 +96,9 @@ these views come from the local sample job. `/jobs` opens status; enter opens ou
 
 ## themes
 
-click any image for its full-size capture. the welcome mark and wordmark are rendered by the app. animations are disabled for these stills; enabling them moves light across the mark and changes the eye glow without shifting its shape.
+every palette shows the same populated workspace. compare the background, borders, command syntax, search highlights, cursor and key hints. click any image for its full-size capture.
+
+the [welcome mark](assets/screenshots/welcome.png) is also rendered by the app. animations are disabled for these stills; enabling them moves light across the mark and changes the eye glow without shifting its shape. [custom palettes](themes.md) use the same rendering paths.
 
 | phosphor | rose-pine |
 | --- | --- |
@@ -95,23 +122,25 @@ click any image for its full-size capture. the welcome mark and wordmark are ren
 
 ## reproduce
 
-from a hyprland session with ghostty, grim, python 3, bash and go installed:
+from a hyprland session with ghostty, grim, python 3, bash, neovim, go and the JetBrainsMono Nerd Font Mono font installed:
 
 ```sh
-python3 tools/screenshots.py
+python3 tools/screenshots.py --output /tmp/wraith-showcase
 ```
 
-the script builds wraith, opens one floating ghostty window, drives the app through these workflows and closes it. keep the window visible and avoid typing into it during capture. output goes to `/tmp/wraith-screenshots`; use `--output PATH` to change that. temporary config, sessions and shell working directories are isolated and removed afterward.
+the script builds wraith, opens one floating ghostty window, drives the app through these workflows and closes it. keep the window visible and avoid typing into it during capture. the example writes to `/tmp/wraith-showcase`; without `--output`, the default is `/tmp/wraith-screenshots`. temporary config, sessions and shell working directories are isolated and removed afterward.
 
-`--record` records pty output without accessing the desktop. it validates the interaction sequence, but does not create screenshots. `.ansi` files contain the accumulated terminal stream at each checkpoint.
+`--record` records pty output without accessing the desktop. it records the interaction sequence for inspection, but does not assert checkpoint contents or create screenshots. `.ansi` files contain the accumulated terminal stream at each checkpoint.
 
-[manifest.json](assets/screenshots/manifest.json) records the binary hash, source commit, fixture description, grid dimensions, raw capture hashes, cropped hashes and crop geometry. the committed pngs preserve the original pixels within that rectangle.
+[manifest.json](assets/screenshots/manifest.json) records the binary hash, source commit, fixture description, grid dimensions, dirty working-tree state, raw capture hashes, cropped hashes and crop geometry. source identity is recorded when the app starts, so later commits cannot relabel the capture. the commit identifies head; `source_dirty` records local edits at capture time. the binary hash identifies the build used. the committed pngs preserve the original pixels within their crop rectangles.
 
-for this capture's 1440 by 960 host window, the app grid starts at `(16, 16)` and measures 1400 by 912 pixels. reproduce its padding crop with:
+for this capture's 1440 by 900 host window with a 14 pt font, the app grid starts at `(0, 0)` and measures 1430 by 900 pixels. reproduce its padding crop with:
 
 ```sh
-magick /tmp/wraith-screenshots/conversation.png \
-  -crop 1400x912+16+16 +repage conversation.png
+magick /tmp/wraith-showcase/conversation.png \
+  -crop 1430x900+0+0 +repage conversation.png
 ```
+
+`grid_crop` applies to full frames. detail entries override it with `[x, y, width, height]` and name their source capture.
 
 measure again if font, scale, window dimensions or padding changes. do not apply a guessed crop that removes app rows. terminal fonts, palette inheritance and compositor transparency can change appearance on another setup.
