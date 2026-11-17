@@ -13,8 +13,8 @@ func TestThinkingKeepsMutedColorOnEveryWrappedLine(t *testing.T) {
 	a.showThinking = true
 	a.Session.Messages = []session.Message{{Role: "assistant", Thinking: strings.Repeat("reasoning ", 20) + "\nsecond paragraph"}}
 	p := a.Config.Palette()
-	for _, row := range a.transcript(25)[2:] {
-		if strings.TrimSpace(row.Text) == "" {
+	for _, row := range a.transcript(25)[1:] {
+		if row.Thinking || strings.TrimSpace(row.Text) == "" {
 			continue
 		}
 		screen := terminal.NewScreen(25, 1, 0)

@@ -19,26 +19,26 @@ func (a *App) menuFrame() []string {
 		height = min(a.height-4, 22)
 	}
 	if m.Reader != nil {
-		content := []string{bold(p.Accent, clean(m.Title)), ink(p.Muted, m.Reader.Buffer.Status()+" · / search · v select · y yank · r refresh · q close")}
+		content := []string{bold(p.Accent, clean(m.Title)), ink(p.Muted, m.Reader.Buffer.Status()+" · ") + keyHints("/ search · v select · y yank · r refresh · q close", p)}
 		if !m.Record.ShareOutput || m.Record.OutputHidden {
-			content[0] += ink(p.Second, " · "+a.Config.Keys["output_share"]+" share to agent")
+			content[0] += ink(p.Muted, " · ") + keyHints(a.Config.Keys["output_share"]+" share to agent", p)
 		}
 		if m.Record.Finished.IsZero() {
-			content[0] += ink(p.Warn, " · "+a.Config.Keys["job_cancel"]+" cancel")
+			content[0] += ink(p.Muted, " · ") + keyHints(a.Config.Keys["job_cancel"]+" cancel", p)
 		}
 		content = append(content, m.Reader.lines(w-2, height-3, p)...)
 		return frame(content, w, p, false, "", "")
 	}
-	content := []string{bold(p.Accent, clean(m.Title)), ink(p.Muted, "j/k move · / search · enter select · esc close"), ""}
+	content := []string{bold(p.Accent, clean(m.Title)), keyHints("j/k move · / search · enter select · esc close", p), ""}
 	if m.Kind == "context-input" {
-		content[1] = ink(p.Muted, "enter saves · ctrl+u clears · esc normal/cancel")
+		content[1] = keyHints("enter saves · ctrl+u clears · esc normal/cancel", p)
 		content[2] = ink(p.Second, "positive integer or auto · "+clean(a.Config.Provider+" / "+a.Session.Model))
 	}
 	if m.Kind == "settings" || m.Kind == "value" {
-		content[1] = ink(p.Muted, "j/k move · / search · "+a.Config.Keys["setting_help"]+" explain · enter select")
+		content[1] = keyHints("j/k move · / search · "+a.Config.Keys["setting_help"]+" explain · enter select", p)
 	}
 	if m.Searching || m.Query != "" {
-		content[1] = ink(p.Second, "/"+clean(m.Query)+"▏ · enter keeps filter · esc resets")
+		content[1] = ink(p.Second, "/"+clean(m.Query)+"▏ · ") + keyHints("enter keeps filter · esc resets", p)
 	}
 
 	preview := ""
@@ -124,14 +124,14 @@ func (a *App) terminalFrame(index, w, h int) []string {
 	lines := pane.Screen.Lines(a.focus == fmt.Sprintf("terminal%d", index) && pane.Pending == "", fg, bg)
 	if pane.Reader != nil {
 		lines = pane.Reader.lines(w-2, h-3, p)
-		hint := pane.Reader.Buffer.Status() + " · / search · v select · y yank · r refresh · i shell"
+		hint := "/ search · v select · y yank · r refresh · i shell"
 		if !a.Config.Execution.AutoShare {
 			hint = a.Config.Keys["output_share"] + " share to agent · " + hint
 		}
-		lines = append(lines, ink(p.Muted, hint))
+		lines = append(lines, ink(p.Muted, pane.Reader.Buffer.Status()+" · ")+keyHints(hint, p))
 	}
 	if pane.Pending != "" {
-		lines[len(lines)-2] = ink(p.Warn, " enter inserts · r tracked run · e edits · esc dismisses")
+		lines[len(lines)-2] = " " + keyHints("enter inserts · r tracked run · e edits · esc dismisses", p)
 		lines[len(lines)-1] = ink(p.Accent, ansi.Truncate(pane.Pending, w-2, "…"))
 	}
 	if pane.Err != "" {

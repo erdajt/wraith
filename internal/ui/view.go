@@ -11,7 +11,7 @@ import (
 func (a *App) View() string {
 	p := a.Config.Palette()
 	if a.width < 50 || a.height < 18 {
-		return "wraith needs a terminal at least 50 columns × 18 rows.\nresize the terminal, or press ctrl+q to exit."
+		return "wraith needs a terminal at least 50 columns × 18 rows.\nresize the terminal · " + keyHints(a.Config.Keys["quit"]+" quit", p)
 	}
 	w := a.width
 	mainW := a.mainWidth()
@@ -84,7 +84,7 @@ func (a *App) View() string {
 	inputY := 3 + bodyH
 	label := " prompt "
 	if a.focus == "chat" {
-		label = " prompt · tab to focus "
+		label = " prompt · " + keyHints(a.Config.Keys["focus"]+" focus", p) + " "
 	}
 	rows[inputY] = base(p, ink(p.Border, "╭─"+label+strings.Repeat("─", max(0, mainW-ansi.StringWidth(label)-3))+"╮"), mainW) + base(p, "", w-mainW)
 	lines := a.promptLines(mainW - 4)
@@ -103,10 +103,10 @@ func (a *App) View() string {
 	}
 	if a.busy {
 		frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
-		status = frames[a.frame%len(frames)] + " " + a.phase + " · " + a.Config.Keys["cancel"] + " cancels"
+		status = frames[a.frame%len(frames)] + " " + a.phase + " · " + keyHints(a.Config.Keys["cancel"]+" cancels", p)
 	}
 	rows[a.height-3] = base(p, "  "+ink(p.Accent, ansi.Truncate(status, w-4, "…")), w)
-	footer := "  " + a.Config.Keys["send"] + " send  ·  " + a.Config.Keys["focus"] + " focus  ·  : commands  ·  /help  ·  " + a.Config.Keys["quit"] + " quit"
+	footer := "  " + keyHints(a.Config.Keys["send"]+" send · "+a.Config.Keys["focus"]+" focus · : commands · /help help · "+a.Config.Keys["quit"]+" quit", p)
 	if a.commandMode {
 		footer = "  :" + clean(a.command) + "▏"
 	} else if a.searchMode {

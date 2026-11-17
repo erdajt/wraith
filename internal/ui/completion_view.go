@@ -33,6 +33,6 @@ func (a *App) completionFrame() []string {
 			content = append(content, ink(p.FG, "  "+label))
 		}
 	}
-	content = append(content, ink(p.Muted, "↑/↓ move · enter choose · esc close"))
+	content = append(content, keyHints("↑/↓ move · enter choose · esc close", p))
 	return frame(content, w, p, false, "", "")
 }

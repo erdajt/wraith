@@ -28,7 +28,7 @@ func (a *App) transcript(w int) []rendered {
 		}
 	}
 	if a.Session.Summary != "" {
-		add(ink(p.Second, "◌ compacted memory · /archives restores originals"), -1)
+		add(ink(p.Second, "◌ compacted memory · ")+keyHints("/archives restores originals", p), -1)
 		add(a.expandStyled(ink(p.Muted, clean(a.Session.Summary))), -1)
 		add("", -1)
 	}
@@ -63,8 +63,8 @@ func (a *App) transcript(w int) []rendered {
 				arrow = "▾"
 			}
 			start := len(out)
-			for _, line := range strings.Split(ansi.Hardwrap(arrow+" thinking · "+a.Config.Keys["thinking_toggle"]+" or click to toggle", w, true), "\n") {
-				add(ink(p.Muted, line), i)
+			for _, line := range strings.Split(ansi.Hardwrap(ink(p.Muted, arrow+" thinking · ")+keyHints(a.Config.Keys["thinking_toggle"]+" or click to toggle", p), w, true), "\n") {
+				add(ink(p.Accent, line), i)
 			}
 			for j := start; j < len(out); j++ {
 				out[j].Thinking = true

@@ -78,11 +78,11 @@ func (a *App) approvalFrame() []string {
 			content = append(content, ink(p.FG, "  "+label))
 		}
 	}
-	hint := "j/k or ↑/↓ · enter selects · esc rejects"
+	hint := keyHints("j/k or ↑/↓ · enter selects · esc rejects", p)
 	if m.Searching || m.Query != "" {
-		hint = "/" + clean(m.Query) + "▏ · enter selects · esc resets"
+		hint = ink(p.Second, "/"+clean(m.Query)+"▏ · ") + keyHints("enter selects · esc resets", p)
 	}
-	content = append(content, ink(p.Muted, ansi.Truncate(hint, inner, "…")))
+	content = append(content, ansi.Truncate(hint, inner, "…"))
 	for i := range content {
 		content[i] = " " + fit(content[i], inner) + " "
 	}
