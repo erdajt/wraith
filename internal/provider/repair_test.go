@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/erdajt/wraith/internal/config"
+	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/variables"
@@ -90,5 +91,49 @@ func TestRepairDoesNotRetryTransportFailuresOrOverflow(t *testing.T) {
 		if err == nil || calls != 1 {
 			t.Fatalf("unexpected retry: calls=%d err=%v", calls, err)
 		}
+	}
+}
+
+func TestRepairCorrectsOutputQueryChannelOnNextAttempt(t *testing.T) {
+	t.Parallel()
+	client := New(config.Default())
+	id := "0123456789abcdef01234567"
+	query := `{"tool":"output","id":"` + id + `","pattern":"open","regex":true,"from":1,"limit":40}`
+	calls, retries := 0, 0
+	client.HTTP.Transport = transport(func(r *http.Request) (*http.Response, error) {
+		calls++
+		var req ollama.Request
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatal(err)
+		}
+		channel := "wraith-run"
+		if calls > 1 {
+			feedback := req.Messages[len(req.Messages)-1].Content
+			for _, want := range []string{"output query sent as a command request", "fenced wraith-tool block instead of wraith-run", "one-based output line number"} {
+				if !strings.Contains(feedback, want) {
+					t.Fatalf("repair omitted %q", want)
+				}
+			}
+			channel = "wraith-tool"
+		}
+		data, err := json.Marshal(ollama.Response{Done: true, Message: session.Message{Role: "assistant", Content: "```" + channel + "\n" + query + "\n```"}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return response(string(data)), nil
+	})
+	result, err := client.ChatWithRepair(t.Context(), ollama.Request{RunIDs: map[string]bool{id: true}}, func(update StreamUpdate) {
+		if update.Retry > 0 {
+			retries++
+			if strings.Contains(update.Problem, "wraith-") {
+				t.Fatal("retry status exposed internal protocol")
+			}
+		}
+	})
+	if err != nil || calls != 2 || retries != 1 || result.Message.Interrupted {
+		t.Fatalf("query did not recover: calls=%d retries=%d err=%v", calls, retries, err)
+	}
+	if request, err := contextual.RequestedTool(result.Message.Content); err != nil || request == nil || request.From != 1 {
+		t.Fatalf("corrected output request lost: %+v, %v", request, err)
 	}
 }
