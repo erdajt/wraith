@@ -22,6 +22,9 @@ func TestAgentApprovesRunsAndContinuesWithEvidence(t *testing.T) {
 		calls++
 		content := "```wraith-run\n{\"command\":\"printf evidence\",\"reason\":\"inspect local output\"}\n```"
 		if calls == 2 {
+			content = "waiting for the background result"
+		}
+		if calls == 3 {
 			if !strings.Contains(req.Messages[len(req.Messages)-1].Content, "output:\nevidence") {
 				t.Error("command output not supplied")
 			}
@@ -37,8 +40,8 @@ func TestAgentApprovesRunsAndContinuesWithEvidence(t *testing.T) {
 		t.Fatal("model request did not stop for approval")
 	}
 	a.approvalAction("run")
-	drain(t, a)
-	if calls != 2 || a.Session.Messages[len(a.Session.Messages)-1].Content != "verified the command output" {
+	finishJobs(t, a)
+	if calls != 3 || a.Session.Messages[len(a.Session.Messages)-1].Content != "verified the command output" {
 		t.Fatalf("continuation failed: %s", a.notice)
 	}
 }
@@ -129,8 +132,8 @@ func TestOrdinaryApprovedRunFollowsExecutionMode(t *testing.T) {
 			})
 			a.approve(proposal{Command: "printf result", Source: "block"})
 			a.runApproved()
-			drain(t, a)
-			if mode == "agent" && (calls != 1 || len(a.Session.SharedRuns) != 1) {
+			finishJobs(t, a)
+			if mode == "agent" && (calls != 2 || len(a.Session.SharedRuns) != 1) {
 				t.Fatal("agent mode did not observe ordinary run")
 			}
 			if mode == "blocks" && (calls != 0 || len(a.Session.Messages) != 0) {

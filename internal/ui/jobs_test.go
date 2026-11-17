@@ -14,6 +14,7 @@ func TestRunningJobIsBrowsableAndCancellable(t *testing.T) {
 	a := fixture(t)
 	a.approve(proposal{Command: "printf live; sleep 30"})
 	a.runApproved()
+	drain(t, a)
 	a.runCommand("jobs")
 	if a.popup == nil || a.popup.Kind != "jobs" || len(a.popup.Items) != 1 {
 		t.Fatalf("jobs unavailable during execution: %s", a.notice)
@@ -23,7 +24,7 @@ func TestRunningJobIsBrowsableAndCancellable(t *testing.T) {
 		t.Fatal("live reader did not open")
 	}
 	a.readerKey(key(a.Config.Keys["job_cancel"]))
-	drain(t, a)
+	finishJobs(t, a)
 	if a.activeRun.Status != "cancelled" {
 		t.Fatalf("job did not cancel: %+v", a.activeRun)
 	}

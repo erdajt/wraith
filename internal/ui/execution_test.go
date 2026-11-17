@@ -21,10 +21,10 @@ func TestBlockNeedsApprovalAndSavesOutput(t *testing.T) {
 		t.Fatal("block executed before approval")
 	}
 	a.blockAction("run")
-	if !a.executing {
+	if len(a.jobs.Snapshot()) != 1 {
 		t.Fatal("run asked for a second approval")
 	}
-	drain(t, a)
+	finishJobs(t, a)
 	records, err := a.history().List()
 	if err != nil || len(records) != 1 {
 		t.Fatalf("history: %v", err)
@@ -67,7 +67,7 @@ func TestApprovalFreezesPrivateArgumentsAndEnvironment(t *testing.T) {
 	}
 	a.environmentCommand("set TARGET=changed.example", false)
 	a.runApproved()
-	drain(t, a)
+	finishJobs(t, a)
 	if a.activeRun.Output != "private.example|private.example" {
 		t.Fatalf("approval changed before execution: %q", a.activeRun.Output)
 	}
@@ -76,6 +76,7 @@ func TestApprovalFreezesPrivateArgumentsAndEnvironment(t *testing.T) {
 func TestSavedApprovalEditRunsWithoutSecondPrompt(t *testing.T) {
 	a := fixture(t)
 	a.approve(proposal{Command: "printf original", Language: "sh", Source: "model"})
+	a.Config.Execution.Mode = "blocks"
 	f, err := editor.Prepare(a.Paths.Cache, ".sh", a.proposal.Resolved)
 	if err != nil {
 		t.Fatal(err)
@@ -84,11 +85,11 @@ func TestSavedApprovalEditRunsWithoutSecondPrompt(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.finishEdit(editedMsg{Kind: "run", Language: "sh", File: f})
-	if !a.executing {
+	if len(a.jobs.Snapshot()) != 1 {
 		t.Fatalf("saved approval did not execute: %s", a.notice)
 	}
-	drain(t, a)
-	if a.activeRun.Output != "edited" || a.activeRun.Source != "model-edited" {
+	finishJobs(t, a)
+	if a.activeRun.Output != "edited" || a.activeRun.Source != "model-edited" || !a.activeRun.Background || !a.activeRun.Agent {
 		t.Fatalf("edit lost: %+v", a.activeRun)
 	}
 }
@@ -111,8 +112,8 @@ func TestApprovalRetainsDirectoryShellAndSharingPolicy(t *testing.T) {
 	a.Config.Shell = []string{"/missing-shell"}
 	a.Config.Execution.Mode = "agent"
 	a.runApproved()
-	drain(t, a)
-	if strings.TrimSpace(a.activeRun.Output) != directory || a.activeRun.Agent || a.activeRun.ShareOutput {
+	finishJobs(t, a)
+	if strings.TrimSpace(a.activeRun.Output) != directory || a.activeRun.Agent || a.activeRun.ShareOutput || a.activeRun.Background {
 		t.Fatalf("approval changed: %+v", a.activeRun)
 	}
 }
@@ -161,8 +162,8 @@ func TestManualRunContinuesExistingConversation(t *testing.T) {
 	})
 	a.approve(proposal{Command: "printf result", Source: "block"})
 	a.runApproved()
-	drain(t, a)
-	if calls != 1 {
+	finishJobs(t, a)
+	if calls != 2 {
 		t.Fatalf("continuations: %d", calls)
 	}
 }

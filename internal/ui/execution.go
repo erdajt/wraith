@@ -89,14 +89,11 @@ func (a *App) runApproved() tea.Cmd {
 	if p.Continue {
 		a.agentSteps++
 	}
-	a.cancel = func() { a.jobs.Cancel(record.ID) }
-	a.busy, a.executing = true, true
-	a.phase = "running command"
 	record.Status = "starting"
 	a.activeRun = record
-	a.showRun(record, "")
-	if p.Background {
-		a.busy, a.executing, a.cancel = false, false, nil
+	if record.Background {
+		a.popup = nil
+		a.notice = "background job " + record.ID + " · /jobs shows live output"
 		if record.Agent {
 			candidate := a.Session.Clone()
 			candidate.Messages = append(candidate.Messages, session.Evidence{ID: record.ID, Kind: "started", Command: a.Variables.Redact(record.Command), Hidden: !record.ShareOutput}.Message())
@@ -105,11 +102,16 @@ func (a *App) runApproved() tea.Cmd {
 				return nil
 			}
 			a.Session = candidate
-			if a.Prompt.String() == "" {
+			if a.canContinue() {
 				return a.continueEvidence()
 			}
 		}
+		return nil
 	}
+	a.cancel = func() { a.jobs.Cancel(record.ID) }
+	a.busy, a.executing = true, true
+	a.phase = "running command"
+	a.showRun(record, "")
 	return nil
 }
 
@@ -124,9 +126,9 @@ func (a *App) syncJobs() tea.Cmd {
 			if a.popup != nil && a.popup.Kind == "run-output" && a.popup.Record.ID == r.ID {
 				a.showRun(r, r.Output)
 			}
-			if r.ID == a.activeRun.ID && a.executing {
+			if r.ID == a.activeRun.ID {
 				a.activeRun = r
-				if !r.Finished.IsZero() {
+				if a.executing && !r.Finished.IsZero() {
 					a.busy, a.executing, a.cancel = false, false, nil
 					a.notice = fmt.Sprintf("command %s · exit %d · /history", r.Status, r.ExitCode)
 				}
@@ -229,6 +231,7 @@ func (a *App) prepareProposal(p *proposal) error {
 		return err
 	}
 	p.Resolved, p.Variables = resolved, a.Variables
+	p.Background = p.Background || a.Config.Execution.Mode == "agent"
 	if a.generation == "" {
 		a.generation = session.ID()
 	}

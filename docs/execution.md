@@ -29,7 +29,9 @@ saving a shell block stages its actual text in the scratch shell. enter inserts 
 
 tracked jobs use the configured shell executable with `-c` in `terminal.directory`, or the launch directory when empty. each job starts a fresh shell with the active private bindings. use a scratch pane for persistent interactive state or programs needing a tty.
 
-an agent may request a background job, labelled in approval. after approval it receives a start receipt and can keep working. `/jobs` or `<leader>j` shows current-session jobs; `/history` shows saved command records. open a job to view live output, status and exit code. `ctrl+x` cancels the selected job, configurable as `keys.job_cancel`.
+agent mode runs every approved command as a tracked background job, even if the model omits `background` or sets it to false. approval shows this before execution. launching keeps the chat and draft available; it does not open an output popup. the agent receives a job id and can poll its status or search bounded output while it runs. blocks mode retains its existing foreground behavior unless background execution is explicitly requested.
+
+`/jobs` or `<leader>j` shows current-session jobs; `/history` shows saved command records. open a job to view live output, status and exit code. `ctrl+x` cancels the selected job, configurable as `keys.job_cancel`. completion evidence waits while you type, edit or select output. it stays in its original conversation and is delivered once.
 
 output readers support vim motions, counts, `/` search, visual selection and yanks. selection freezes the visible snapshot so incoming output does not move it. `r` refreshes it. live views show the recent tail; completed views include the retained prefix and tail with gap offsets.
 
