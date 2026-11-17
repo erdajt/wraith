@@ -3,6 +3,8 @@ package ui
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -80,5 +82,68 @@ func finishJobs(t *testing.T, a *App) {
 		case <-deadline:
 			t.Fatal("jobs did not finish")
 		}
+	}
+}
+
+func TestBackgroundLaunchFailuresKeepChatAndHistoryAvailable(t *testing.T) {
+	for _, failure := range []string{"process", "receipt"} {
+		t.Run(failure, func(t *testing.T) {
+			a := fixture(t)
+			a.Prompt.Set("retain draft")
+			if failure == "process" {
+				a.Config.Shell = []string{filepath.Join(t.TempDir(), "missing-shell")}
+			}
+			a.approve(proposal{Command: "printf evidence", Continue: true})
+			id := a.proposal.launch.ID
+			if failure == "receipt" {
+				a.Store.Root = filepath.Join(t.TempDir(), "blocked")
+				if err := os.WriteFile(a.Store.Root, []byte("blocked"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			a.runApproved()
+			if a.busy || a.executing || a.popup != nil || a.Prompt.String() != "retain draft" {
+				t.Fatal("launch failure took over chat")
+			}
+			if failure == "receipt" && !strings.Contains(a.notice, "receipt save failed") {
+				t.Fatalf("receipt failure not reported: %s", a.notice)
+			}
+			a.runApproved()
+			finishJobs(t, a)
+			records, err := a.history().List()
+			if err != nil || len(records) != 1 || records[0].ID != id || records[0].Finished.IsZero() {
+				t.Fatalf("job lost or relaunched: %+v %v", records, err)
+			}
+			r, err := a.jobRecord(id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if failure == "process" && (r.Status != "failed" || r.Error == "") {
+				t.Fatalf("startup failure not retained: %+v", r)
+			}
+			if failure == "receipt" && (r.Status != "completed" || r.Output != "evidence") {
+				t.Fatalf("receipt failure lost command output: %+v", r)
+			}
+		})
+	}
+}
+
+func TestBackgroundReceiptRespectsInteractiveBarriers(t *testing.T) {
+	for _, barrier := range []string{"editor", "shell", "selection"} {
+		t.Run(barrier, func(t *testing.T) {
+			a := fixture(t)
+			a.editing = barrier == "editor"
+			if barrier == "shell" {
+				a.focus = "terminal0"
+			}
+			if barrier == "selection" {
+				a.visualMode = "visual"
+			}
+			a.approve(proposal{Command: "sleep 30", Continue: true})
+			a.runApproved()
+			if a.busy || a.executing || a.popup != nil || len(a.Session.Messages) != 1 {
+				t.Fatal("background receipt interrupted an interactive action")
+			}
+		})
 	}
 }
