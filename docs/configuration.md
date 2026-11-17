@@ -2,7 +2,7 @@
 
 settings live in `~/.config/wraith/config.yaml`, or `$XDG_CONFIG_HOME/wraith/config.yaml`. the first launch writes defaults. legacy `config.json` is migrated when YAML does not yet exist; the original remains available. omitted values receive defaults, while unknown fields and invalid values are rejected.
 
-`/settings` groups values into model, execution, context, appearance, terminals, and keys/editor categories. `/settings.appearance` opens one directly. press `?` on a setting for its detailed explanation, enter to choose a value, or `e` to edit the complete file. invalid saved edits remain in a recovery file and do not replace the active configuration.
+`/settings` groups values into model, environment, execution, context, appearance, terminals, and keys/editor categories. `/settings.appearance` opens one directly. press `?` on a setting for its detailed explanation, enter to choose a value, or `e` to edit the complete file. invalid saved edits remain in a recovery file and do not replace the active configuration.
 
 ```text
 /set editor ["nvim"]
@@ -19,6 +19,7 @@ context accepts any positive integer representable by the binary. model architec
 
 | setting | default | effect |
 | --- | --- | --- |
+| `version` | `1` | configuration schema version; keep the supported version |
 | `provider` | `ollama` | active backend profile |
 | `providers` | six named profiles | endpoints, credentials, cli commands and model options; [details](providers.md) |
 | `host` | `http://127.0.0.1:11434` | fallback Ollama endpoint |
@@ -46,7 +47,7 @@ context accepts any positive integer representable by the binary. model architec
 | `theme` / `themes` | `phosphor` / empty | built-in or custom palette; [details](themes.md) |
 | `appearance.background` | `theme` | theme background or host-terminal inheritance |
 | `appearance.mouse` / `appearance.thinking` | `true` / `false` | mouse events and initial reasoning visibility |
-| `animations` | `true` | activity indicators, welcome eye glow and drifting wisps |
+| `animations` | `true` | activity indicators, welcome eye glow and moving light across the mark |
 | `clipboard` | `[wl-copy]` | clipboard executable and arguments; empty disables external copying |
 | `leader` | `space` | prefix for command hints |
 | `bindings` / `keys` | see example | leader sequences and direct action bindings |
@@ -77,7 +78,7 @@ keys:
 | --- | --- |
 | config: `config.yaml`, `instructions.md` | settings and global user preferences |
 | data: `sessions/`, `archives/` | compressed active sessions and immutable originals |
-| config: `variables/` | directory/global bindings and retained-value redaction journal |
+| config: `variables/` | conversation/directory/global bindings and retained-value redaction journal |
 | data: `commands/` | compressed tracked command metadata/output and live recovery journals |
 | data: `input/` | bounded compressed prompt/command history per directory |
 | data: `snippets/`, `exports/` | edited source and markdown exports |
@@ -91,3 +92,37 @@ roots default to `~/.config/wraith`, `~/.local/share/wraith` and `~/.cache/wrait
 Wraith does not reserve VRAM or control GPU offload. for Ollama, inspect `ollama ps` during generation and adjust model/context size to leave space for desktop work. cloud requests use the selected account and endpoint; CLI backends use their installed authentication.
 
 [private variables](private-variables.md) documents scoped bindings, comments, editor management and provider redaction. agent mode shares tracked evidence by default unless explicitly hidden; `execution.auto_share` controls blocks and scratch snapshots.
+
+## changing values
+
+`/set` accepts an existing key and either plain text or a json value. use json arrays for executables and json objects when replacing a whole map. it validates the candidate before saving. use the config editor to add a new provider or theme rather than trying to address a nonexistent nested key.
+
+```text
+/set theme nord
+/set appearance.thinking true
+/set execution.max_jobs 2
+/set execution.command_timeout 5m
+/set terminal.split_width 0.45
+/set clipboard []
+```
+
+the active provider/model capacity is special: `/set context` saves a model-specific override, while the root `context` field in the file remains the automatic local budget. `/set model` changes the current model; `/model` also exposes the picker. use `/think` to choose only capabilities advertised by the current backend.
+
+settings are applied after validation. shell executable, initial directory, environment and scrollback changes take effect when a pane starts; restart an existing pane to apply them. approved jobs retain the launch settings shown at approval. changing a default does not rewrite past sessions or migrate variable files.
+
+## bounds
+
+| field | accepted values |
+| --- | --- |
+| `context`, `predict` | positive integers |
+| `threads` | 0–512; zero leaves inference threads to ollama |
+| `temperature` | 0–2 |
+| `terminal.overlay_width` | 0.3–0.95 |
+| `terminal.overlay_height` | 0.3–0.95 |
+| `terminal.split_width` | 0.25–0.7 |
+| `terminal.scrollback` | 0–100000 |
+| `terminal.background`, `terminal.foreground` | `inherit`, `theme` or quoted `#rrggbb` |
+| `appearance.background` | `theme` or `inherit` |
+| `leader` | `space` or one character |
+
+execution bounds are in [execution](execution.md#limits-and-recovery). provider-specific fields are in [providers](providers.md). every default action and leader sequence is listed in [keybindings](keybindings.md) and [config.example.yaml](config.example.yaml).

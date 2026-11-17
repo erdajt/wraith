@@ -111,7 +111,7 @@ def drive(output, record):
             command("review the certificate on our lab service and list what to record")
             pump(1)
             capture("conversation", "sample response; markdown, table and locally resolved private variable")
-            send("\tza")
+            send("\t]za")
             capture("thinking", "expanded sample reasoning in the conversation")
             send("za\t")
             command("run the local report")
@@ -152,7 +152,8 @@ def drive(output, record):
             send("\x1be", 0.7)
             send("printf 'scratch shell\\nready for edited commands\\n'\r")
             capture("scratch-shell", "centered bash pane")
-            send("\x1b\x1b\x1b")
+            for _ in range(3):
+                send("\x1b", 0.15)
             capture("terminal-copy", "terminal copy mode with vim cursor")
             send("i")
             send("\x1be")
