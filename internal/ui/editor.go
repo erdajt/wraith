@@ -124,7 +124,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 	}
 	switch m.Kind {
 	case "environment":
-		_, err = a.variableStore().Save(a.Directory, a.envScope(), a.envRevision, text)
+		_, err = a.envEdit.Store.Save(a.Directory, a.envEdit.Scope, a.envEdit.Revision, text)
 		if err != nil {
 			a.notice = err.Error()
 			return nil
@@ -134,11 +134,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 			return nil
 		}
 		applied = true
-		prefix := ""
-		if a.envGlobal {
-			prefix = "global"
-		}
-		return a.environmentCommand(prefix, true)
+		return a.environmentCommand(string(a.envEdit.Scope), true)
 	case "prompt":
 		a.Prompt.Set(text)
 		a.focus = "prompt"

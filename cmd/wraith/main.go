@@ -152,7 +152,7 @@ func run(args []string, out io.Writer) error {
 					return fmt.Errorf("export privacy: %w", e)
 				}
 			}
-			state, e := (variables.Store{Root: filepath.Join(p.Config, "variables")}).Load(directory, variables.Directory)
+			state, e := (variables.Store{Root: filepath.Join(p.Config, "variables"), Conversation: v.ID}).Load(directory, variables.Directory)
 			if e != nil {
 				return fmt.Errorf("export privacy: %w", e)
 			}

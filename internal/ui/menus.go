@@ -133,6 +133,8 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 			return a.runCommand(choice.Value)
 		case "environment":
 			a.variableDetails(choice.Value)
+		case "env-scope":
+			return a.environmentCommand(choice.Value, false)
 		case "env-global":
 			pending := a.envPending
 			a.envPending = ""

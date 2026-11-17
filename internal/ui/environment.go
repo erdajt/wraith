@@ -10,10 +10,12 @@ import (
 )
 
 func (a *App) variableStore() variables.Store {
-	return variables.Store{Root: filepath.Join(a.Paths.Config, "variables")}
+	return variables.Store{Root: filepath.Join(a.Paths.Config, "variables"), Conversation: a.Session.ID}
 }
 
 func (a *App) refreshVariables() error {
+	a.Variables = variables.Snapshot{}
+	a.variableInventory = ""
 	state, err := a.variableStore().Load(a.Directory, variables.Directory)
 	if err != nil {
 		return err
@@ -35,15 +37,16 @@ func (a *App) chatInstructions() string {
 }
 
 func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
-	scope := variables.Directory
-	global := arg == "global" || strings.HasPrefix(arg, "global ")
-	if global {
-		scope = variables.Global
-		arg = strings.TrimSpace(strings.TrimPrefix(arg, "global"))
+	scope := variables.Scope(a.Config.Environment.Scope)
+	prefix, rest, _ := strings.Cut(arg, " ")
+	switch variables.Scope(prefix) {
+	case variables.Conversation, variables.Directory, variables.Global:
+		scope, arg = variables.Scope(prefix), strings.TrimSpace(rest)
 	}
+	global := scope == variables.Global
 	if global && arg != "" && !confirmed {
 		a.envPending = "global " + arg
-		a.popup = &menu{Kind: "env-global", Title: "global variables apply in every directory", Items: []item{{"cancel", "cancel", "keep directory scope"}, {"continue", "continue", "names and descriptions become available in all chats"}}}
+		a.popup = &menu{Kind: "env-global", Title: "global variables apply in every directory", Items: []item{{"cancel", "cancel", "leave variables unchanged"}, {"continue", "continue", "names and descriptions become available in all chats"}}}
 		return nil
 	}
 	if arg == "edit" || arg == "new" {
@@ -52,7 +55,14 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 			a.notice = err.Error()
 			return nil
 		}
-		a.envRevision, a.envGlobal = state.Revision, global
+		if scope == variables.Conversation {
+			if err := a.Store.Save(a.Session); err != nil {
+				a.notice = err.Error()
+				return nil
+			}
+		}
+		a.envEdit.Store, a.envEdit.Scope, a.envEdit.Revision = a.variableStore(), scope, state.Revision
+		a.envScope = scope
 		return a.edit("environment", "", state.Text, -1)
 	}
 	state, err := a.variableStore().Load(a.Directory, scope)
@@ -77,7 +87,12 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 			text += "\n" + input + "\n"
 		}
 		if e == nil {
-			_, e = a.variableStore().Save(a.Directory, scope, state.Revision, text)
+			if scope == variables.Conversation {
+				e = a.Store.Save(a.Session)
+			}
+			if e == nil {
+				_, e = a.variableStore().Save(a.Directory, scope, state.Revision, text)
+			}
 		}
 		if e == nil {
 			e = a.refreshVariables()
@@ -90,18 +105,18 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 		if operation == "unset" {
 			notice = "removed private variable " + name
 			if _, err := a.Variables.Validate("wraith::"+name, true); !global && err == nil {
-				notice += " · global binding is now active"
+				if scope == variables.Directory {
+					notice += " · global binding is now active"
+				} else {
+					notice += " · inherited binding is now active"
+				}
 			}
 		}
 		index := 0
 		if a.popup != nil && a.popup.Kind == "environment" {
 			index = a.popup.Index
 		}
-		scope := ""
-		if global {
-			scope = "global"
-		}
-		a.environmentCommand(scope, true)
+		a.environmentCommand(string(scope), true)
 		if a.popup != nil && a.popup.Kind == "environment" {
 			a.popup.Index = max(0, min(index, len(a.popup.Items)-1))
 		}
@@ -109,7 +124,7 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 		return nil
 	}
 	if arg != "" {
-		a.notice = "usage: /env · /env edit · /env set NAME=value · /env unset NAME · /env global"
+		a.notice = "usage: /env · /env edit · /env set NAME=value · /env unset NAME · /env conversation|directory|global"
 		return nil
 	}
 	var items []item
@@ -117,24 +132,23 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 		items = append(items, item{Label: entry.Name + "=" + entry.Value, Value: entry.Name, Detail: entry.Description})
 	}
 	label := string(scope)
-	a.envGlobal = global
+	a.envScope = scope
 	a.popup = &menu{Kind: "environment", Title: "private variables · " + label + " · " + a.Config.Keys["env_new"] + "/" + a.Config.Keys["env_edit"] + " editor · " + a.Config.Keys["env_scope"] + " scope · " + a.Config.Keys["env_remove"] + " remove", Items: items}
 	return nil
 }
 
 func (a *App) environmentKey(k tea.KeyMsg) (tea.Cmd, bool) {
-	prefix := ""
-	if a.envGlobal {
-		prefix = "global "
-	}
+	prefix := string(a.envScope) + " "
 	switch k.String() {
 	case a.Config.Keys["env_edit"], a.Config.Keys["env_new"]:
 		return a.environmentCommand(prefix+"edit", false), true
 	case a.Config.Keys["env_scope"]:
-		if a.envGlobal {
-			return a.environmentCommand("", false), true
-		}
-		return a.environmentCommand("global edit", false), true
+		a.popup = &menu{Kind: "env-scope", Title: "manage variable scope", Items: []item{
+			{"conversation", "conversation", "only this saved conversation"},
+			{"directory", "directory", "chats in this working directory"},
+			{"global", "global", "all conversations and directories"},
+		}}
+		return nil, true
 	case a.Config.Keys["env_remove"]:
 		if len(a.popup.Items) > 0 {
 			name := a.popup.Items[a.popup.Index].Value
@@ -146,7 +160,7 @@ func (a *App) environmentKey(k tea.KeyMsg) (tea.Cmd, bool) {
 }
 
 func (a *App) variableDetails(name string) {
-	state, err := a.variableStore().Load(a.Directory, a.envScope())
+	state, err := a.variableStore().Load(a.Directory, a.envScope)
 	if err != nil {
 		a.notice = err.Error()
 		return
@@ -157,11 +171,4 @@ func (a *App) variableDetails(name string) {
 			return
 		}
 	}
-}
-
-func (a *App) envScope() variables.Scope {
-	if a.envGlobal {
-		return variables.Global
-	}
-	return variables.Directory
 }

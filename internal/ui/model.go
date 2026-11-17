@@ -83,9 +83,14 @@ type terminalMsg struct {
 }
 
 type App struct {
-	Variables                                  variables.Snapshot
-	variableInventory, envRevision, envPending string
-	envGlobal                                  bool
+	Variables                     variables.Snapshot
+	variableInventory, envPending string
+	envScope                      variables.Scope
+	envEdit                       struct {
+		Store    variables.Store
+		Scope    variables.Scope
+		Revision string
+	}
 
 	streamStopped bool
 	streamSerial  uint64
