@@ -1,0 +1,186 @@
+{
+  "binary_sha256": "6e4ec91bcf21a01e760ebef4b76f9dc71a6acf07dbe74d2714603b1dca92f7d2",
+  "commit": "0b0fc8c06e2776800e212375d8bb806a30ec2b8b",
+  "columns": 140,
+  "rows": 48,
+  "content": "scripted local fixtures; no provider credentials or network requests",
+  "capture": "grim capture of ghostty running wraith",
+  "scenes": [
+    {
+      "file": "conversation.png",
+      "caption": "sample response; markdown, table and locally resolved private variable",
+      "source_sha256": "f14b3cfcd93e006d0a24fb0868ef3f27c7e853347e592017655e348ca2d219eb",
+      "sha256": "264e6827cb7c9e9236d9208da0d1c48defbba30e89c64e80d48b1621cbe021fd"
+    },
+    {
+      "file": "thinking.png",
+      "caption": "expanded sample reasoning in the conversation",
+      "source_sha256": "68c5627b45ccd2a391a144bca7c32be5e19369b9e7d512523a1f6930875b3b03",
+      "sha256": "fa100491f313f06e6c79d3de059e5aef7581e2137ad11be8b26550929900c528"
+    },
+    {
+      "file": "approval.png",
+      "caption": "approval for a real local printf and sleep command",
+      "source_sha256": "8817b8b4cdbf2124757f8ef20656f2233864c72ae518e8d7ad4389e4dc2c5ce6",
+      "sha256": "793710cc185b21ab7f6dafaef926cb3c6daf1833d6cac79ce1d318226781d989"
+    },
+    {
+      "file": "jobs.png",
+      "caption": "running background job with status and id",
+      "source_sha256": "cccf6ce0076c7b47120a03fa1520b89391267363cdb1104cd5fea9fcfbd71768",
+      "sha256": "2cd8c92fbc5cb6ed91564c6567e4134884eeddcf44ab2bfa1bd2bfdef7db5215"
+    },
+    {
+      "file": "output.png",
+      "caption": "live output from the local job",
+      "source_sha256": "2ac5c63c4bbc2ab73989000a8470fe9486f2b9d9124e00ce5e1a79cffec69354",
+      "sha256": "536ec5f2ce8eda14122d820902854d09ca06e1f8906ce8936de5fa7d8cdca842"
+    },
+    {
+      "file": "variables.png",
+      "caption": "directory variables with attached comments",
+      "source_sha256": "360ab39c1f553b239363f372f200a0307a38b40638405283952a0e06920ecbe2",
+      "sha256": "e9b53535921d09121fb0b79b041e8b6ee3e1b1a60e1834275133d88ed23e06dc"
+    },
+    {
+      "file": "pins.png",
+      "caption": "exact conversation facts",
+      "source_sha256": "e7e192b06cd3affe166c4e927c54b98169b2edc870a01ed7409bb101379ffb3a",
+      "sha256": "a402c6e3b630b4296929df4f2a242582df1924de22dff64fefb44f5aa768f969"
+    },
+    {
+      "file": "context.png",
+      "caption": "context usage and compaction policy",
+      "source_sha256": "51ffa89a9a4c02b11e8ee7d78e3f84c18a5a1c0ec26ab5539f380cdcc5045a7e",
+      "sha256": "7a826aaa58a29b4c7bbeaf2761ad32fbd47a046d657df600a6e55ec8d939c01e"
+    },
+    {
+      "file": "models.png",
+      "caption": "configured sample model catalog",
+      "source_sha256": "ff2ff7363478e512170d9dde30c328a4e627b11acd555226b066bb9d2047628b",
+      "sha256": "5c5d760d447f8d2efd3d5dc5e800279684959530b431f25bf803f4cbd167a210"
+    },
+    {
+      "file": "providers.png",
+      "caption": "configured provider picker",
+      "source_sha256": "151f467308ad6f6eaa43e4074fd241cb9d81498d68a475e5ca17377b9b47dbdc",
+      "sha256": "1cff519c74fcd9cd2d08606c2863e96612805b795437d99711111c7ee21fe437"
+    },
+    {
+      "file": "settings.png",
+      "caption": "settings categories",
+      "source_sha256": "7a9ccb26f3e2a06e34fd57544ecc694b8fa8565fb59c513eae42d51004fa47f7",
+      "sha256": "aa0b175995cb9f028eb8e325d417bef5ccfedb46b55e3aa719e7cdc46699b3f8"
+    },
+    {
+      "file": "appearance.png",
+      "caption": "appearance settings",
+      "source_sha256": "033721c0d7a99ed59645c5fe35aabe57562d617283586d86ee9577829588795f",
+      "sha256": "21c70f0773c42a24765610231e4eb12de871fee2fc20a8be59653844d0a2ffe0"
+    },
+    {
+      "file": "setting-help.png",
+      "caption": "per-setting explanation",
+      "source_sha256": "8cac79517aedb5237b1c1a354950218996d437935030f5976c1f70d3064b5646",
+      "sha256": "ccee3b4029935580f5d96e842595812a52566922b09ed0199fdc01af222e43a3"
+    },
+    {
+      "file": "completion.png",
+      "caption": "category completion after an exact command and dot",
+      "source_sha256": "245047f12eada4d181da64da6222f137036f6d45a874412f201de4c2e8e996d4",
+      "sha256": "084795659190adec2858db4c7ff95b09df7ad5425ee480dc069a66a26ffb1391"
+    },
+    {
+      "file": "side-shell.png",
+      "caption": "independent bash pane alongside the conversation",
+      "source_sha256": "2f63ed85f0505fdbcf78799e48e8af6235fa87e56ca1188b104a2f28c052f882",
+      "sha256": "f97b1afaefc39501d1ee0ccbd4d70d22a044599e4bfe08da03cbd55052b47ef4"
+    },
+    {
+      "file": "scratch-shell.png",
+      "caption": "centered bash pane",
+      "source_sha256": "16c99bb633b08a91145a0c4623a39daee5ba82fa4293a6f5dbd35610e3dd1c84",
+      "sha256": "c306b097c8f813dcdcd50ee17707b73b7f873ee7992992ed6f3ded24d2679b88"
+    },
+    {
+      "file": "terminal-copy.png",
+      "caption": "terminal copy mode with vim cursor",
+      "source_sha256": "336c11360760532adce030021fff6df84fe24542070fb7a9eeb0dc29003c3ff8",
+      "sha256": "b8c3433806e6740d36d36c0b94b547337c5d7cbafabdb850d78af05352ce997b"
+    },
+    {
+      "file": "sessions.png",
+      "caption": "directory-scoped session picker",
+      "source_sha256": "26bf7c9b146f3611cc6aa55b0ed196631378127a0cdb3bc785879c033079fe3a",
+      "sha256": "a0599072cd591cf59ebe6e3cb3ea39e44bd3319d4113a721733e29970648d3fa"
+    },
+    {
+      "file": "theme-phosphor.png",
+      "caption": "phosphor welcome screen",
+      "source_sha256": "5968a898ceb37f7d3af14af9d4906d991e712402631ee98949b9ed844416991f",
+      "sha256": "ea9102e2bc004a0dfd1d12244d8c147162362b8c310dc515a499ff0e94c7b056"
+    },
+    {
+      "file": "theme-rose-pine.png",
+      "caption": "rose-pine welcome screen",
+      "source_sha256": "04e29015cf4f2082f83fc2bcb2e1651e0787a7fad3eabeb316eba828c4f5c8a6",
+      "sha256": "be2625349ff432d9644b99266c8c019de978c1990f5eba4a036422f682fb5f1b"
+    },
+    {
+      "file": "theme-dracula.png",
+      "caption": "dracula welcome screen",
+      "source_sha256": "228178349b7ec29a08c15fbadf90bb393bc3783fd798fa23fe62c08184c722a4",
+      "sha256": "75dd2f9ed670b8d80d95105bd9d1aa6cbb371f681a6bf8cfe604526d784fd223"
+    },
+    {
+      "file": "theme-everforest.png",
+      "caption": "everforest welcome screen",
+      "source_sha256": "55b4f2d2a6e1c4f88b18b17c5f69dceecc7bb3e4b7ef6c40b421cd862ec56f4e",
+      "sha256": "5a260c4ac2cf060da83322b108f84e455caca4b6263f509fa507e7afe4b1a2b3"
+    },
+    {
+      "file": "theme-nord.png",
+      "caption": "nord welcome screen",
+      "source_sha256": "c615a76e35271f7f98bbbb45c198cd03cb0aee002f0bb04bbeed2e1d8751dc9d",
+      "sha256": "30b49c8ea59440c50da657a096899639b7cca2a676740f1f3812386f44a30f99"
+    },
+    {
+      "file": "theme-catppuccin-mocha.png",
+      "caption": "catppuccin-mocha welcome screen",
+      "source_sha256": "dc6f26c3500137c8a2c37aa41596fca70cc21761bd203836de36ecb889b64506",
+      "sha256": "29843b17daadbcb62b3cae642cba8f34825bf66f0a221c997a40a41a30b286e4"
+    },
+    {
+      "file": "theme-tokyo.png",
+      "caption": "tokyo welcome screen",
+      "source_sha256": "6bbf70ff5592e7c6e458fa3b6eb032f48a55adfd5782e2dc7c9a40d816bf3495",
+      "sha256": "f57cecfeb7ccc141d685c8389f63ceb87b7b74d20091f8075ecdebc36e7827f0"
+    },
+    {
+      "file": "theme-ember.png",
+      "caption": "ember welcome screen",
+      "source_sha256": "0947b2b55c0230bf0c74642abc21b48311b2200ef12f64f547c7677d9ae1d286",
+      "sha256": "712d8f69974d24f6042af940238215dc81be6122bc2b15c154b735bec65410ed"
+    },
+    {
+      "file": "theme-ice.png",
+      "caption": "ice welcome screen",
+      "source_sha256": "0375f60638898603928359ad5915ff9ccf7eaf85775e055e41dc2e262df168db",
+      "sha256": "a1d1c5c3a4c61ee1cacb822d832bcf4d09c6d5cc7e65f2c18ccbd823aaaf7dca"
+    },
+    {
+      "file": "theme-mono.png",
+      "caption": "mono welcome screen",
+      "source_sha256": "c4f36ba2b8d762ac8a52075856f76fc9f68b9fbc3c98784c616917395b8ccb20",
+      "sha256": "ced911830a60bed59568476fe70462a889d1c059c3bd2f6e846da24b4e5faa50"
+    }
+  ],
+  "terminal": "ghostty; jetbrains mono; 12 pt; opaque background",
+  "crop": {
+    "x": 16,
+    "y": 16,
+    "width": 1400,
+    "height": 912,
+    "purpose": "remove host terminal padding; preserve the complete 140 by 48 app grid"
+  }
+}
