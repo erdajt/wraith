@@ -84,15 +84,15 @@ func TestExportRedactsOriginalDirectoryAndRetiredValues(t *testing.T) {
 		t.Fatal(err)
 	}
 	env := variables.Store{Root: filepath.Join(root, "config", "variables")}
-	state, err := env.Load(s.Directory, false)
+	state, err := env.Load(s.Directory, variables.Directory)
 	if err != nil {
 		t.Fatal(err)
 	}
-	state, err = env.Save(s.Directory, false, state.Revision, "TARGET=retired.example")
+	state, err = env.Save(s.Directory, variables.Directory, state.Revision, "TARGET=retired.example")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = env.Save(s.Directory, false, state.Revision, "TARGET=current.example"); err != nil {
+	if _, err = env.Save(s.Directory, variables.Directory, state.Revision, "TARGET=current.example"); err != nil {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer
@@ -127,11 +127,11 @@ func TestDiscoveryCommandsLoadPrivacyBeforeProviderAccess(t *testing.T) {
 		t.Fatal(err)
 	}
 	env := variables.Store{Root: filepath.Join(root, "variables")}
-	state, err := env.Load(directory, false)
+	state, err := env.Load(directory, variables.Directory)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := env.Save(directory, false, state.Revision, "TARGET=private.example"); err != nil {
+	if _, err := env.Save(directory, variables.Directory, state.Revision, "TARGET=private.example"); err != nil {
 		t.Fatal(err)
 	}
 	for _, command := range []string{"models", "doctor"} {

@@ -17,15 +17,15 @@ func TestLegacyExportPreservesPrivacyWithoutAssigningDirectory(t *testing.T) {
 	root := t.TempDir()
 	directory := t.TempDir()
 	env := variables.Store{Root: filepath.Join(root, "config", "variables")}
-	state, err := env.Load(directory, false)
+	state, err := env.Load(directory, variables.Directory)
 	if err != nil {
 		t.Fatal(err)
 	}
-	state, err = env.Save(directory, false, state.Revision, "TARGET=retired.example")
+	state, err = env.Save(directory, variables.Directory, state.Revision, "TARGET=retired.example")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = env.Save(directory, false, state.Revision, "TARGET=current.example"); err != nil {
+	if _, err = env.Save(directory, variables.Directory, state.Revision, "TARGET=current.example"); err != nil {
 		t.Fatal(err)
 	}
 	chat := session.New("test")

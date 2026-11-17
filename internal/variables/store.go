@@ -14,7 +14,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type Store struct{ Root string }
+type Store struct {
+	Root         string
+	Conversation string
+}
 
 type State struct {
 	Text     string
@@ -28,30 +31,20 @@ type journal struct {
 	Retained []Entry            `json:"retained"`
 }
 
-func (s Store) Path(directory string, global bool) string {
-	if global {
-		return filepath.Join(s.Root, "global.env")
-	}
-	key := sha256.Sum256([]byte(directory))
-	return filepath.Join(s.Root, "directories", hex.EncodeToString(key[:])+".env")
+func (s Store) Load(directory string, scope Scope) (State, error) {
+	return s.transact(directory, scope, "", nil)
 }
 
-func (s Store) Load(directory string, global bool) (State, error) {
-	return s.transact(directory, global, "", nil)
+func (s Store) Save(directory string, scope Scope, revision, text string) (State, error) {
+	return s.transact(directory, scope, revision, &text)
 }
 
-func (s Store) Save(directory string, global bool, revision, text string) (State, error) {
-	return s.transact(directory, global, revision, &text)
-}
-
-func (s Store) Edit(directory string, global bool) (State, error) {
-	if real, err := filepath.EvalSymlinks(directory); err == nil {
-		directory = real
+func (s Store) Edit(directory string, scope Scope) (State, error) {
+	selected, _, err := s.paths(directory, scope)
+	if err != nil {
+		return State{}, err
 	}
-	if !filepath.IsAbs(directory) {
-		return State{}, errors.New("variable directory must be absolute")
-	}
-	text, err := fsutil.ReadLimit(s.Path(directory, global), FileLimit)
+	text, err := fsutil.ReadLimit(selected, FileLimit)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return State{}, err
 	}
@@ -59,13 +52,11 @@ func (s Store) Edit(directory string, global bool) (State, error) {
 	return State{Text: string(text), Revision: hex.EncodeToString(hash[:])}, nil
 }
 
-func (s Store) transact(directory string, global bool, revision string, replacement *string) (State, error) {
+func (s Store) transact(directory string, scope Scope, revision string, replacement *string) (State, error) {
 	var state State
-	if real, err := filepath.EvalSymlinks(directory); err == nil {
-		directory = real
-	}
-	if !filepath.IsAbs(directory) {
-		return state, errors.New("variable directory must be absolute")
+	selected, paths, err := s.paths(directory, scope)
+	if err != nil {
+		return state, err
 	}
 	if err := os.MkdirAll(s.Root, 0700); err != nil {
 		return state, err
@@ -93,9 +84,8 @@ func (s Store) transact(directory string, global bool, revision string, replacem
 	} else {
 		return state, err
 	}
-	selected := s.Path(directory, global)
 	active := map[string]Entry{}
-	for _, scope := range []string{s.Path(directory, true), s.Path(directory, false)} {
+	for _, scope := range paths {
 		text, err := fsutil.ReadLimit(scope, FileLimit)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return state, err

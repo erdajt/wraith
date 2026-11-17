@@ -14,7 +14,7 @@ func (a *App) variableStore() variables.Store {
 }
 
 func (a *App) refreshVariables() error {
-	state, err := a.variableStore().Load(a.Directory, false)
+	state, err := a.variableStore().Load(a.Directory, variables.Directory)
 	if err != nil {
 		return err
 	}
@@ -35,8 +35,10 @@ func (a *App) chatInstructions() string {
 }
 
 func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
+	scope := variables.Directory
 	global := arg == "global" || strings.HasPrefix(arg, "global ")
 	if global {
+		scope = variables.Global
 		arg = strings.TrimSpace(strings.TrimPrefix(arg, "global"))
 	}
 	if global && arg != "" && !confirmed {
@@ -45,7 +47,7 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 		return nil
 	}
 	if arg == "edit" || arg == "new" {
-		state, err := a.variableStore().Edit(a.Directory, global)
+		state, err := a.variableStore().Edit(a.Directory, scope)
 		if err != nil {
 			a.notice = err.Error()
 			return nil
@@ -53,7 +55,7 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 		a.envRevision, a.envGlobal = state.Revision, global
 		return a.edit("environment", "", state.Text, -1)
 	}
-	state, err := a.variableStore().Load(a.Directory, global)
+	state, err := a.variableStore().Load(a.Directory, scope)
 	if err != nil {
 		a.notice = err.Error()
 		return nil
@@ -75,7 +77,7 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 			text += "\n" + input + "\n"
 		}
 		if e == nil {
-			_, e = a.variableStore().Save(a.Directory, global, state.Revision, text)
+			_, e = a.variableStore().Save(a.Directory, scope, state.Revision, text)
 		}
 		if e == nil {
 			e = a.refreshVariables()
@@ -114,12 +116,9 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 	for _, entry := range state.Entries {
 		items = append(items, item{Label: entry.Name + "=" + entry.Value, Value: entry.Name, Detail: entry.Description})
 	}
-	scope := "directory"
-	if global {
-		scope = "global"
-	}
+	label := string(scope)
 	a.envGlobal = global
-	a.popup = &menu{Kind: "environment", Title: "private variables · " + scope + " · " + a.Config.Keys["env_new"] + "/" + a.Config.Keys["env_edit"] + " editor · " + a.Config.Keys["env_scope"] + " scope · " + a.Config.Keys["env_remove"] + " remove", Items: items}
+	a.popup = &menu{Kind: "environment", Title: "private variables · " + label + " · " + a.Config.Keys["env_new"] + "/" + a.Config.Keys["env_edit"] + " editor · " + a.Config.Keys["env_scope"] + " scope · " + a.Config.Keys["env_remove"] + " remove", Items: items}
 	return nil
 }
 
@@ -147,7 +146,7 @@ func (a *App) environmentKey(k tea.KeyMsg) (tea.Cmd, bool) {
 }
 
 func (a *App) variableDetails(name string) {
-	state, err := a.variableStore().Load(a.Directory, a.envGlobal)
+	state, err := a.variableStore().Load(a.Directory, a.envScope())
 	if err != nil {
 		a.notice = err.Error()
 		return
@@ -158,4 +157,11 @@ func (a *App) variableDetails(name string) {
 			return
 		}
 	}
+}
+
+func (a *App) envScope() variables.Scope {
+	if a.envGlobal {
+		return variables.Global
+	}
+	return variables.Directory
 }

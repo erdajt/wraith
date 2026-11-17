@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/erdajt/wraith/internal/variables"
 	"strings"
 	"testing"
 
@@ -37,13 +38,13 @@ func TestPrivateAssignmentsStayOutOfChatAndHistory(t *testing.T) {
 func TestGlobalMutationRequiresVisibleWarning(t *testing.T) {
 	a := fixture(t)
 	a.runCommand("env global set TARGET=private.example")
-	state, err := a.variableStore().Load(a.Directory, true)
+	state, err := a.variableStore().Load(a.Directory, variables.Global)
 	if err != nil || len(state.Entries) != 0 || a.popup.Kind != "env-global" {
 		t.Fatalf("global assignment applied before warning: %v", err)
 	}
 	a.popup.Index = 1
 	a.menuKey(tea.KeyMsg{Type: tea.KeyEnter})
-	state, err = a.variableStore().Load(a.Directory, true)
+	state, err = a.variableStore().Load(a.Directory, variables.Global)
 	if err != nil || len(state.Entries) != 1 {
 		t.Fatalf("confirmed global assignment missing: %v", err)
 	}
@@ -79,7 +80,7 @@ func TestDemoAssignmentsDoNotMutateBindings(t *testing.T) {
 	a.demo = true
 	a.Prompt.Set("TARGET=private.example")
 	a.submit()
-	state, err := a.variableStore().Load(a.Directory, false)
+	state, err := a.variableStore().Load(a.Directory, variables.Directory)
 	if err != nil || len(state.Entries) != 0 {
 		t.Fatalf("demo changed bindings: %v", err)
 	}

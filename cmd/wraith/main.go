@@ -152,7 +152,7 @@ func run(args []string, out io.Writer) error {
 					return fmt.Errorf("export privacy: %w", e)
 				}
 			}
-			state, e := (variables.Store{Root: filepath.Join(p.Config, "variables")}).Load(directory, false)
+			state, e := (variables.Store{Root: filepath.Join(p.Config, "variables")}).Load(directory, variables.Directory)
 			if e != nil {
 				return fmt.Errorf("export privacy: %w", e)
 			}
@@ -271,7 +271,7 @@ func localProvider(c config.Config, p config.Paths) (*provider.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	state, err := (variables.Store{Root: filepath.Join(p.Config, "variables")}).Load(directory, false)
+	state, err := (variables.Store{Root: filepath.Join(p.Config, "variables")}).Load(directory, variables.Directory)
 	if err != nil {
 		return nil, err
 	}

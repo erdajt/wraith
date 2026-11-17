@@ -124,7 +124,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 	}
 	switch m.Kind {
 	case "environment":
-		_, err = a.variableStore().Save(a.Directory, a.envGlobal, a.envRevision, text)
+		_, err = a.variableStore().Save(a.Directory, a.envScope(), a.envRevision, text)
 		if err != nil {
 			a.notice = err.Error()
 			return nil
