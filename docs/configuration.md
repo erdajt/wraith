@@ -30,6 +30,7 @@ context accepts any positive integer representable by the binary. model architec
 | `thinking` | `auto` | native model default or supported effort value |
 | `threads` / `temperature` | `6` / `0.3` | Ollama inference options; API-specific options belong in provider `extra` |
 | `keep_alive` / `timeout` | `2m` / `10m` | Ollama idle retention and request/compaction deadline |
+| `environment.scope` | `directory` | default private-variable storage: `conversation`, `directory`, or `global`; existing bindings stay in their scopes |
 | `execution.mode` | `agent` | request approval when execution is useful; `blocks` keeps approvals with optional sharing |
 | `execution.auto_share` | `false` | share blocks-mode output and scratch snapshots automatically |
 | `execution.max_steps` | `8` | approved model commands per user turn, 1–100 |

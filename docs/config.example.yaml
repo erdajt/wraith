@@ -1,3 +1,5 @@
+environment:
+    scope: directory
 provider: ollama
 providers:
     anthropic:

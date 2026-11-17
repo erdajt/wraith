@@ -59,7 +59,7 @@ this is a modal editor, not a complete embedded Neovim instance. macros, plugins
 | `/instructions`, `/memory`, `/remember text` | persistent preferences across chats |
 | `/pin text`, `/pins`, `/unpin number` | exact per-chat facts; `e` edits and `d` removes in the pins picker |
 | `/blocks`, `/history`, `/jobs` | code actions, saved output and current-session jobs |
-| `/env`, `/env edit`, `/env global` | scoped private variables and attached descriptions |
+| `/env`, `/env edit`, `/env conversation\|directory\|global` | scoped private variables and attached descriptions |
 | `/edit`, `/edit-response` | editor handoff or user-message fork |
 | `/clear`, `/new` | create a clean conversation while keeping the original |
 | `/resume [id]`, `/chats`, `/sessions` | resume from the current directory |

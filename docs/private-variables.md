@@ -9,13 +9,31 @@ private variables let a model refer to a target by name while Wraith keeps the v
 /env edit
 /env set TARGET_DOMAIN=lab.example
 /env unset TARGET_DOMAIN
+/env conversation
+/env directory
 /env global
 /env global edit
 ```
 
-a bare `TARGET_DOMAIN=lab.example` in the prompt also creates a directory binding. assignments and `/env` commands are excluded from input recall. `/env` shows local values and descriptions; enter opens details, `n` or `e` opens the default editor, `d` removes a binding, and `g` switches scope through the global warning. these bindings use `keys.env_new`, `env_edit`, `env_remove` and `env_scope`.
+a bare `TARGET_DOMAIN=lab.example` in the prompt also creates a binding in the configured scope. assignments and `/env` commands are excluded from input recall. `/env` shows local values and descriptions; enter opens details, `n` or `e` opens the default editor, `d` removes a binding, and `g` opens the conversation/directory/global scope picker. these bindings use `keys.env_new`, `env_edit`, `env_remove` and `env_scope`.
 
-directory bindings use the canonical launch directory and override global bindings with the same name. global changes require confirmation because they affect every directory. removing a directory override reveals any global binding. saving in the editor validates the complete file; an invalid edit or stale revision leaves the active configuration unchanged and retains the editor file for repair.
+choose the default storage through `/settings.environment` → `environment.scope`, or set it directly:
+
+```text
+/set environment.scope conversation
+/set environment.scope directory
+/set environment.scope global
+```
+
+| scope | persistence |
+| --- | --- |
+| `conversation` | only this saved conversation, including resume |
+| `directory` | all chats launched in the same canonical directory; default |
+| `global` | always keep across conversations and directories |
+
+changing the setting affects future assignments and default editor selection. existing bindings are not copied or moved. `/env conversation`, `/env directory` and `/env global` manage a scope explicitly without changing the default. conversation bindings override directory bindings, which override global bindings with the same name. new chats, forks and archive restores start with no conversation bindings; their directory/global defaults remain available. a chat containing only conversation variables is saved so it can be resumed.
+
+directory bindings use the canonical launch directory. global changes require confirmation because they affect every directory. removing a directory override reveals any global binding. saving in the editor validates the complete file; an invalid edit or stale revision leaves the active configuration unchanged and retains the editor file for repair.
 
 ```dotenv
 # domain for the isolated lab
@@ -48,6 +66,6 @@ text streams as it arrives. a marker split across chunks is buffered only until 
 
 corrective requests include the original task, a bounded rejected excerpt, the failure and the valid inventory. there are at most three retries after the initial attempt. exhausted responses remain visible as interrupted text with no automatic actions; unresolved commands can be edited manually. transport failures and cancellation are not retried as variable mistakes.
 
-superseded attempts are compressed under `~/.cache/wraith/repairs/archives/`, separate from accepted chat history. they are not automatically pruned. variables live under `~/.config/wraith/variables/`: `global.env`, `directories/<directory-hash>.env` and `state.json` for accepted/retained bindings. back up this directory together; a missing or corrupt journal stops outbound requests until repaired so forgotten values are not silently exposed.
+superseded attempts are compressed under `~/.cache/wraith/repairs/archives/`, separate from accepted chat history. they are not automatically pruned. variables live under `~/.config/wraith/variables/`: `global.env`, `directories/<directory-hash>.env`, `conversations/<session-id>.env` and `state.json` for accepted/retained bindings. back up this directory together; a missing or corrupt journal stops outbound requests until repaired so forgotten values are not silently exposed.
 
 approvals display the frozen, shell-quoted command and its reason. changing a variable while approval is open does not change the displayed or executed binding.

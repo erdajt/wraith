@@ -141,3 +141,27 @@ func TestDiscoveryCommandsLoadPrivacyBeforeProviderAccess(t *testing.T) {
 		}
 	}
 }
+
+func TestExportLoadsExternallyEditedConversationBindings(t *testing.T) {
+	root := t.TempDir()
+	chat := session.New("test")
+	chat.Messages = []session.Message{{Role: "user", Content: "new-private.example"}}
+	if err := (store.Store{Root: root}).Save(chat); err != nil {
+		t.Fatal(err)
+	}
+	env := variables.Store{Root: filepath.Join(root, "config", "variables"), Conversation: chat.ID}
+	path := env.Path(chat.Directory, variables.Conversation)
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("TARGET=new-private.example"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	if err := run([]string{"--config-dir", filepath.Join(root, "config"), "--data-dir", root, "export", chat.ID}, &out); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out.String(), "new-private.example") || !strings.Contains(out.String(), "wraith::TARGET") {
+		t.Fatal("export ignored conversation bindings")
+	}
+}

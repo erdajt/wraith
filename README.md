@@ -41,7 +41,7 @@ configure the editor, shell and providers in `~/.config/wraith/config.yaml`. `wr
 | output control | agent runs share bounded evidence; hide output per job, or use blocks mode for manual sharing |
 | background jobs | approve tracked background work, inspect live output, cancel jobs and receive completion evidence |
 | targeted output reads | model polls, searches and pages authorized output without filling context |
-| private variables | directory/global annotated bindings, green local substitution and provider redaction |
+| private variables | conversation/directory/global annotated bindings, green local substitution and provider redaction |
 | real terminals | centered `alt+e` scratch shell and independent `alt+s` side shell with configurable sizes |
 | terminal copy mode | triple escape exposes a cursor, visual selection, clipboard yanks and `/` search |
 | context management | persistent instructions, exact pins, automatic or prompted compaction and original archives |
@@ -95,7 +95,7 @@ shells preserve their cwd, jobs and scrollback while hidden. exiting restarts th
 /env global edit
 ```
 
-bindings belong to the launch directory unless you confirm global scope. attach `#`, `//` or `/* */` comments to explain each name; the model receives names and comments, not values. it writes `wraith::TARGET_DOMAIN`, which Wraith resolves locally and highlights in green. approved shells receive literal values; provider-bound conversation and shared output use redacted markers. invalid references trigger up to three visible streaming retries. exact-value redaction has limits for arbitrary encodings and partial selections; [variable syntax and privacy details](docs/private-variables.md) explain the boundary.
+choose persistence through `/settings.environment`: conversation, directory (default), or global. conversation variables return on resume; global writes show a warning. changing the default does not move existing bindings. attach `#`, `//` or `/* */` comments to explain each name; the model receives names and comments, not values. it writes `wraith::TARGET_DOMAIN`, which Wraith resolves locally and highlights in green. approved shells receive literal values; provider-bound conversation and shared output use redacted markers. invalid references trigger up to three visible streaming retries. exact-value redaction has limits for arbitrary encodings and partial selections; [variable syntax and privacy details](docs/private-variables.md) explain the boundary.
 
 ## keep the context that matters
 
