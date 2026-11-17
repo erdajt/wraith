@@ -11,7 +11,7 @@ func TestWrongActionChannelExplainsCorrectionWithoutExposingProtocol(t *testing.
 	query := `{"tool":"output","id":"0123456789abcdef01234567","pattern":"open","regex":true,"ignore_case":false,"from":1,"before":2,"after":2,"limit":40}`
 	_, err := RequestedCommand("```wraith-run\n" + query + "\n```")
 	var protocol *ActionProtocolError
-	if !errors.As(err, &protocol) || !strings.Contains(protocol.Correction, "fenced wraith-tool") || !strings.Contains(protocol.Correction, "one-based output line") {
+	if !errors.As(err, &protocol) || !strings.Contains(protocol.Correction(), "fenced wraith-tool") || !strings.Contains(protocol.Correction(), "one-based output line") {
 		t.Fatalf("missing targeted correction: %v", err)
 	}
 	if strings.Contains(err.Error(), "wraith-") {
@@ -26,7 +26,7 @@ func TestWrongActionChannelExplainsCorrectionWithoutExposingProtocol(t *testing.
 		t.Fatal("output query became execution request")
 	}
 	_, err = RequestedTool("```wraith-tool\n{\"command\":\"printf test\",\"reason\":\"inspect\"}\n```")
-	if !errors.As(err, &protocol) || !strings.Contains(protocol.Correction, "fenced wraith-run") || strings.Contains(err.Error(), "wraith-") {
+	if !errors.As(err, &protocol) || !strings.Contains(protocol.Correction(), "fenced wraith-run") || strings.Contains(err.Error(), "wraith-") {
 		t.Fatalf("wrong command channel not explained: %v", err)
 	}
 }

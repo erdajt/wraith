@@ -7,12 +7,29 @@ import (
 	"strings"
 )
 
-type ActionProtocolError struct {
-	Problem    string
-	Correction string
+type ActionProtocolError struct{ Target string }
+
+func (e *ActionProtocolError) Error() string {
+	switch e.Target {
+	case "output":
+		return "output query sent as a command request"
+	case "command":
+		return "command sent as an output query"
+	default:
+		return "action request used the wrong channel"
+	}
 }
 
-func (e *ActionProtocolError) Error() string { return e.Problem }
+func (e *ActionProtocolError) Correction() string {
+	switch e.Target {
+	case "output":
+		return "This is an output query, not a shell command. Keep the query object and place it in a fenced wraith-tool block instead of wraith-run. Do not wrap the query in a command or request shell execution. The from field is a one-based output line number, not a byte offset; use 1 to begin at the first line."
+	case "command":
+		return "A shell command request belongs in a fenced wraith-run block with command and reason strings, not wraith-tool. It still requires user approval; nothing from the rejected response was executed."
+	default:
+		return ""
+	}
+}
 
 func decodeObject(text string, out any) error {
 	if len(text) > 32768 {
@@ -48,17 +65,11 @@ func decodeObject(text string, out any) error {
 	switch out.(type) {
 	case *CommandRequest:
 		if seen["tool"] && !seen["command"] {
-			return &ActionProtocolError{
-				Problem:    "output query sent as a command request",
-				Correction: "This is an output query, not a shell command. Keep the query object and place it in a fenced wraith-tool block instead of wraith-run. Do not wrap the query in a command or request shell execution. The from field is a one-based output line number, not a byte offset; use 1 to begin at the first line.",
-			}
+			return &ActionProtocolError{Target: "output"}
 		}
 	case *ToolRequest:
 		if seen["command"] && !seen["tool"] {
-			return &ActionProtocolError{
-				Problem:    "command sent as an output query",
-				Correction: "A shell command request belongs in a fenced wraith-run block with command and reason strings, not wraith-tool. It still requires user approval; nothing from the rejected response was executed.",
-			}
+			return &ActionProtocolError{Target: "command"}
 		}
 	}
 	d = json.NewDecoder(strings.NewReader(text))

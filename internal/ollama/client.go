@@ -22,6 +22,7 @@ type Options struct {
 	Threads     int     `json:"num_thread,omitempty"`
 }
 type Request struct {
+	RepairAction     string            `json:"-"`
 	RunIDs           map[string]bool   `json:"-"`
 	CompactionTask   string            `json:"-"`
 	ExecutionMode    string            `json:"-"`

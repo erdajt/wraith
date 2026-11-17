@@ -92,6 +92,10 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 		request.Messages[i].Thinking = ""
 	}
 
+	if correction := (&contextual.ActionProtocolError{Target: request.RepairAction}).Correction(); correction != "" && len(request.Messages) > 0 {
+		request.Messages[len(request.Messages)-1].Content += "\n" + correction
+	}
+
 	if policy != "" {
 		if len(request.Messages) > 0 && request.Messages[0].Role == "system" {
 			request.Messages[0].Content += "\n\n" + policy

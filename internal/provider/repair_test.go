@@ -98,6 +98,7 @@ func TestRepairCorrectsOutputQueryChannelOnNextAttempt(t *testing.T) {
 	t.Parallel()
 	client := New(config.Default())
 	id := "0123456789abcdef01234567"
+	client.Variables = variables.NewSnapshot([]variables.Entry{{Name: "REFERENCE", Value: "wraith-tool"}, {Name: "TARGET", Value: "private.example"}}, nil)
 	query := `{"tool":"output","id":"` + id + `","pattern":"open","regex":true,"from":1,"limit":40}`
 	calls, retries := 0, 0
 	client.HTTP.Transport = transport(func(r *http.Request) (*http.Response, error) {
@@ -109,6 +110,9 @@ func TestRepairCorrectsOutputQueryChannelOnNextAttempt(t *testing.T) {
 		channel := "wraith-run"
 		if calls > 1 {
 			feedback := req.Messages[len(req.Messages)-1].Content
+			if strings.Contains(feedback, "private.example") {
+				t.Fatal("repair leaked private user content")
+			}
 			for _, want := range []string{"output query sent as a command request", "fenced wraith-tool block instead of wraith-run", "one-based output line number"} {
 				if !strings.Contains(feedback, want) {
 					t.Fatalf("repair omitted %q", want)
@@ -122,7 +126,7 @@ func TestRepairCorrectsOutputQueryChannelOnNextAttempt(t *testing.T) {
 		}
 		return response(string(data)), nil
 	})
-	result, err := client.ChatWithRepair(t.Context(), ollama.Request{RunIDs: map[string]bool{id: true}}, func(update StreamUpdate) {
+	result, err := client.ChatWithRepair(t.Context(), ollama.Request{RunIDs: map[string]bool{id: true}, Messages: []session.Message{{Role: "user", Content: "inspect private.example"}}}, func(update StreamUpdate) {
 		if update.Retry > 0 {
 			retries++
 			if strings.Contains(update.Problem, "wraith-") {
