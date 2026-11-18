@@ -137,3 +137,22 @@ func TestRejectedUnloadKeepsResourcesAndRegistrations(t *testing.T) {
 		t.Fatalf("rejected unload lost callback: %+v", got)
 	}
 }
+
+func TestFailedParentSetupCleansParentBeforeDependency(t *testing.T) {
+	marker := filepath.Join(t.TempDir(), "cleanup")
+	r := openTestRuntime(t, fmt.Sprintf(`
+ local function record(text) local f=assert(io.open(%q,"a")); f:write(text); f:close() end
+ package.preload.child=function() return {setup=function() end,teardown=function() record("child\n") end} end
+ package.preload.parent=function() return {
+  setup=function() wraith.plugins.load("child"); error("setup failed") end,
+  teardown=function() record("parent\n") end
+ } end
+ assert(not pcall(wraith.plugins.load,"parent"))
+ assert(#wraith.plugins.list()==0)
+ `, marker))
+	defer r.Close()
+	data, err := os.ReadFile(marker)
+	if err != nil || string(data) != "parent\nchild\n" {
+		t.Fatalf("failed setup cleanup order: %q, %v", data, err)
+	}
+}

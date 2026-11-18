@@ -55,6 +55,15 @@ func (e *engine) loadPlugin(name string, options *lua.LTable) (err error) {
 	e.packages[name] = packageRecord{owner: owner}
 	defer func() { e.owner = parentOwner }()
 	defer func() {
+		var owned []cleanupHook
+		e.cleanup = slices.DeleteFunc(e.cleanup, func(hook cleanupHook) bool {
+			if hook.owner != owner {
+				return false
+			}
+			owned = append(owned, hook)
+			return true
+		})
+		e.cleanup = append(e.cleanup, owned...)
 		if err != nil {
 			hooks := e.restoreRegistry(before)
 			err = errors.Join(err, e.disposeHooks(hooks))
@@ -93,15 +102,6 @@ func (e *engine) loadPlugin(name string, options *lua.LTable) (err error) {
 			e.packages[parent] = record
 		}
 	}
-	var owned []cleanupHook
-	e.cleanup = slices.DeleteFunc(e.cleanup, func(hook cleanupHook) bool {
-		if hook.owner != owner {
-			return false
-		}
-		owned = append(owned, hook)
-		return true
-	})
-	e.cleanup = append(e.cleanup, owned...)
 	e.dirty = !e.setup
 	return nil
 }
