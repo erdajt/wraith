@@ -2,12 +2,13 @@ package plugin
 
 import (
 	"context"
-	"github.com/erdajt/wraith/internal/config"
 	"os"
 	"path/filepath"
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/erdajt/wraith/internal/config"
 )
 
 func TestConfigSetupCanClearArray(t *testing.T) {
@@ -133,5 +134,60 @@ func TestCloseReleasesQueuedCallbacks(t *testing.T) {
 		case <-time.After(time.Second):
 			t.Fatal("queued caller remained blocked")
 		}
+	}
+}
+
+func TestLatestEventRunsAfterCallbackTimeout(t *testing.T) {
+	dir := t.TempDir()
+	source := `wraith.commands.create("wait", function()
+  wraith.notify("discard")
+  while true do end
+ end)
+ wraith.events.on("window_changed", function(ctx)
+  wraith.notify(tostring(ctx.value))
+ end)`
+	if err := os.WriteFile(filepath.Join(dir, "init.lua"), []byte(source), 0600); err != nil {
+		t.Fatal(err)
+	}
+	r, err := Open(t.Context(), dir, config.Default(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(r.Close)
+	m := r.Manifest()
+
+	blocked, err := r.Submit(m.Commands[0].Callback, "", nil, m.Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := r.Submit("", "window_changed", map[string]any{"value": 1}, m.Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	latest, err := r.Submit("", "window_changed", map[string]any{"value": 2}, m.Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case got := <-blocked:
+		if got.Err == nil || len(got.Effects) != 0 {
+			t.Fatalf("timeout retained effects: %+v", got)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("callback deadline did not release worker")
+	}
+	select {
+	case <-first:
+	case <-time.After(3 * time.Second):
+		t.Fatal("superseded caller remained blocked")
+	}
+	select {
+	case got := <-latest:
+		if got.Err != nil || len(got.Effects) != 1 || got.Effects[0].Argument != "2" {
+			t.Fatalf("latest snapshot not delivered: %+v", got)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("worker did not recover after callback timeout")
 	}
 }
