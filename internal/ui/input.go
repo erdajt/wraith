@@ -179,6 +179,7 @@ func (a *App) inputSnapshot() map[string]any {
 		left, right := b.Selection()
 		snapshot["cursor"], snapshot["selection_start"], snapshot["selection_end"] = b.Pos, left, right
 		snapshot["count"], snapshot["pending"], snapshot["search"] = b.Count, b.Pending, b.SearchQuery()
+		snapshot["operator_count"] = b.OperatorCount
 	}
 	return snapshot
 }

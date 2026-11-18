@@ -92,8 +92,7 @@ func (b *Buffer) pendingKey(key, text string, n int) bool {
 			}
 		}
 
-		b.motion(key, n)
-		end := b.Pos
+		end := b.motion(key, n)
 		b.Pos = start
 		if end < start {
 			start, end = end, start

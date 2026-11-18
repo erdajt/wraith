@@ -1,10 +1,49 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/erdajt/wraith/internal/keymap"
+	"github.com/erdajt/wraith/internal/session"
 )
+
+func TestNativeCompoundYanksAcrossInputSurfaces(t *testing.T) {
+	const text = "one two three four five six seven eight"
+	for _, surface := range []string{"prompt", "chat", "output", "terminal.copy"} {
+		t.Run(surface, func(t *testing.T) {
+			a := fixture(t)
+			a.Config.Clipboard = nil
+			r := newReader(text)
+			switch surface {
+			case "prompt":
+				a.Prompt = r.Buffer
+			case "chat":
+				a.focus = "chat"
+				a.Session.Messages = []session.Message{{Role: "assistant", Content: text}}
+				found := false
+				for i, row := range a.transcript(a.chatWidth()) {
+					if strings.Contains(row.Text, text) {
+						a.chatCursor, a.chatColumn, found = i, 0, true
+						break
+					}
+				}
+				if !found {
+					t.Fatal("transcript fixture is missing")
+				}
+			case "output":
+				a.popup = &menu{Kind: "output", Reader: r}
+			case "terminal.copy":
+				a.focus = "terminal0"
+				a.panes[0] = &pane{Reader: r}
+			}
+			a.feedInput("2y3w")
+			if got := string(a.Prompt.Register); got != "one two three four five six " {
+				t.Fatalf("compound yank: %q", got)
+			}
+		})
+	}
+}
 
 func TestNativeMappingsRetainCountsOperatorsAndLiteralTargets(t *testing.T) {
 	a := fixture(t)

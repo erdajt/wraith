@@ -18,6 +18,7 @@ type Buffer struct {
 	Linewise           bool
 	Pending            string
 	Count              string
+	OperatorCount      string
 	Search             string
 	query              string
 	undo, redo         []snapshot
@@ -39,6 +40,7 @@ func (b *Buffer) Set(s string) {
 	b.Pos = len(b.Text)
 	b.Mode = "insert"
 	b.Pending = ""
+	b.Count, b.OperatorCount = "", ""
 }
 
 // save records a bounded undo snapshot and clears redo history.
@@ -134,6 +136,9 @@ func (b *Buffer) Selection() (int, int) {
 func (b *Buffer) Status() string {
 	if b.Mode == "search" {
 		return "/" + b.query
+	}
+	if b.OperatorCount != "" {
+		return strings.ToUpper(b.Mode) + " " + b.OperatorCount + b.Pending + b.Count
 	}
 	return strings.ToUpper(b.Mode) + " " + b.Count + b.Pending
 }

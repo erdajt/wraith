@@ -22,7 +22,7 @@ func (b *Buffer) Key(key, text string) {
 		}
 		b.Mode = "normal"
 		b.Pending = ""
-		b.Count = ""
+		b.Count, b.OperatorCount = "", ""
 		b.clamp()
 		return
 	}
@@ -89,9 +89,14 @@ func (b *Buffer) Key(key, text string) {
 		return
 	}
 
+	n, _ := strconv.Atoi(b.Count)
+	operatorCount, _ := strconv.Atoi(b.OperatorCount)
+	n = min(9999, max(1, n)*max(1, operatorCount))
 	if b.Pending == "r" || b.findPending() {
-		n, _ := strconv.Atoi(b.Count)
-		b.pendingKey(key, text, max(1, n))
+		b.pendingKey(key, text, n)
+		if b.Pending == "" {
+			b.Count, b.OperatorCount = "", ""
+		}
 		return
 	}
 
@@ -102,13 +107,10 @@ func (b *Buffer) Key(key, text string) {
 		return
 	}
 
-	n := 1
-	if b.Count != "" {
-		n, _ = strconv.Atoi(b.Count)
-		n = max(1, min(n, 9999))
-	}
-
 	if b.pendingKey(key, text, n) {
+		if b.Pending == "" {
+			b.Count, b.OperatorCount = "", ""
+		}
 		return
 	}
 
@@ -158,7 +160,12 @@ func (b *Buffer) Key(key, text string) {
 	case "V":
 		b.Mode = "visual-line"
 		b.Anchor = b.Pos
-	case "d", "c", "y", "g", "r", "f", "F", "t", "T":
+	case "d", "c", "y":
+		b.Pending = key
+		if n > 1 {
+			b.OperatorCount = strconv.Itoa(n)
+		}
+	case "g", "r", "f", "F", "t", "T":
 		b.Pending = key
 		if n > 1 {
 			b.Count = strconv.Itoa(n)

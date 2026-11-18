@@ -35,8 +35,8 @@ func (b *Buffer) wordBounds() (int, int) {
 	return a, z
 }
 
-// motion applies a counted movement and clamps the resulting cursor position.
-func (b *Buffer) motion(key string, n int) {
+// motion returns the movement endpoint before clamping the visible cursor.
+func (b *Buffer) motion(key string, n int) int {
 	classify := category
 	if key == "W" || key == "B" || key == "E" {
 		classify = func(r rune) int {
@@ -112,7 +112,9 @@ func (b *Buffer) motion(key string, n int) {
 		}
 	}
 
+	end := b.Pos
 	b.clamp()
+	return end
 }
 
 // moveVertical moves one line while retaining the column when the destination permits it.

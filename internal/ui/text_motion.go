@@ -39,12 +39,12 @@ func (a *App) moveChatText(key string, count int) tea.Cmd {
 	b.Pos = min(position, len(b.Text))
 	b.Mode = "normal"
 	b.Pending = a.chatMotionPending
-	b.Count = a.chatMotionCount
+	b.Count, b.OperatorCount = a.chatCount, a.chatMotionCount
 	if b.Pending == "" && count > 1 {
 		b.Count = strconv.Itoa(count)
 	}
 	b.Key(key, key)
-	a.chatMotionPending, a.chatMotionCount = b.Pending, b.Count
+	a.chatMotionPending, a.chatCount, a.chatMotionCount = b.Pending, b.Count, b.OperatorCount
 	a.chatCursor, a.chatColumn = 0, 0
 	for _, r := range b.Text[:b.Pos] {
 		if r == '\n' {
