@@ -18,16 +18,20 @@ func TestPrivateValuesRenderAfterMarkdownParsing(t *testing.T) {
 	for _, row := range a.transcript(100) {
 		plain.WriteString(ansi.Strip(row.Text))
 		styled.WriteString(row.Text)
+
 		if row.Block >= 0 {
 			blocks++
 		}
 	}
+
 	if !strings.Contains(plain.String(), "inspect **literal** `text`") || !strings.Contains(plain.String(), "echo **literal** `text`") || strings.Contains(plain.String(), "wraith::TARGET") {
 		t.Fatal("value was parsed as markdown or left unresolved")
 	}
+
 	if blocks != 3 || !strings.Contains(styled.String(), color(a.Config.Palette().Variable, false)) {
 		t.Fatal("substitution styling or block identity missing")
 	}
+
 	if a.Session.Messages[0].Content != "**inspect wraith::TARGET**\n\n```sh\necho wraith::TARGET\n```" {
 		t.Fatal("local rendering changed stored context")
 	}
@@ -41,6 +45,7 @@ func TestPrivateMarkerExpandsBeforeWrapping(t *testing.T) {
 	for _, row := range a.transcript(10) {
 		output.WriteString(ansi.Strip(row.Text))
 	}
+
 	if !strings.Contains(output.String(), "host") || strings.Contains(output.String(), "wraith::") {
 		t.Fatal("marker wrapped before substitution")
 	}

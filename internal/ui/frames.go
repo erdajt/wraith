@@ -7,10 +7,12 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
+// menuFrame renders the active popup with bounded previews, input fields or menu choices.
 func (a *App) menuFrame() []string {
 	if a.popup.Kind == "approval" && a.proposal != nil {
 		return a.approvalFrame()
 	}
+
 	p := a.Config.Palette()
 	m := a.popup
 	w := min(a.width-6, 90)
@@ -18,6 +20,7 @@ func (a *App) menuFrame() []string {
 	if m.Kind == "approval" || m.Kind == "modify-command" {
 		height = min(a.height-4, 22)
 	}
+
 	if m.Reader != nil {
 		content := []string{bold(p.Accent, clean(m.Title)), ink(p.Muted, m.Reader.Buffer.Status()+" · ") + keyHints("/ search · v select · y yank · r refresh · q close", p)}
 		if !m.Record.ShareOutput || m.Record.OutputHidden {
@@ -29,6 +32,7 @@ func (a *App) menuFrame() []string {
 		content = append(content, m.Reader.lines(w-2, height-3, p)...)
 		return frame(content, w, p, false, "", "")
 	}
+
 	content := []string{bold(p.Accent, clean(m.Title)), keyHints("j/k move · / search · enter select · esc close", p), ""}
 	if m.Hints != "" {
 		content[2] = keyHints(m.Hints, p)
@@ -71,12 +75,14 @@ func (a *App) menuFrame() []string {
 			content = append(content, ink(p.Muted, "… use view full command"))
 		}
 	}
+
 	if m.Input != nil {
 		content = append(content, ink(p.Second, m.Input.Status()))
 		r := &reader{Buffer: m.Input}
 		content = append(content, r.lines(w-2, max(1, height-len(content)-1), p)...)
 		return frame(content, w, p, false, "", "")
 	}
+
 	slots := max(1, height-1-len(content))
 	start := max(0, m.Index-slots/2)
 	start = min(start, max(0, len(m.Items)-slots))
@@ -102,6 +108,7 @@ func (a *App) menuFrame() []string {
 	return frame(content, w, p, false, "", "")
 }
 
+// frame wraps content in a fixed-width border using themed or inherited colors.
 func frame(content []string, w int, p palette, inherit bool, fg, bg string) []string {
 	wrap := func(s string) string {
 		if inherit {
@@ -116,6 +123,7 @@ func frame(content []string, w int, p palette, inherit bool, fg, bg string) []st
 	return append(rows, wrap(ink(p.Border, "╰"+strings.Repeat("─", w-2)+"╯")))
 }
 
+// terminalFrame renders a shell pane with its reader, staging and status overlays.
 func (a *App) terminalFrame(index, w, h int) []string {
 	p := a.Config.Palette()
 	pane := a.panes[index]
@@ -131,6 +139,7 @@ func (a *App) terminalFrame(index, w, h int) []string {
 	} else if cfg.Background != "inherit" {
 		bg = color(cfg.Background, true)
 	}
+
 	lines := pane.Screen.Lines(a.focus == fmt.Sprintf("terminal%d", index) && pane.Pending == "", fg, bg)
 	if pane.Reader != nil {
 		lines = pane.Reader.lines(w-2, h-3, p)
@@ -140,13 +149,16 @@ func (a *App) terminalFrame(index, w, h int) []string {
 		}
 		lines = append(lines, ink(p.Muted, pane.Reader.Buffer.Status()+" · ")+keyHints(hint, p))
 	}
+
 	if pane.Pending != "" {
 		lines[len(lines)-2] = " " + keyHints("enter inserts · r tracked run · e edits · esc dismisses", p)
 		lines[len(lines)-1] = ink(p.Accent, ansi.Truncate(pane.Pending, w-2, "…"))
 	}
+
 	if pane.Err != "" {
 		lines[len(lines)-1] = ink(p.Warn, a.noticeText(pane.Err, p))
 	}
+
 	fgArg, bgArg := "", ""
 	if fg != "" {
 		fgArg = ";" + fg
@@ -164,6 +176,7 @@ func (a *App) terminalFrame(index, w, h int) []string {
 	return box[:min(h, len(box))]
 }
 
+// overlay composites a box over application rows without retaining covered background text.
 func (a *App) overlay(rows, box []string, x, y int) {
 	for i, line := range box {
 		if y+i < 0 || y+i >= len(rows) {

@@ -10,6 +10,7 @@ import (
 	"github.com/erdajt/wraith/internal/ollama"
 )
 
+// probe cancels the previous probe and prepares server startup, model discovery and loading.
 func (a *App) probe() tea.Cmd {
 	if a.demo {
 		return nil
@@ -18,9 +19,11 @@ func (a *App) probe() tea.Cmd {
 		a.notice = err.Error()
 		return nil
 	}
+
 	if a.loadCancel != nil {
 		a.loadCancel()
 	}
+
 	timeout, _ := time.ParseDuration(a.Config.Timeout)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	a.loadCancel = cancel
@@ -31,11 +34,13 @@ func (a *App) probe() tea.Cmd {
 	logPath := filepath.Join(a.Paths.Cache, "ollama.log")
 	return func() tea.Msg {
 		defer cancel()
+
 		result := infoMsg{Serial: serial, Model: model}
 		if err := client.EnsureServer(ctx, cfg.AutoStart, logPath); err != nil {
 			result.Err = fmt.Errorf("%s startup: %w · log: %s", client.Name, err, logPath)
 			return result
 		}
+
 		result.Info, result.Err = client.Show(ctx, model)
 		if result.Err == nil {
 			result.Err = client.Load(ctx, model, cfg.KeepAlive, ollama.Options{Context: cfg.ContextFor(model, result.Info.ContextWindow), Threads: cfg.Threads, Predict: cfg.Predict, Temperature: cfg.Temperature})

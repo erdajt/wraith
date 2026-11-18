@@ -12,6 +12,7 @@ func TestCountedTranscriptMotions(t *testing.T) {
 	a := fixture(t)
 	a.Session.Messages = []session.Message{{Role: "assistant", Content: strings.Repeat("line\n", 300)}}
 	a.focus, a.follow, a.offset = "chat", false, 150
+
 	for _, step := range []struct {
 		keys   string
 		offset int
@@ -21,11 +22,14 @@ func TestCountedTranscriptMotions(t *testing.T) {
 		if step.keys == "999999j" {
 			want = len(a.transcript(max(10, a.mainWidth()-5))) - 1
 		}
+
 		if a.chatCursor != want {
 			t.Fatalf("%s: got %d, want %d", step.keys, a.chatCursor, want)
 		}
 	}
+
 	a.key(key("gg"))
+
 	if a.offset != 0 || a.follow {
 		t.Fatal("batched gg did not reach the beginning")
 	}
@@ -34,9 +38,11 @@ func TestCountedTranscriptMotions(t *testing.T) {
 func TestNormalQuitDoesNotConsumeInsertOrShellInput(t *testing.T) {
 	a := fixture(t)
 	a.key(key("q"))
+
 	if a.Prompt.String() != "q" {
 		t.Fatal("insert q was consumed")
 	}
+
 	a.Prompt.Mode = "normal"
 	cmd := a.key(key("q"))
 	if cmd == nil {
@@ -52,6 +58,7 @@ func TestBatchedNormalMotionsDoNotInsertDigits(t *testing.T) {
 	a.Prompt.Set("one\ntwo\nthree")
 	a.Prompt.Mode = "normal"
 	a.key(key("10k"))
+
 	if a.Prompt.String() != "one\ntwo\nthree" {
 		t.Fatal("motion inserted text")
 	}
@@ -64,14 +71,17 @@ func TestSlashSearchFollowsFocusedSurface(t *testing.T) {
 	a.key(key("/"))
 	a.key(key("beta"))
 	a.key(tea.KeyMsg{Type: tea.KeyEnter})
+
 	if a.Prompt.Pos != 6 || a.Prompt.Search != "beta" || a.search != "" {
 		t.Fatal("prompt search escaped its buffer")
 	}
+
 	a.Session.Messages = []session.Message{{Role: "user", Content: "needle"}, {Role: "assistant", Content: strings.Repeat("answer\n", 50)}}
 	a.focus = "chat"
 	a.key(key("/"))
 	a.key(key("needle"))
 	a.key(tea.KeyMsg{Type: tea.KeyEnter})
+
 	if a.search != "needle" || a.Prompt.Search != "beta" || a.follow {
 		t.Fatal("transcript search changed prompt search")
 	}
@@ -82,18 +92,25 @@ func TestCountedMenuNavigationAndSelectedBlocks(t *testing.T) {
 	a.focus = "chat"
 	a.Session.Messages = []session.Message{{Role: "assistant", Content: "```sh\nprintf one\n```\n```sh\nprintf two\n```"}}
 	a.key(tea.KeyMsg{Type: tea.KeyEnter})
+
 	if a.popup == nil || a.popup.Kind != "blocks" || len(a.popup.Items) != 2 {
 		t.Fatal("enter did not offer response blocks")
 	}
+
 	a.key(key("10j"))
+
 	if a.popup.Index != 1 {
 		t.Fatal("count did not clamp to last block")
 	}
+
 	a.key(key("100k"))
+
 	if a.popup.Index != 0 {
 		t.Fatal("count did not clamp to first block")
 	}
+
 	a.key(tea.KeyMsg{Type: tea.KeyEnter})
+
 	if a.popup.Kind != "block-actions" {
 		t.Fatal("block did not offer edit or run")
 	}
@@ -107,18 +124,25 @@ func TestConversationParagraphIndentAndWordMotions(t *testing.T) {
 	a.chatCursor = 1
 	a.chatColumn = 8
 	a.key(key("^"))
+
 	if a.chatColumn != 3 {
 		t.Fatalf("indent motion: %d", a.chatColumn)
 	}
+
 	a.key(key("w"))
+
 	if a.chatColumn != 9 {
 		t.Fatalf("word motion: %d", a.chatColumn)
 	}
+
 	a.key(key("b"))
+
 	if a.chatColumn != 3 {
 		t.Fatal("b opened blocks instead of moving")
 	}
+
 	a.key(key("}"))
+
 	if a.chatCursor != 2 {
 		t.Fatalf("paragraph motion: %d", a.chatCursor)
 	}

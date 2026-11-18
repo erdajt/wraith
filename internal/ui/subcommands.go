@@ -14,6 +14,7 @@ var subcommands = map[string][]commandSpec{
 	},
 }
 
+// commandChoices offers child commands only after a recognized parent and dot.
 func commandChoices(query string) []commandSpec {
 	if parent, _, ok := strings.Cut(query, "."); ok {
 		return subcommands[parent]

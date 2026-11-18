@@ -19,6 +19,7 @@ type rendered struct {
 	Message  int
 }
 
+// transcript renders conversation rows with message, thinking and code-block metadata.
 func (a *App) transcript(w int) []rendered {
 	p := a.Config.Palette()
 	var out []rendered
@@ -27,15 +28,18 @@ func (a *App) transcript(w int) []rendered {
 			out = append(out, rendered{Text: line, Message: index, Block: -1})
 		}
 	}
+
 	if a.Session.Summary != "" {
 		add(ink(p.Second, "◌ compacted memory · ")+keyHints("/archives restores originals", p), -1)
 		add(a.expandStyled(ink(p.Muted, clean(a.Session.Summary))), -1)
 		add("", -1)
 	}
+
 	messages := append([]session.Message(nil), a.Session.Messages...)
 	if a.busy && !a.compacting && !a.executing {
 		messages = append(messages, a.partial)
 	}
+
 	block := 0
 	for i, m := range messages {
 		label := "YOU"
@@ -44,10 +48,12 @@ func (a *App) transcript(w int) []rendered {
 			label = "WRAITH"
 			c = p.Second
 		}
+
 		marker := "◇"
 		if a.focus == "chat" && a.selected == i {
 			marker = "◆"
 		}
+
 		meta := ""
 		if m.Edited {
 			meta += " · edited"
@@ -56,6 +62,7 @@ func (a *App) transcript(w int) []rendered {
 			meta += " · interrupted"
 		}
 		add(bold(c, marker+" "+label)+ink(p.Muted, fmt.Sprintf("  %02d%s", i+1, meta)), i)
+
 		if m.Thinking != "" {
 			expanded := a.thinkingOpen(i)
 			arrow := "▸"
@@ -69,6 +76,7 @@ func (a *App) transcript(w int) []rendered {
 			for j := start; j < len(out); j++ {
 				out[j].Thinking = true
 			}
+
 			if expanded {
 				for _, line := range strings.Split(ansi.Hardwrap(a.expandStyled(clean(m.Thinking)), w, true), "\n") {
 					add(ink(p.Muted, line), i)
@@ -90,6 +98,7 @@ func (a *App) transcript(w int) []rendered {
 	return out
 }
 
+// promptLines renders a four-row prompt viewport with cursor, selection and search highlighting.
 func (a *App) promptLines(w int) []string {
 	p := a.Config.Palette()
 	b := a.Prompt
@@ -109,6 +118,7 @@ func (a *App) promptLines(w int) []string {
 			}
 		}
 	}
+
 	for i := 0; i <= len(b.Text); i++ {
 		r := ' '
 		if i < len(b.Text) {
@@ -118,6 +128,7 @@ func (a *App) promptLines(w int) []string {
 		if i == len(b.Text) && !cursor {
 			break
 		}
+
 		if column >= w {
 			lines = append(lines, line.String())
 			line.Reset()
@@ -126,6 +137,7 @@ func (a *App) promptLines(w int) []string {
 		if cursor {
 			cursorRow = len(lines)
 		}
+
 		if r == '\n' {
 			if cursor {
 				line.WriteString(cursorText(" ", 0, p))
@@ -135,6 +147,7 @@ func (a *App) promptLines(w int) []string {
 			column = 0
 			continue
 		}
+
 		s := string(r)
 		if r == '\t' {
 			s = "    "
@@ -142,6 +155,7 @@ func (a *App) promptLines(w int) []string {
 		if unicode.IsControl(r) {
 			s = ""
 		}
+
 		width := runewidth.StringWidth(s)
 		if column+width > w {
 			lines = append(lines, line.String())
@@ -151,6 +165,7 @@ func (a *App) promptLines(w int) []string {
 				cursorRow = len(lines)
 			}
 		}
+
 		if cursor || (i >= left && i < right) {
 			line.WriteString(cursorText(s, 0, p))
 		} else if i < len(matches) && matches[i] {

@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
+// completionFrame renders a bounded command list around the current selection.
 func (a *App) completionFrame() []string {
 	choices, index, visible := a.completions()
 	if !visible {

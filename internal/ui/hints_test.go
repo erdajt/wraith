@@ -10,6 +10,7 @@ import (
 
 func TestKeyHintsUseActionColorsWithoutChangingText(t *testing.T) {
 	p := fixture(t).Config.Palette()
+
 	for _, tc := range []struct{ text, color string }{
 		{"q quit", p.HintQuit}, {"ctrl+q quit", p.HintQuit}, {"esc close", p.HintQuit},
 		{"r refresh", p.HintRefresh}, {"ctrl+x cancel", p.HintCancel}, {"esc rejects", p.HintCancel},
@@ -22,6 +23,7 @@ func TestKeyHintsUseActionColorsWithoutChangingText(t *testing.T) {
 			}
 		})
 	}
+
 	text := "q close · r refresh · ctrl+x cancel · j/k move"
 	got := keyHints(text, p)
 	if ansi.Strip(got) != text || ansi.StringWidth(got) != ansi.StringWidth(text) {
@@ -67,6 +69,7 @@ func TestActionHintColorsReachRenderedViews(t *testing.T) {
 				view = a.View()
 				want["ctrl+x quit"] = p.HintQuit
 			}
+
 			assertHintColors(t, view, want)
 		})
 	}
@@ -75,6 +78,7 @@ func TestActionHintColorsReachRenderedViews(t *testing.T) {
 func assertHintColors(t *testing.T, view string, want map[string]string) {
 	t.Helper()
 	rows := strings.Split(view, "\n")
+
 	for text, c := range want {
 		found := false
 		for _, row := range rows {
@@ -93,6 +97,7 @@ func assertHintColors(t *testing.T, view string, want map[string]string) {
 				}
 			}
 		}
+
 		if !found {
 			t.Fatalf("hint %q missing from view", text)
 		}
@@ -124,6 +129,7 @@ func TestPickerAndHelpHintsUseActionColors(t *testing.T) {
 				a.openLeader("")
 				want["x"], want["c"], want["r"] = p.HintQuit, p.HintCancel, p.HintRefresh
 				view := strings.Join(a.menuFrame(), "\n")
+
 				for _, it := range a.popup.Items {
 					found := false
 					for _, row := range strings.Split(view, "\n") {
@@ -132,16 +138,19 @@ func TestPickerAndHelpHintsUseActionColors(t *testing.T) {
 							assertHintColors(t, row, map[string]string{it.Label: want[it.Label]})
 						}
 					}
+
 					if !found {
 						t.Fatalf("leader binding %q missing", it.Label)
 					}
 				}
+
 				return
 			case "filter":
 				a.settingsMenu()
 				a.popup.Searching, a.popup.Query = true, "appearance"
 				want["esc resets"] = p.HintCancel
 			}
+
 			assertHintColors(t, strings.Join(a.menuFrame(), "\n"), want)
 		})
 	}
@@ -152,6 +161,7 @@ func TestNoticeHintsFollowRemappedKeysAndPreserveText(t *testing.T) {
 	a.Config.Keys["send"], a.Config.Keys["cancel"] = "f7", "f8"
 	a.Config.Keys["terminal_unfocus"] = "f9"
 	p := a.Config.Palette()
+
 	for _, tc := range []struct{ text, hint, color string }{
 		{"prompt updated · f7 sends", "f7 sends", p.Accent},
 		{"wait for the current operation or press f8", "press f8", p.HintCancel},
@@ -166,12 +176,15 @@ func TestNoticeHintsFollowRemappedKeysAndPreserveText(t *testing.T) {
 			if ansi.Strip(view) != tc.text {
 				t.Fatal("hint styling changed notice text")
 			}
+
 			assertHintColors(t, view, map[string]string{tc.hint: tc.color})
 		})
 	}
+
 	a.busy = true
 	a.Prompt.Set("keep working")
 	a.submit()
+
 	if !strings.Contains(a.notice, "press f8") || strings.Contains(a.notice, "ctrl+c") {
 		t.Fatalf("busy notice ignored cancel binding: %q", a.notice)
 	}

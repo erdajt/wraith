@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// settingsMenu opens the top-level settings categories.
 func (a *App) settingsMenu() tea.Cmd {
 	a.popup = &menu{Kind: "settings", Title: "settings", Hints: "e edits config.yaml", Items: []item{
 		{"model", "category.model", "model, thinking, context, startup"},
@@ -22,6 +23,7 @@ func (a *App) settingsMenu() tea.Cmd {
 	return nil
 }
 
+// settingsCategory lists category values while hiding provider credentials from the ui.
 func (a *App) settingsCategory(category string) {
 	groups := map[string][]string{
 		"environment": {"environment.scope"},

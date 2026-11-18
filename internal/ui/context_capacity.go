@@ -9,16 +9,19 @@ import (
 	"github.com/erdajt/wraith/internal/provider"
 )
 
+// contextLimit resolves the selected model's effective context capacity.
 func (a *App) contextLimit() int {
 	return a.Config.ContextFor(a.Session.Model, a.Info.ContextWindow)
 }
 
+// runtimeConfig copies configuration with the selected model's effective context capacity.
 func (a *App) runtimeConfig() config.Config {
 	c := a.Config
 	c.Context = a.contextLimit()
 	return c
 }
 
+// setContext validates and saves a model-specific capacity before reloading the model.
 func (a *App) setContext(value string) tea.Cmd {
 	value = strings.TrimSpace(value)
 	capacity := 0

@@ -10,17 +10,21 @@ import (
 	"github.com/erdajt/wraith/internal/provider"
 )
 
+// set validates and persists a setting before applying runtime effects.
 func (a *App) set(key, value string) tea.Cmd {
 	if a.demo {
 		a.notice = "settings are read-only in demo mode"
 		return nil
 	}
+
 	if key == "provider" {
 		return a.selectProvider(value)
 	}
+
 	if key == "context" {
 		return a.setContext(value)
 	}
+
 	b, _ := json.Marshal(a.Config)
 	var data map[string]any
 	_ = json.Unmarshal(b, &data)
@@ -28,6 +32,7 @@ func (a *App) set(key, value string) tea.Cmd {
 	if err := json.Unmarshal([]byte(value), &decoded); err != nil {
 		decoded = value
 	}
+
 	parent := data
 	parts := strings.Split(key, ".")
 	for _, part := range parts[:len(parts)-1] {
@@ -50,12 +55,14 @@ func (a *App) set(key, value string) tea.Cmd {
 		a.notice = err.Error()
 		return nil
 	}
+
 	if key == "model" {
 		p := c.Providers[c.Provider]
 		p.Model = c.Model
 		c.Providers[c.Provider] = p
 		c.Thinking = "auto"
 	}
+
 	if err := c.Validate(); err != nil {
 		a.notice = err.Error()
 		return nil
@@ -66,33 +73,40 @@ func (a *App) set(key, value string) tea.Cmd {
 			return nil
 		}
 	}
+
 	if err := config.Save(config.File(a.Paths.Config), c); err != nil {
 		a.notice = err.Error()
 		return nil
 	}
 	a.Config = c
+
 	if key == "appearance.thinking" {
 		a.showThinking = c.Appearance.Thinking
 		a.thinkingExpanded = map[string]bool{}
 	}
+
 	if key == "appearance.mouse" {
 		if c.Appearance.Mouse {
 			return tea.EnableMouseCellMotion
 		}
 		return tea.DisableMouse
 	}
+
 	a.resizePanes()
 	a.notice = "saved " + key + " = " + value
+
 	if strings.HasPrefix(key, "providers") {
 		a.notice = "saved provider settings"
 		a.Client = provider.New(c)
 		return a.probe()
 	}
+
 	if key == "host" {
 		a.Client = provider.New(c)
 		a.connected = false
 		return a.probe()
 	}
+
 	if key == "model" || key == "threads" {
 		if key == "model" {
 			a.Info = ollama.Info{}
@@ -104,34 +118,43 @@ func (a *App) set(key, value string) tea.Cmd {
 	return nil
 }
 
+// settingMenu opens a setting's picker or hands unrestricted configuration to the editor.
 func (a *App) settingMenu(key string) tea.Cmd {
 	if strings.HasPrefix(key, "category.") {
 		a.settingsCategory(strings.TrimPrefix(key, "category."))
 		return nil
 	}
+
 	if key == "edit" {
 		return a.edit("config", "", "", -1)
 	}
+
 	if key == "provider" {
 		return a.providerMenu()
 	}
+
 	if key == "context" {
 		a.openContextInput()
 		return nil
 	}
+
 	if key == "model" {
 		return a.modelCommand("models", "")
 	}
+
 	if key == "theme" {
 		return a.runCommand("theme")
 	}
+
 	if key == "thinking" {
 		return a.runCommand("think")
 	}
+
 	values := map[string][]string{"environment.scope": {"conversation", "directory", "global"}, "execution.capture_bytes": {"1048576", "8388608", "33554432", "67108864"}, "execution.tail_bytes": {"16384", "65536", "262144", "1048576"}, "execution.max_jobs": {"1", "2", "4", "8"}, "execution.max_reads": {"4", "8", "16", "32"}, "execution.command_timeout": {"1m", "5m", "10m", "30m"}, "execution.auto_share": {"false", "true"}, "predict": {"512", "1024", "2048", "4096"}, "compact.mode": {"ask", "auto", "manual"}, "compact.threshold": {"0.7", "0.8", "0.9", "0.95"}, "terminal.background": {"inherit", "theme"}, "appearance.background": {"theme", "inherit"}, "appearance.mouse": {"true", "false"}, "appearance.thinking": {"true", "false"}, "animations": {"true", "false"}, "execution.mode": {"agent", "blocks"}, "execution.max_steps": {"1", "4", "8", "16"}, "execution.output_context": {"1024", "4096", "8192", "16384"}, "auto_start": {"true", "false"}, "threads": {"0", "4", "6", "8"}, "terminal.overlay_width": {"0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "0.95"}, "terminal.overlay_height": {"0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9"}, "terminal.split_width": {"0.25", "0.3", "0.4", "0.5", "0.6", "0.7"}}
 	if len(values[key]) == 0 {
 		return a.edit("config", "", "", -1)
 	}
+
 	items := []item{}
 	for _, v := range values[key] {
 		items = append(items, item{v, key + "=" + v, ""})

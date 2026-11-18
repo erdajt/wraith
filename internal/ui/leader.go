@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// openLeader opens the configured key sequences matching a leader prefix.
 func (a *App) openLeader(prefix string) {
 	items := []item{}
 	for sequence, command := range a.Config.Bindings {
@@ -19,15 +20,18 @@ func (a *App) openLeader(prefix string) {
 	a.popup = &menu{Kind: "leader", Title: "leader · " + a.Config.Leader + " " + prefix, Prefix: prefix, Items: items}
 }
 
+// leaderKey runs a complete binding or narrows the leader menu to a longer sequence.
 func (a *App) leaderKey(k tea.KeyMsg) (tea.Cmd, bool) {
 	if k.Type != tea.KeyRunes {
 		return nil, false
 	}
+
 	prefix := strings.TrimSpace(a.popup.Prefix + " " + k.String())
 	if command, ok := a.Config.Bindings[prefix]; ok {
 		a.popup = nil
 		return a.runCommand(command), true
 	}
+
 	for sequence := range a.Config.Bindings {
 		if strings.HasPrefix(sequence, prefix+" ") {
 			a.openLeader(prefix)
@@ -37,6 +41,7 @@ func (a *App) leaderKey(k tea.KeyMsg) (tea.Cmd, bool) {
 	return nil, false
 }
 
+// menuSearch filters menu entries and lets selection keys continue after search ends.
 func (a *App) menuSearch(k tea.KeyMsg) bool {
 	m := a.popup
 	key := k.String()
@@ -56,6 +61,7 @@ func (a *App) menuSearch(k tea.KeyMsg) bool {
 		}
 		return false
 	}
+
 	switch key {
 	case "enter", "down", "up":
 		m.Searching = false
@@ -82,6 +88,7 @@ func (a *App) menuSearch(k tea.KeyMsg) bool {
 			m.Query += string(k.Runes)
 		}
 	}
+
 	m.Items = nil
 	for _, it := range m.All {
 		if strings.Contains(strings.ToLower(it.Label+" "+it.Detail), strings.ToLower(m.Query)) {

@@ -6,12 +6,14 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// pinKey opens a pin in the editor or persists its removal before refreshing the picker.
 func (a *App) pinKey(k tea.KeyMsg) (tea.Cmd, bool) {
 	key := k.String()
 	edit, remove := key == a.Config.Keys["pin_edit"], key == a.Config.Keys["pin_remove"]
 	if !edit && !remove {
 		return nil, false
 	}
+
 	m := a.popup
 	if m.Index < 0 || m.Index >= len(m.Items) {
 		return nil, true
@@ -24,10 +26,12 @@ func (a *App) pinKey(k tea.KeyMsg) (tea.Cmd, bool) {
 		a.popup = nil
 		return a.edit("pin", "", "", index), true
 	}
+
 	if a.demo {
 		a.notice = "demo pins are read-only"
 		return nil, true
 	}
+
 	candidate := a.Session.Clone()
 	candidate.Pins = append(candidate.Pins[:index], candidate.Pins[index+1:]...)
 	if err := a.Store.Save(candidate); err != nil {

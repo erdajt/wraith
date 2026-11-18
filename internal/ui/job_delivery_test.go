@@ -18,24 +18,30 @@ func TestCompletedEvidenceWaitsForDraftAndDoesNotCrossSessions(t *testing.T) {
 	a.pendingRuns[r.ID] = r
 	a.Prompt.Set("unsent draft")
 	a.deliverRuns()
+
 	if len(a.Session.Messages) != 0 || a.Prompt.String() != "unsent draft" {
 		t.Fatal("completion interrupted draft")
 	}
+
 	a.Prompt.Set("")
 	original := a.Session
 	a.Session = session.New("other")
 	a.deliverRuns()
+
 	if len(a.Session.Messages) != 0 {
 		t.Fatal("output crossed session boundary")
 	}
+
 	a.Session = original
 	a.agentStopped = true
 	a.deliverRuns()
 	a.pendingRuns[r.ID] = r
 	a.deliverRuns()
+
 	if len(a.Session.Messages) != 1 || len(a.Session.DeliveredRuns) != 1 || a.busy {
 		t.Fatal("duplicate evidence or stopped turn resumed")
 	}
+
 	saved, err := a.Store.Load(original.ID)
 	if err != nil || len(saved.DeliveredRuns) != 1 {
 		t.Fatal("delivery not durable")
@@ -52,6 +58,7 @@ func TestCompletionDoesNotInterruptEditorOrSelection(t *testing.T) {
 	a.showRun(r, "text")
 	a.popup.Reader.Frozen = true
 	a.deliverRuns()
+
 	if len(a.Session.Messages) != 0 || len(a.pendingRuns) != 1 {
 		t.Fatal("interactive barrier ignored")
 	}
@@ -82,11 +89,13 @@ func TestPendingResultIsIncludedWithNextSubmittedDraft(t *testing.T) {
 		if n < 3 || !strings.Contains(body.Messages[n-2].Content, "queued evidence") || body.Messages[n-1].Content != "use the result" {
 			t.Errorf("pending result not delivered with draft: %+v", body.Messages)
 		}
+
 		return response(`{"done":true,"message":{"role":"assistant","content":"done"}}`), nil
 	})
 	a.Prompt.Set("use the result")
 	a.submit()
 	drain(t, a)
+
 	if len(a.Session.DeliveredRuns) != 1 {
 		t.Fatal("delivery id missing")
 	}
@@ -95,15 +104,20 @@ func TestPendingResultIsIncludedWithNextSubmittedDraft(t *testing.T) {
 func TestReconciliationPersistsEvidenceWithoutRestartingAgent(t *testing.T) {
 	a := fixture(t)
 	r := runner.Record{ID: session.ID(), Session: a.Session.ID, Agent: true, ShareOutput: true, Output: "completed offline", Finished: time.Now()}
+
 	if err := a.history().Save(r); err != nil {
 		t.Fatal(err)
 	}
+
 	a.reconcileJobs()
+
 	if cmd := a.deliverRuns(); cmd != nil || a.busy {
 		t.Fatal("reconciliation restarted agent")
 	}
+
 	a.reconcileJobs()
 	a.deliverRuns()
+
 	if len(a.Session.Messages) != 1 || !strings.Contains(a.Session.Messages[0].Content, "completed offline") {
 		t.Fatal("reconciliation lost or duplicated output")
 	}
@@ -126,10 +140,12 @@ func TestCommandEvidenceKeepsTrustedIdAcrossProviderDispatch(t *testing.T) {
 		if !strings.Contains(text, r.ID) || strings.Contains(text, "ab line") || !strings.Contains(text, "wraith::TOKEN wraith::FIELD") {
 			t.Errorf("evidence corrupted: %s", text)
 		}
+
 		return response(`{"done":true,"message":{"role":"assistant","content":"done"}}`), nil
 	})
 	a.deliverRuns()
 	drain(t, a)
+
 	if a.Session.Messages[0].Evidence == nil {
 		t.Fatal("evidence metadata missing")
 	}

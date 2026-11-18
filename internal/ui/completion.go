@@ -46,6 +46,7 @@ var commandSpecs = []commandSpec{
 	{"quit", "save and exit", false},
 }
 
+// matchingCommands returns prefix matches with exact command names first.
 func matchingCommands(query string) []commandSpec {
 	query = strings.ToLower(query)
 	var exact, matches []commandSpec
@@ -59,12 +60,14 @@ func matchingCommands(query string) []commandSpec {
 	return append(exact, matches...)
 }
 
+// slashDraft reports whether the prompt is editing a single-line slash command.
 func (a *App) slashDraft() (string, bool) {
 	text := a.Prompt.String()
 	active := a.focus == "prompt" && a.Prompt.Mode == "insert" && !a.commandMode && !a.searchMode && strings.HasPrefix(text, "/") && !strings.ContainsRune(text, '\n')
 	return strings.TrimPrefix(text, "/"), active
 }
 
+// completions resolves visible command choices and a valid selection index.
 func (a *App) completions() ([]commandSpec, int, bool) {
 	query, active := a.slashDraft()
 	if !active || strings.ContainsAny(query, " \t") {

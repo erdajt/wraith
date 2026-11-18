@@ -7,11 +7,13 @@ import (
 	"github.com/erdajt/wraith/internal/vim"
 )
 
+// slashKey handles completion navigation, argument insertion and command selection.
 func (a *App) slashKey(k tea.KeyMsg) (tea.Cmd, bool) {
 	text, active := a.slashDraft()
 	if !active {
 		return nil, false
 	}
+
 	choices, index, visible := a.completions()
 	switch k.String() {
 	case "up", "down":
@@ -48,6 +50,7 @@ func (a *App) slashKey(k tea.KeyMsg) (tea.Cmd, bool) {
 		} else if k.String() != "enter" {
 			return nil, false
 		}
+
 		name, _, _ := strings.Cut(strings.TrimSpace(text), " ")
 		matches := matchingCommands(name)
 		if len(matches) == 0 || matches[0].Name != name {

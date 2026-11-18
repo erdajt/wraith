@@ -11,6 +11,7 @@ import (
 	"github.com/erdajt/wraith/internal/terminal"
 )
 
+// toggleTerminal hides a visible pane or opens and focuses it.
 func (a *App) toggleTerminal(index int) tea.Cmd {
 	p := a.panes[index]
 	if p != nil && p.Visible {
@@ -21,17 +22,20 @@ func (a *App) toggleTerminal(index int) tea.Cmd {
 	return a.openTerminal(index)
 }
 
+// openTerminal shows an existing shell or starts one with the current private-variable environment.
 func (a *App) openTerminal(index int) tea.Cmd {
 	if a.demo {
 		a.notice = "shells are disabled in demo mode"
 		return nil
 	}
+
 	if p := a.panes[index]; p != nil {
 		p.Visible = true
 		a.focus = fmt.Sprintf("terminal%d", index)
 		a.resizePanes()
 		return nil
 	}
+
 	if err := a.refreshVariables(); err != nil {
 		a.notice = err.Error()
 		return nil
@@ -57,6 +61,7 @@ func (a *App) openTerminal(index int) tea.Cmd {
 	return a.readTerminal(index)
 }
 
+// readTerminal waits for one terminal event or application shutdown.
 func (a *App) readTerminal(index int) tea.Cmd {
 	p := a.panes[index].PTY
 	return func() tea.Msg {
@@ -69,6 +74,7 @@ func (a *App) readTerminal(index int) tea.Cmd {
 	}
 }
 
+// resizePanes updates active screen buffers and pseudo-terminal dimensions.
 func (a *App) resizePanes() {
 	for i, p := range a.panes {
 		if p == nil || p.PTY == nil {

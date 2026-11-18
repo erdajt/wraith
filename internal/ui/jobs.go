@@ -9,15 +9,18 @@ import (
 	"github.com/erdajt/wraith/internal/runner"
 )
 
+// jobList merges saved command metadata with live job snapshots, newest first.
 func (a *App) jobList() ([]runner.Record, error) {
 	records, err := a.history().List()
 	if err != nil {
 		return nil, err
 	}
+
 	positions := map[string]int{}
 	for i, r := range records {
 		positions[r.ID] = i
 	}
+
 	for _, job := range a.jobs.Snapshot() {
 		r := job.Record
 		r.Output, r.Tail = "", ""
@@ -31,21 +34,25 @@ func (a *App) jobList() ([]runner.Record, error) {
 	return records, nil
 }
 
+// openJobs opens current-session jobs with status and output-sharing indicators.
 func (a *App) openJobs() tea.Cmd {
 	records, err := a.jobList()
 	if err != nil {
 		a.notice = err.Error()
 		return nil
 	}
+
 	items := []item{}
 	for _, r := range records {
 		if r.Session != a.Session.ID {
 			continue
 		}
+
 		policy := "output private"
 		if r.ShareOutput && !r.OutputHidden {
 			policy = "output shared"
 		}
+
 		location := "foreground"
 		if r.Background {
 			location = "background"
@@ -56,6 +63,7 @@ func (a *App) openJobs() tea.Cmd {
 	return nil
 }
 
+// cancelJob requests job cancellation and reports whether the command was still active.
 func (a *App) cancelJob(id string) {
 	if a.jobs.Cancel(id) {
 		a.notice = "cancelling command · output remains in history"
@@ -64,12 +72,14 @@ func (a *App) cancelJob(id string) {
 	}
 }
 
+// reconcileJobs queues saved, undelivered command results after restoring a session.
 func (a *App) reconcileJobs() {
 	records, err := a.history().List()
 	if err != nil {
 		a.notice = "command reconciliation: " + err.Error()
 		return
 	}
+
 	for _, record := range records {
 		if record.Session != a.Session.ID || record.Finished.IsZero() || slices.Contains(a.Session.DeliveredRuns, record.ID) {
 			continue

@@ -8,6 +8,7 @@ import (
 	"github.com/erdajt/wraith/internal/terminal"
 )
 
+// terminalKey routes shell input, staged-command actions and scrollback navigation.
 func (a *App) terminalKey(k tea.KeyMsg) tea.Cmd {
 	key := k.String()
 	if strings.HasPrefix(a.focus, "terminal") {
@@ -20,12 +21,15 @@ func (a *App) terminalKey(k tea.KeyMsg) tea.Cmd {
 			a.focus = "prompt"
 			return nil
 		}
+
 		if p == nil || p.PTY == nil {
 			return nil
 		}
+
 		if handled, cmd := a.terminalReaderKey(index, k); handled {
 			return cmd
 		}
+
 		if p.Pending != "" {
 			if key == "enter" {
 				data, err := stagedInput(p.Pending, p.Screen.Bracketed)
@@ -49,6 +53,7 @@ func (a *App) terminalKey(k tea.KeyMsg) tea.Cmd {
 			}
 			return nil
 		}
+
 		if key == "shift+pgup" {
 			p.Screen.Scroll(p.Screen.Height / 2)
 			return nil
@@ -57,6 +62,7 @@ func (a *App) terminalKey(k tea.KeyMsg) tea.Cmd {
 			p.Screen.Scroll(-p.Screen.Height / 2)
 			return nil
 		}
+
 		p.Screen.Offset = 0
 		if err := p.PTY.Write(terminal.Key(k, p.Screen.Application, p.Screen.Bracketed)); err != nil {
 			a.notice = err.Error()
@@ -66,10 +72,12 @@ func (a *App) terminalKey(k tea.KeyMsg) tea.Cmd {
 	return nil
 }
 
+// stagedInput encodes a reviewable paste, rejecting control bytes and unsafe multiline staging.
 func stagedInput(command string, bracketed bool) ([]byte, error) {
 	if strings.ContainsAny(command, "\x00\x1b\r") {
 		return nil, errors.New("command contains terminal control bytes; edit before staging")
 	}
+
 	if bracketed {
 		return []byte("\x1b[200~" + command + "\x1b[201~"), nil
 	}

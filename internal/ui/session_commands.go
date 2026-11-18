@@ -13,6 +13,7 @@ import (
 	"github.com/erdajt/wraith/internal/vim"
 )
 
+// sessionCommand handles session navigation, export, retry and terminal restart commands.
 func (a *App) sessionCommand(name, arg string) tea.Cmd {
 	switch name {
 	case "new", "clear":
@@ -20,6 +21,7 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 			a.notice = err.Error()
 			return nil
 		}
+
 		s := session.New(a.Config.Model)
 		s.Directory = a.Directory
 		s.Provider = a.Config.Provider
@@ -46,6 +48,7 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 			a.notice = err.Error()
 			return nil
 		}
+
 		items := []item{}
 		for _, s := range list {
 			items = append(items, item{s.Title, s.ID, s.Updated.Local().Format("jan 02 15:04") + " · " + s.ID[:8]})
@@ -62,6 +65,7 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 			a.notice = err.Error()
 			return nil
 		}
+
 		items := []item{}
 		for _, p := range paths {
 			info, err := os.Stat(p)
@@ -81,6 +85,7 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 			home, _ := os.UserHomeDir()
 			arg = filepath.Join(home, arg[2:])
 		}
+
 		if err := a.refreshVariables(); err != nil {
 			a.notice = err.Error()
 			return nil

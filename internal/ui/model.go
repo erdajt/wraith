@@ -165,6 +165,7 @@ type App struct {
 	pendingPrompt                      string
 }
 
+// New initializes the workspace, loads private context and recovers command history outside demo mode.
 func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, error) {
 	instructions, err := fsutil.ReadLimit(filepath.Join(p.Config, "instructions.md"), 64<<10)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -173,6 +174,7 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 	if demo {
 		instructions = nil
 	}
+
 	c.Model = s.Model
 	if s.Provider != "" {
 		c.Provider = s.Provider
@@ -180,6 +182,7 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 	if _, ok := c.Providers[c.Provider]; !ok {
 		return nil, errors.New("session provider is not configured")
 	}
+
 	dir, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -187,11 +190,14 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 	if real, e := filepath.EvalSymlinks(dir); e == nil {
 		dir = real
 	}
+
 	a := &App{inputIndex: -1, Directory: dir, Config: c, Paths: p, Store: store.Store{Root: p.Data}, Session: s, Client: provider.New(c), Instructions: string(instructions), Prompt: vim.New(), width: 100, height: 30, chatCursor: -1, focus: "prompt", follow: true, events: make(chan tea.Msg, 128), done: make(chan struct{}), demo: demo, notice: "/help commands · " + c.Keys["send"] + " send · " + c.Keys["editor"] + " editor"}
+
 	if !demo {
 		if err := a.refreshVariables(); err != nil {
 			return nil, err
 		}
+
 		entries, e := a.Store.Inputs(a.Directory)
 		if e != nil {
 			a.notice = "input history: " + e.Error()
@@ -199,6 +205,7 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 			a.inputHistory = entries
 		}
 	}
+
 	a.agentStopped = true
 	a.pendingRuns = map[string]runner.Record{}
 	a.lastPoll = map[string]time.Time{}
@@ -214,6 +221,7 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 	if !demo {
 		a.reconcileJobs()
 	}
+
 	a.showThinking = c.Appearance.Thinking
 	a.thinkingExpanded = map[string]bool{}
 	if demo {
@@ -225,15 +233,20 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 	return a, nil
 }
 
+// Init starts ui ticks and the initial model probe.
 func (a *App) Init() tea.Cmd {
 	if a.demo {
 		return a.ticker()
 	}
 	return tea.Batch(a.ticker(), a.probe())
 }
+
+// ticker schedules the next animation and job-update tick.
 func (a *App) ticker() tea.Cmd {
 	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg { return tick(t) })
 }
+
+// Close cancels active work and closes owned shell panes once.
 func (a *App) Close() {
 	a.once.Do(func() {
 		if a.loadCancel != nil {
@@ -243,10 +256,13 @@ func (a *App) Close() {
 			a.cancel()
 		}
 		close(a.done)
+
 		if a.jobs != nil {
 			a.jobs.Close()
 		}
+
 		a.workers.Wait()
+
 		for _, p := range a.panes {
 			if p != nil && p.PTY != nil {
 				p.PTY.Close()

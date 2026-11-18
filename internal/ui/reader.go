@@ -16,6 +16,7 @@ type reader struct {
 	Frozen bool
 }
 
+// newReader creates a read-only text viewer with a normal-mode vim cursor.
 func newReader(text string) *reader {
 	b := vim.New()
 	b.Text = []rune(text)
@@ -23,9 +24,11 @@ func newReader(text string) *reader {
 	return &reader{Buffer: b}
 }
 
+// key handles reader motions and returns copied text or a request to leave the viewer.
 func (r *reader) key(k tea.KeyMsg, height int) (string, bool) {
 	b := r.Buffer
 	r.Frozen = true
+
 	if k.Type == tea.KeyRunes && len(k.Runes) > 1 && !k.Paste {
 		copied := ""
 		for _, ch := range k.Runes {
@@ -39,11 +42,13 @@ func (r *reader) key(k tea.KeyMsg, height int) (string, bool) {
 		}
 		return copied, false
 	}
+
 	key := k.String()
 	if b.Mode == "search" {
 		b.Key(key, string(k.Runes))
 		return "", false
 	}
+
 	if (key == "q" || key == "i" || key == "esc") && b.Mode == "normal" && b.Pending == "" {
 		return "", true
 	}
@@ -51,6 +56,7 @@ func (r *reader) key(k tea.KeyMsg, height int) (string, bool) {
 		b.Key("esc", "")
 		return "", false
 	}
+
 	pending := b.Pending
 	switch key {
 	case "ctrl+d", "pgdown", "ctrl+f", "ctrl+u", "pgup", "ctrl+b":
@@ -73,6 +79,7 @@ func (r *reader) key(k tea.KeyMsg, height int) (string, bool) {
 			return "", false
 		}
 	}
+
 	b.Key(key, key)
 	if b.Yanked && len(b.Register) > 0 {
 		return string(b.Register), false
@@ -80,6 +87,7 @@ func (r *reader) key(k tea.KeyMsg, height int) (string, bool) {
 	return "", false
 }
 
+// lines renders the cursor's viewport with search and visual-selection highlights.
 func (r *reader) lines(width, height int, p palette) []string {
 	b := r.Buffer
 	text := strings.Split(string(b.Text), "\n")
@@ -92,6 +100,7 @@ func (r *reader) lines(width, height int, p palette) []string {
 			column += runewidth.RuneWidth(ch)
 		}
 	}
+
 	if row < r.Offset {
 		r.Offset = row
 	}
@@ -113,12 +122,14 @@ func (r *reader) lines(width, height int, p palette) []string {
 					styled = highlightRange(styled, runewidth.StringWidth(string(runes[:start])), runewidth.StringWidth(string(runes[:end])), p.Second, p)
 				}
 			}
+
 			if i == row {
 				if b.Mode == "insert" && column == ansi.StringWidth(styled) {
 					styled += " "
 				}
 				styled = cursorText(styled, column, p)
 			}
+
 			horizontal := 0
 			if i == row && column >= width {
 				horizontal = column - width + 1

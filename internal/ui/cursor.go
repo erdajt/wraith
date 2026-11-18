@@ -7,6 +7,7 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
+// cursorText draws a themed block cursor over a full display cell, including wide characters.
 func cursorText(text string, column int, p palette) string {
 	width := ansi.StringWidth(text)
 	column = max(0, min(column, max(0, width-1)))
@@ -21,10 +22,12 @@ func cursorText(text string, column int, p palette) string {
 		}
 		position += size
 	}
+
 	cell := ansi.Cut(text, column, end)
 	if strings.TrimSpace(ansi.Strip(cell)) == "" {
 		cell = " "
 	}
+
 	foreground := p.BG
 	if foreground == "" {
 		foreground = "#101419"

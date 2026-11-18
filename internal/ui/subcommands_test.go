@@ -15,16 +15,20 @@ func TestDottedCommandsRequireCompleteParent(t *testing.T) {
 			}
 		}
 	}
+
 	if len(matchingCommands("sett.")) != 0 || len(matchingCommands("models.")) != 0 {
 		t.Fatal("invalid parent exposed children")
 	}
+
 	choices := matchingCommands("settings.a")
 	if len(choices) != 1 || choices[0].Name != "settings.appearance" {
 		t.Fatal("category completion missing")
 	}
+
 	a := fixture(t)
 	a.Prompt.Set("/settings.a")
 	a.key(tea.KeyMsg{Type: tea.KeyEnter})
+
 	if a.popup == nil || a.popup.Title != "settings · appearance" {
 		t.Fatal("dotted command did not open category")
 	}

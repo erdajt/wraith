@@ -1,10 +1,12 @@
 package ui
 
+// helpItems builds the command reference with bindings from the active configuration.
 func (a *App) helpItems() []item {
 	items := make([]item, 0, len(commandSpecs)+16)
 	for _, command := range commandSpecs {
 		items = append(items, item{Label: "/" + command.Name, Value: command.Name, Detail: command.Description})
 	}
+
 	entries := [][3]string{
 		{a.Config.Keys["send"] + " · :w", "send the prompt", "send"},
 		{a.Config.Keys["editor"], "edit the focused prompt or message; user-message edits fork", "edit"},

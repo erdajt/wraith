@@ -1,6 +1,9 @@
 package ui
 
+// bodyHeight reserves vertical space for the header, prompt and footer.
 func (a *App) bodyHeight() int { return max(5, a.height-12) }
+
+// mainWidth returns conversation width after reserving space for a visible side shell.
 func (a *App) mainWidth() int {
 	if p := a.panes[1]; p != nil && p.Visible {
 		return max(30, a.width-int(float64(a.width)*a.Config.Terminal.SplitWidth)-1)
@@ -8,6 +11,7 @@ func (a *App) mainWidth() int {
 	return a.width
 }
 
+// paneSize computes configured pane dimensions while retaining minimum usable sizes.
 func (a *App) paneSize(index int) (int, int) {
 	if index == 0 {
 		return max(20, int(float64(a.width)*a.Config.Terminal.OverlayWidth)), max(6, int(float64(a.height)*a.Config.Terminal.OverlayHeight))

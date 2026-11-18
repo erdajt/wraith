@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
+// approvalFrame renders command details, reasons and approval actions within the available screen.
 func (a *App) approvalFrame() []string {
 	p, m, request := a.Config.Palette(), a.popup, a.proposal
 	w, h := min(a.width-6, 100), min(a.height-2, 30)
@@ -24,6 +25,7 @@ func (a *App) approvalFrame() []string {
 		content = append(content, "")
 	}
 	content = append(content, bold(p.Second, "COMMAND"))
+
 	reason, _ := request.Variables.Expand(request.Reason)
 	if reason == "" {
 		reason = "no reason supplied"
@@ -37,12 +39,14 @@ func (a *App) approvalFrame() []string {
 		reasons = reasons[:reasonLimit]
 		reasons[len(reasons)-1] = ansi.Truncate(reasons[len(reasons)-1], inner-1, "") + "…"
 	}
+
 	slots := max(1, min(len(m.Items), 6))
 	spacing := 0
 	if roomy {
 		spacing = 1
 	}
 	commandLimit := max(1, min(8, h-2-len(content)-len(reasons)-slots-2-spacing))
+
 	command := clean(request.Resolved)
 	command = a.styleVariableSpans(command, request.Variables.LiteralSpans(command))
 	commands := strings.Split(ansi.Hardwrap(command, inner-2, true), "\n")
@@ -56,11 +60,13 @@ func (a *App) approvalFrame() []string {
 	for _, line := range reasons {
 		content = append(content, ink(p.Muted, line))
 	}
+
 	divider := strings.Repeat("─", inner)
 	if clipped {
 		divider = "… view full command for remaining lines"
 	}
 	content = append(content, ink(p.Border, ansi.Truncate(divider, inner, "…")))
+
 	start := max(0, min(m.Index-slots/2, len(m.Items)-slots))
 	if len(m.Items) == 0 {
 		content = append(content, ink(p.Muted, "no matching actions"))
@@ -78,11 +84,13 @@ func (a *App) approvalFrame() []string {
 			content = append(content, ink(p.FG, "  "+label))
 		}
 	}
+
 	hint := keyHints("j/k or ↑/↓ · enter selects · esc rejects", p)
 	if m.Searching || m.Query != "" {
 		hint = ink(p.Second, "/"+clean(m.Query)+"▏ · ") + keyHints("enter selects · esc resets", p)
 	}
 	content = append(content, ansi.Truncate(hint, inner, "…"))
+
 	for i := range content {
 		content[i] = " " + fit(content[i], inner) + " "
 	}

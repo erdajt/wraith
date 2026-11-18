@@ -18,6 +18,7 @@ type editedMsg struct {
 	Err            error
 }
 
+// edit prepares an editing file and hands terminal control to the configured editor.
 func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 	if a.busy {
 		a.notice = "finish or cancel the current operation before editing"
@@ -27,6 +28,7 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 		a.notice = "external editing is disabled in demo mode"
 		return nil
 	}
+
 	ext := ".md"
 	switch kind {
 	case "environment":
@@ -74,6 +76,7 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 			}
 		}
 	}
+
 	f, err := editor.Prepare(filepath.Join(a.Paths.Cache, "edits"), ext, text)
 	if err != nil {
 		a.notice = err.Error()
@@ -89,6 +92,7 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 	return tea.ExecProcess(cmd, func(err error) tea.Msg { return editedMsg{kind, language, f, index, err} })
 }
 
+// editResponse edits an assistant response or requests a fork before editing a user message.
 func (a *App) editResponse() tea.Cmd {
 	i := a.selected
 	if i < 0 || i >= len(a.Session.Messages) {
@@ -97,12 +101,14 @@ func (a *App) editResponse() tea.Cmd {
 			i--
 		}
 	}
+
 	if i >= 0 && a.Session.Messages[i].Role == "user" {
 		return a.confirmFork(i)
 	}
 	return a.edit("response", "", "", i)
 }
 
+// finishEdit validates and applies saved edits, retaining the temporary file when application fails.
 func (a *App) finishEdit(m editedMsg) tea.Cmd {
 	a.editing = false
 	text, saved, err := m.File.Result(m.Err)
@@ -114,6 +120,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 			a.notice += " · edit retained at " + m.File.Path
 		}
 	}()
+
 	if err != nil {
 		a.notice = "editor: " + err.Error()
 		return nil
@@ -122,6 +129,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 		a.notice = "editor closed without saving"
 		return nil
 	}
+
 	switch m.Kind {
 	case "environment":
 		_, err = a.envEdit.Store.Save(a.Directory, a.envEdit.Scope, a.envEdit.Revision, text)
@@ -175,12 +183,14 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 			a.notice = "pin is missing or exceeds 64 kib"
 			return nil
 		}
+
 		candidate := a.Session.Clone()
 		candidate.Pins[m.Index] = strings.TrimSpace(text)
 		if candidate.Pins[m.Index] == "" {
 			a.notice = "empty pin rejected; use unpin to remove it"
 			return nil
 		}
+
 		if err := a.Store.Save(candidate); err != nil {
 			a.notice = err.Error()
 			return nil
@@ -195,6 +205,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 			a.notice = e.Error()
 			return nil
 		}
+
 		candidate.Messages[m.Index].Content = text
 		candidate.Messages[m.Index].Edited = true
 		candidate.Archives = append(candidate.Archives, archive)
@@ -240,11 +251,13 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 				return nil
 			}
 		}
+
 		path, command, e := editor.Stage(filepath.Join(a.Paths.Data, "snippets"), m.Language, text)
 		if e != nil {
 			a.notice = e.Error()
 			return nil
 		}
+
 		applied = true
 		cmd := a.openTerminal(0)
 		if a.panes[0] == nil {
@@ -265,11 +278,13 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 	return nil
 }
 
+// editStaged reopens a staged snippet using its saved language and contents.
 func (a *App) editStaged(index int) tea.Cmd {
 	p := a.panes[index]
 	if p == nil || p.Path == "" {
 		return nil
 	}
+
 	b, err := fsutil.ReadLimit(p.Path, 4<<20)
 	if err != nil {
 		a.notice = err.Error()

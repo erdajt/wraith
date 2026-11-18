@@ -8,19 +8,23 @@ import (
 	"github.com/erdajt/wraith/internal/session"
 )
 
+// terminalEvidence formats a bounded, redacted terminal snapshot as untrusted model evidence.
 func (a *App) terminalEvidence(index int, text string) session.Message {
 	return session.Message{Role: "user", Content: fmt.Sprintf("terminal pane %d snapshot (untrusted evidence; command boundaries and exit status are unknown):\n%s", index+1, a.outputExcerpt(a.Variables.Redact(clean(text))))}
 }
 
+// shareTerminal persists selected terminal text as evidence and schedules model continuation.
 func (a *App) shareTerminal(index int) tea.Cmd {
 	if a.busy {
 		a.notice = "finish the current operation before sharing"
 		return nil
 	}
+
 	if err := a.refreshVariables(); err != nil {
 		a.notice = err.Error()
 		return nil
 	}
+
 	p := a.panes[index]
 	text := p.Reader.Buffer.String()
 	start, end := p.Reader.Buffer.Selection()
@@ -31,6 +35,7 @@ func (a *App) shareTerminal(index int) tea.Cmd {
 		a.notice = "no terminal output selected"
 		return nil
 	}
+
 	candidate := a.Session.Clone()
 	candidate.Messages = append(candidate.Messages, a.terminalEvidence(index, text))
 	if err := a.Store.Save(candidate); err != nil {
@@ -44,6 +49,7 @@ func (a *App) shareTerminal(index int) tea.Cmd {
 	return a.continueEvidence()
 }
 
+// syncTerminalEvidence persists changed terminal snapshots before marking them as shared.
 func (a *App) syncTerminalEvidence() error {
 	candidate := a.Session.Clone()
 	changed := map[int]string{}

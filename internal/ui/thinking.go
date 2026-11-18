@@ -6,7 +6,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// thinkingKey identifies per-message thinking expansion state within a session.
 func (a *App) thinkingKey(index int) string { return fmt.Sprintf("%s:%d", a.Session.ID, index) }
+
+// thinkingOpen resolves a message's expansion override or the default thinking visibility.
 func (a *App) thinkingOpen(index int) bool {
 	if expanded, ok := a.thinkingExpanded[a.thinkingKey(index)]; ok {
 		return expanded
@@ -14,6 +17,7 @@ func (a *App) thinkingOpen(index int) bool {
 	return a.showThinking
 }
 
+// toggleThinking toggles thinking for a message and keeps its heading in view.
 func (a *App) toggleThinking(index int) {
 	lines := a.transcript(max(10, a.mainWidth()-5))
 	for n, line := range lines {
@@ -30,6 +34,7 @@ func (a *App) toggleThinking(index int) {
 	a.notice = "selected response has no thinking output"
 }
 
+// mouse toggles a clicked thinking heading when no popup or terminal covers it.
 func (a *App) mouse(m tea.MouseMsg) tea.Cmd {
 	if !a.Config.Appearance.Mouse || a.popup != nil || m.X < 0 || m.X >= a.mainWidth() || m.Y < 3 || m.Y >= 3+a.bodyHeight() {
 		return nil
@@ -41,9 +46,11 @@ func (a *App) mouse(m tea.MouseMsg) tea.Cmd {
 			return nil
 		}
 	}
+
 	if m.Action != tea.MouseActionPress || m.Button != tea.MouseButtonLeft {
 		return nil
 	}
+
 	lines := a.transcript(max(10, a.mainWidth()-5))
 	start := min(a.offset, max(0, len(lines)-a.bodyHeight()))
 	if a.follow {

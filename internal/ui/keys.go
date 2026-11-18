@@ -6,9 +6,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// key routes input by global bindings, popup state and the focused vim or terminal view.
 func (a *App) key(k tea.KeyMsg) tea.Cmd {
 	if k.Type == tea.KeyRunes && len(k.Runes) > 1 && !k.Paste && !k.Alt && (a.focus == "chat" || a.Prompt.Mode == "normal") {
-
 		for i, r := range k.Runes {
 			if cmd := a.key(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}}); cmd != nil {
 				if i == len(k.Runes)-1 {
@@ -20,6 +20,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		}
 		return nil
 	}
+
 	key := k.String()
 	if key == a.Config.Keys["quit"] || (key == "q" && a.chatMotionPending == "" && a.Prompt.Pending == "" && a.popup == nil && !a.commandMode && !a.searchMode && ((a.focus == "chat" && a.visualMode == "") || (a.focus == "prompt" && a.Prompt.Mode == "normal"))) {
 		if a.busy && !a.compacting && (a.partial.Content != "" || a.partial.Thinking != "") {
@@ -31,15 +32,18 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 				return nil
 			}
 		}
+
 		a.Close()
 		return tea.Quit
 	}
+
 	if key == a.Config.Keys["terminal_overlay"] {
 		return a.toggleTerminal(0)
 	}
 	if key == a.Config.Keys["terminal_split"] {
 		return a.toggleTerminal(1)
 	}
+
 	if key == a.Config.Keys["cancel"] && (a.popup != nil || !strings.HasPrefix(a.focus, "terminal")) {
 		a.stopAgent()
 		if a.cancel != nil && a.busy {
@@ -52,12 +56,15 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		}
 		return nil
 	}
+
 	if a.popup != nil {
 		return a.menuKey(k)
 	}
+
 	if strings.HasPrefix(a.focus, "terminal") {
 		return a.terminalKey(k)
 	}
+
 	if a.chatMotionPending == "" && a.Prompt.Pending == "" && !a.commandMode && !a.searchMode && (a.focus == "chat" || a.Prompt.Mode == "normal") && (key == a.Config.Leader || a.Config.Leader == "space" && key == " ") {
 		a.openLeader("")
 		return nil
@@ -69,6 +76,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 			a.searchMode = false
 			return nil
 		}
+
 		if key == "enter" {
 			value := a.command
 			a.command = ""
@@ -84,6 +92,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 			}
 			return a.runCommand(value)
 		}
+
 		if key == "backspace" {
 			r := []rune(a.command)
 			if len(r) > 0 {
@@ -94,6 +103,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		}
 		return nil
 	}
+
 	if a.inputIndex >= 0 && a.historyKey(k) {
 		return nil
 	}
@@ -103,6 +113,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 	if a.historyKey(k) {
 		return nil
 	}
+
 	if key == a.Config.Keys["focus"] {
 		a.chatCount = ""
 		a.chatG = false
@@ -114,23 +125,28 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		}
 		return nil
 	}
+
 	if key == a.Config.Keys["editor"] {
 		if a.focus == "chat" {
 			return a.editResponse()
 		}
 		return a.edit("prompt", "", "", -1)
 	}
+
 	if key == a.Config.Keys["send"] {
 		return a.submit()
 	}
+
 	if (a.focus == "chat" || a.Prompt.Mode == "normal") && a.chatMotionPending == "" && a.Prompt.Pending == "" && key == ":" {
 		a.commandMode = true
 		a.command = ""
 		return nil
 	}
+
 	if a.focus == "chat" {
 		return a.chatKey(k)
 	}
+
 	text := ""
 	if k.Type == tea.KeyRunes || k.Type == tea.KeySpace {
 		text = string(k.Runes)
@@ -140,6 +156,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 	if a.Prompt.Yanked && len(a.Prompt.Register) > 0 {
 		return a.copyText(string(a.Prompt.Register), a.Prompt.Linewise)
 	}
+
 	a.completionQuery = strings.TrimPrefix(a.Prompt.String(), "/")
 	a.completionIndex = 0
 	return nil

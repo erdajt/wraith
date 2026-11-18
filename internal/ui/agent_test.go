@@ -19,28 +19,34 @@ func TestAgentApprovesRunsAndContinuesWithEvidence(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Fatal(err)
 		}
+
 		calls++
 		content := "```wraith-run\n{\"command\":\"printf evidence\",\"reason\":\"inspect local output\"}\n```"
 		if calls == 2 {
 			content = "waiting for the background result"
 		}
+
 		if calls == 3 {
 			if !strings.Contains(req.Messages[len(req.Messages)-1].Content, "output:\nevidence") {
 				t.Error("command output not supplied")
 			}
 			content = "verified the command output"
 		}
+
 		b, _ := json.Marshal(ollama.Response{Done: true, Message: session.Message{Role: "assistant", Content: content}})
 		return response(string(b)), nil
 	})
 	a.Prompt.Set("inspect local output")
 	a.submit()
 	drain(t, a)
+
 	if calls != 1 || a.popup == nil || a.popup.Kind != "approval" || a.busy {
 		t.Fatal("model request did not stop for approval")
 	}
+
 	a.approvalAction("run")
 	finishJobs(t, a)
+
 	if calls != 3 || a.Session.Messages[len(a.Session.Messages)-1].Content != "verified the command output" {
 		t.Fatalf("continuation failed: %s", a.notice)
 	}
@@ -50,6 +56,7 @@ func TestBlocksModeOffersApprovalWithoutAutomaticOutputSharing(t *testing.T) {
 	a := fixture(t)
 	a.Config.Execution.Mode = "blocks"
 	a.receive(streamMsg{Final: true, Chunk: ollama.Response{Done: true, Message: session.Message{Role: "assistant", Content: "```wraith-run\n{\"command\":\"printf x\",\"reason\":\"test\"}\n```"}}})
+
 	if a.proposal == nil || a.popup == nil || a.popup.Kind != "approval" || a.busy {
 		t.Fatal("blocks mode did not offer approval")
 	}
@@ -59,6 +66,7 @@ func TestAgentStopsAtStepBudget(t *testing.T) {
 	a := fixture(t)
 	a.agentSteps = a.Config.Execution.MaxSteps
 	a.receive(streamMsg{Final: true, Chunk: ollama.Response{Done: true, Message: session.Message{Role: "assistant", Content: "```wraith-run\n{\"command\":\"printf x\",\"reason\":\"test\"}\n```"}}})
+
 	if a.proposal != nil || !strings.Contains(a.notice, "step limit") {
 		t.Fatal("step budget bypassed")
 	}
@@ -76,24 +84,31 @@ func TestBackgroundApprovalReturnsReceiptAndDenialStopsItsTurn(t *testing.T) {
 		if !strings.Contains(last, "background command accepted") || !strings.Contains(last, "id:") {
 			t.Errorf("missing start receipt: %s", last)
 		}
+
 		return response(`{"done":true,"message":{"role":"assistant","content":"waiting for the result"}}`), nil
 	})
 	a.approve(proposal{Command: "sleep 30", Continue: true, Background: true})
+
 	if !strings.Contains(a.popup.Title, "background") {
 		t.Fatal("background launch not disclosed")
 	}
+
 	a.runApproved()
+
 	if a.executing {
 		t.Fatal("background job blocked chat")
 	}
+
 	drain(t, a)
 	a.approve(proposal{Command: "printf declined", Continue: true})
 	a.declineCommand()
 	a.jobs.Close()
 	a.syncJobs()
+
 	if !a.agentStopped || a.busy {
 		t.Fatal("denial resumed the agent")
 	}
+
 	records, err := a.history().List()
 	if err != nil || len(records) != 1 || records[0].Status != "cancelled" {
 		t.Fatalf("turn jobs survived denial: %v %v", records, err)
@@ -110,9 +125,11 @@ func TestCancelledStreamCannotOfferExecutionOrResumeTools(t *testing.T) {
 			a.busy = true
 			a.stopAgent()
 			a.receive(streamMsg{Final: true, Chunk: ollama.Response{Done: true, Message: session.Message{Role: "assistant", Content: content}}})
+
 			if a.proposal != nil || a.pendingTool != nil || a.busy || a.agentReads != 0 {
 				t.Fatal("cancelled turn continued")
 			}
+
 			if n := len(a.Session.Messages); n > 0 && !a.Session.Messages[n-1].Interrupted {
 				t.Fatal("cancelled response not marked interrupted")
 			}
@@ -133,9 +150,11 @@ func TestOrdinaryApprovedRunFollowsExecutionMode(t *testing.T) {
 			a.approve(proposal{Command: "printf result", Source: "block"})
 			a.runApproved()
 			finishJobs(t, a)
+
 			if mode == "agent" && (calls != 2 || len(a.Session.SharedRuns) != 1) {
 				t.Fatal("agent mode did not observe ordinary run")
 			}
+
 			if mode == "blocks" && (calls != 0 || len(a.Session.Messages) != 0) {
 				t.Fatal("blocks output shared automatically")
 			}
@@ -153,12 +172,15 @@ func TestBarePrivateTargetRepairReachesResolvedApproval(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Fatal(err)
 		}
+
 		calls++
+
 		for _, message := range req.Messages {
 			if strings.Contains(message.Content, "private.example") {
 				t.Error("private target reached provider")
 			}
 		}
+
 		target := "TARGET_DOMAIN"
 		if calls > 1 {
 			if !strings.Contains(req.Messages[len(req.Messages)-1].Content, "bare private variable TARGET_DOMAIN") {
@@ -166,6 +188,7 @@ func TestBarePrivateTargetRepairReachesResolvedApproval(t *testing.T) {
 			}
 			target = "wraith::TARGET_DOMAIN"
 		}
+
 		content := "```wraith-run\n{\"command\":\"printf %s " + target + "\",\"reason\":\"inspect configured target\"}\n```"
 		data, _ := json.Marshal(ollama.Response{Done: true, Message: session.Message{Role: "assistant", Content: content}})
 		return response(string(data)), nil
@@ -173,12 +196,15 @@ func TestBarePrivateTargetRepairReachesResolvedApproval(t *testing.T) {
 	a.Prompt.Set("inspect the configured target")
 	a.submit()
 	drain(t, a)
+
 	if calls != 2 || a.popup == nil || a.popup.Kind != "approval" || a.proposal == nil {
 		t.Fatalf("corrected request lost approval: calls=%d notice=%s", calls, a.notice)
 	}
+
 	if a.proposal.Resolved != "printf %s private.example" || !strings.Contains(a.View(), "private.example") || !strings.Contains(a.View(), "inspect configured target") {
 		t.Fatal("approval omitted resolved target or reason")
 	}
+
 	if len(a.jobs.Snapshot()) != 0 {
 		t.Fatal("repair executed before approval")
 	}

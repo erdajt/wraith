@@ -12,6 +12,7 @@ var wraithWordmark = []string{
 	"█▀ ▀█  █  █  █  █  ▄█▄    █    █   █",
 }
 
+// wraithEmblem renders the size-appropriate emblem with a moving color highlight.
 func wraithEmblem(height, frame int, p palette) []string {
 	art := []string{
 		"         ▄██▄         ",
@@ -35,6 +36,7 @@ func wraithEmblem(height, frame int, p palette) []string {
 			"     ▀ ▀██▀ ▀     ",
 		}
 	}
+
 	phase := frame / 3 % 12
 	rows := make([]string, len(art))
 	for i, line := range art {
@@ -56,16 +58,19 @@ func wraithEmblem(height, frame int, p palette) []string {
 	return rows
 }
 
+// welcome fits the emblem, wordmark and startup hint to an empty conversation view.
 func (a *App) welcome(width, height int, p palette) []string {
 	frame := a.frame
 	if !a.Config.Animations {
 		frame = 0
 	}
+
 	var rows []string
 	if height >= 10 {
 		rows = append(rows, wraithEmblem(height, frame, p)...)
 		rows = append(rows, "")
 	}
+
 	if width >= 48 && height >= 18 {
 		for _, line := range wraithWordmark {
 			rows = append(rows, bold(p.Accent, line))

@@ -13,12 +13,15 @@ func TestThinkingKeepsMutedColorOnEveryWrappedLine(t *testing.T) {
 	a.showThinking = true
 	a.Session.Messages = []session.Message{{Role: "assistant", Thinking: strings.Repeat("reasoning ", 20) + "\nsecond paragraph"}}
 	p := a.Config.Palette()
+
 	for _, row := range a.transcript(25)[1:] {
 		if row.Thinking || strings.TrimSpace(row.Text) == "" {
 			continue
 		}
+
 		screen := terminal.NewScreen(25, 1, 0)
 		screen.Feed([]byte(base(p, row.Text, 25)))
+
 		for _, cell := range screen.Cells[0] {
 			if strings.TrimSpace(cell.Text) != "" && cell.Style.FG != color(p.Muted, false) {
 				t.Fatalf("thinking changed color: %#v", cell)
@@ -42,6 +45,7 @@ func TestConversationSearchHighlightsBothRoles(t *testing.T) {
 			}
 		}
 	}
+
 	if matched != 12 {
 		t.Fatalf("highlighted %d cells", matched)
 	}

@@ -12,18 +12,21 @@ import (
 	"github.com/erdajt/wraith/internal/contextual"
 )
 
+// modelCommand dispatches model, thinking, theme and context commands.
 func (a *App) modelCommand(name, arg string) tea.Cmd {
 	switch name {
 	case "model", "models":
 		if arg != "" {
 			return a.set("model", arg)
 		}
+
 		a.catalogSerial++
 		serial, client := a.catalogSerial, a.Client
 		a.popup = &menu{Kind: "models-loading", Title: "loading models", Hints: "esc closes"}
 		return func() tea.Msg {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
+
 			models, err := client.Models(ctx)
 			sort.Slice(models, func(i, j int) bool { return models[i].Name < models[j].Name })
 			return modelsMsg{Serial: serial, Models: models, Err: err}
@@ -32,6 +35,7 @@ func (a *App) modelCommand(name, arg string) tea.Cmd {
 		if arg != "" {
 			return a.set("thinking", arg)
 		}
+
 		items := []item{{"auto · model default", "auto", ""}}
 		for _, v := range a.Info.Thinking.Values {
 			switch v {
@@ -66,10 +70,12 @@ func (a *App) modelCommand(name, arg string) tea.Cmd {
 		if arg != "" {
 			return a.set("theme", arg)
 		}
+
 		themes := config.BuiltinThemes()
 		for name, p := range a.Config.Themes {
 			themes[name] = p
 		}
+
 		items := []item{}
 		for name := range themes {
 			items = append(items, item{name, name, ""})

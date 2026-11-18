@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
+// ensureChatCursor initializes and clamps the chat cursor, then brings it into view.
 func (a *App) ensureChatCursor() {
 	lines := a.transcript(max(10, a.mainWidth()-5))
 	if a.chatCursor < 0 {
@@ -23,6 +24,7 @@ func (a *App) ensureChatCursor() {
 	a.revealCursor(len(lines))
 }
 
+// revealCursor adjusts the conversation viewport to keep the cursor visible.
 func (a *App) revealCursor(count int) {
 	a.follow = false
 	if a.chatCursor < a.offset {
@@ -34,11 +36,13 @@ func (a *App) revealCursor(count int) {
 	a.offset = max(0, min(a.offset, max(0, count-a.bodyHeight())))
 }
 
+// chatKey handles counted conversation motions, selection and message actions.
 func (a *App) chatKey(k tea.KeyMsg) tea.Cmd {
 	key := k.String()
 	if a.chatMotionPending != "" {
 		return a.moveChatText(key, 1)
 	}
+
 	if a.chatZ {
 		a.chatZ = false
 		if key == "a" {
@@ -46,6 +50,7 @@ func (a *App) chatKey(k tea.KeyMsg) tea.Cmd {
 			return nil
 		}
 	}
+
 	if key == "z" && a.Config.Keys["thinking_toggle"] == "za" {
 		a.chatZ = true
 		return nil
@@ -54,18 +59,21 @@ func (a *App) chatKey(k tea.KeyMsg) tea.Cmd {
 		a.toggleThinking(a.selected)
 		return nil
 	}
+
 	if len(key) == 1 && key[0] >= '0' && key[0] <= '9' && (key != "0" || a.chatCount != "") {
 		if len(a.chatCount) < 6 {
 			a.chatCount += key
 		}
 		return nil
 	}
+
 	count, _ := strconv.Atoi(a.chatCount)
 	count = max(1, count)
 	a.chatCount = ""
 	if key != "g" {
 		a.chatG = false
 	}
+
 	a.ensureChatCursor()
 	lines := a.transcript(max(10, a.mainWidth()-5))
 	switch key {
@@ -148,6 +156,7 @@ func (a *App) chatKey(k tea.KeyMsg) tea.Cmd {
 	case "?":
 		return a.runCommand("help")
 	}
+
 	a.chatCursor = max(0, min(a.chatCursor, len(lines)-1))
 	if len(lines) > 0 {
 		a.chatColumn = min(a.chatColumn, max(0, ansi.StringWidth(lines[a.chatCursor].Text)-1))

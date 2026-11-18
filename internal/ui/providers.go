@@ -19,6 +19,7 @@ type providerModelsMsg struct {
 	Err    error
 }
 
+// providerMenu opens the sorted provider picker.
 func (a *App) providerMenu() tea.Cmd {
 	var items []item
 	for name, p := range a.Config.Providers {
@@ -29,6 +30,7 @@ func (a *App) providerMenu() tea.Cmd {
 	return nil
 }
 
+// selectProvider activates a provider's default model or asynchronously loads its catalog.
 func (a *App) selectProvider(name string) tea.Cmd {
 	p, ok := a.Config.Providers[name]
 	if !ok {
@@ -38,6 +40,7 @@ func (a *App) selectProvider(name string) tea.Cmd {
 	if p.Model != "" {
 		return a.activateProvider(name, p.Model)
 	}
+
 	c := a.Config
 	c.Provider = name
 	client := provider.New(c)
@@ -48,16 +51,19 @@ func (a *App) selectProvider(name string) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
+
 		models, err := client.Models(ctx)
 		return providerModelsMsg{Serial: serial, Name: name, Models: models, Err: err}
 	}
 }
 
+// activateProvider validates and saves a provider selection before probing its model.
 func (a *App) activateProvider(name, model string) tea.Cmd {
 	if a.busy || a.demo {
 		a.notice = "finish the current operation before switching provider"
 		return nil
 	}
+
 	c := a.Config
 	c.Provider, c.Model, c.Thinking = name, model, "auto"
 	c.Providers = maps.Clone(c.Providers)
@@ -68,6 +74,7 @@ func (a *App) activateProvider(name, model string) tea.Cmd {
 		a.notice = err.Error()
 		return nil
 	}
+
 	if err := config.Save(config.File(a.Paths.Config), c); err != nil {
 		a.notice = err.Error()
 		return nil
@@ -80,15 +87,18 @@ func (a *App) activateProvider(name, model string) tea.Cmd {
 	return a.probe()
 }
 
+// providerModels opens a model picker only when its catalog response is still current.
 func (a *App) providerModels(m providerModelsMsg) {
 	if a.busy || m.Serial != a.catalogSerial || a.popup == nil || a.popup.Kind != "provider-loading" {
 		return
 	}
+
 	a.popup = nil
 	if m.Err != nil {
 		a.notice = "provider models: " + m.Err.Error()
 		return
 	}
+
 	var items []item
 	for _, model := range m.Models {
 		items = append(items, item{Label: model.Name, Value: model.Name})

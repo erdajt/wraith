@@ -10,6 +10,7 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
+// moveChatText applies vim motions to transcript text and maps the cursor and yank range back to display cells.
 func (a *App) moveChatText(key string, count int) tea.Cmd {
 	a.ensureChatCursor()
 	lines := a.transcript(max(10, a.mainWidth()-5))
@@ -32,6 +33,7 @@ func (a *App) moveChatText(key string, count int) tea.Cmd {
 			}
 		}
 	}
+
 	b := vim.New()
 	b.Text = []rune(strings.Join(plain, "\n"))
 	b.Pos = min(position, len(b.Text))
@@ -56,6 +58,7 @@ func (a *App) moveChatText(key string, count int) tea.Cmd {
 		a.selected = lines[min(a.chatCursor, len(lines)-1)].Message
 	}
 	a.revealCursor(len(lines))
+
 	if b.Yanked && len(b.Register) > 0 {
 		first, left := textPosition(b.Text, b.YankStart)
 		last, right := textPosition(b.Text, max(b.YankStart, b.YankEnd-1))
@@ -69,6 +72,7 @@ func (a *App) moveChatText(key string, count int) tea.Cmd {
 	return nil
 }
 
+// textPosition converts a rune offset to a row and display column.
 func textPosition(text []rune, end int) (row, column int) {
 	for _, r := range text[:min(end, len(text))] {
 		if r == '\n' {

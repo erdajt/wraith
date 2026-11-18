@@ -26,15 +26,18 @@ type proposal struct {
 	prepared                                bool
 }
 
+// history returns the command-history store within the application's data directory.
 func (a *App) history() runner.History {
 	return runner.History{Root: filepath.Join(a.Paths.Data, "commands")}
 }
 
+// approve prepares a command and opens its approval menu without executing it.
 func (a *App) approve(p proposal) tea.Cmd {
 	if a.demo || a.busy {
 		a.notice = "finish the current operation before running commands"
 		return nil
 	}
+
 	if err := a.prepareProposal(&p); err != nil {
 		a.notice = "command cannot run: " + err.Error()
 		return nil
@@ -47,6 +50,7 @@ func (a *App) approve(p proposal) tea.Cmd {
 	return nil
 }
 
+// runDirectory resolves the configured shell directory, falling back to the current directory.
 func (a *App) runDirectory() string {
 	dir := a.Config.Terminal.Directory
 	if strings.HasPrefix(dir, "~/") {
@@ -59,10 +63,12 @@ func (a *App) runDirectory() string {
 	return dir
 }
 
+// runApproved launches an approved proposal and records its receipt or opens its output view.
 func (a *App) runApproved() tea.Cmd {
 	if a.proposal == nil || a.busy || a.demo {
 		return nil
 	}
+
 	p := *a.proposal
 	if err := a.prepareProposal(&p); err != nil {
 		a.notice = err.Error()
@@ -73,27 +79,33 @@ func (a *App) runApproved() tea.Cmd {
 		a.proposal = nil
 		return nil
 	}
+
 	a.proposal = nil
 	record := p.launch
 	record.Command, record.Source = p.Resolved, p.Source
 	if p.HideOutput {
 		record.OutputHidden, record.ShareOutput = true, false
 	}
+
 	a.jobs.SetLimit(a.Config.Execution.MaxJobs)
 	if err := a.jobs.Start(context.Background(), record, p.timeout); err != nil {
 		a.proposal = &p
 		a.notice = "command launch: " + err.Error()
 		return nil
 	}
+
 	a.agentStopped = false
 	if p.Continue {
 		a.agentSteps++
 	}
+
 	record.Status = "starting"
 	a.activeRun = record
+
 	if record.Background {
 		a.popup = nil
 		a.notice = "background job " + record.ID + " · /jobs shows live output"
+
 		if record.Agent {
 			candidate := a.Session.Clone()
 			candidate.Messages = append(candidate.Messages, session.Evidence{ID: record.ID, Kind: "started", Command: a.Variables.Redact(record.Command), Hidden: !record.ShareOutput}.Message())
@@ -102,6 +114,7 @@ func (a *App) runApproved() tea.Cmd {
 				return nil
 			}
 			a.Session = candidate
+
 			if a.canContinue() {
 				return a.continueEvidence()
 			}
@@ -109,6 +122,7 @@ func (a *App) runApproved() tea.Cmd {
 		}
 		return nil
 	}
+
 	a.cancel = func() { a.jobs.Cancel(record.ID) }
 	a.busy, a.executing = true, true
 	a.phase = "running command"
@@ -116,10 +130,12 @@ func (a *App) runApproved() tea.Cmd {
 	return nil
 }
 
+// syncJobs applies job updates to the ui and schedules pending output reads or completion evidence.
 func (a *App) syncJobs() tea.Cmd {
 	if a.jobs == nil {
 		return nil
 	}
+
 	select {
 	case <-a.jobs.Updates:
 		for _, job := range a.jobs.Snapshot() {
@@ -127,6 +143,7 @@ func (a *App) syncJobs() tea.Cmd {
 			if a.popup != nil && a.popup.Kind == "run-output" && a.popup.Record.ID == r.ID {
 				a.showRun(r, r.Output)
 			}
+
 			if r.ID == a.activeRun.ID {
 				a.activeRun = r
 				if a.executing && !r.Finished.IsZero() {
@@ -134,6 +151,7 @@ func (a *App) syncJobs() tea.Cmd {
 					a.notice = fmt.Sprintf("command %s · exit %d · /history", r.Status, r.ExitCode)
 				}
 			}
+
 			if !r.Finished.IsZero() {
 				if job.Err != nil {
 					a.notice = "command history: " + job.Err.Error()
@@ -145,19 +163,23 @@ func (a *App) syncJobs() tea.Cmd {
 		}
 	default:
 	}
+
 	if a.pendingTool != nil {
 		return a.runPendingTool()
 	}
 	return a.deliverRuns()
 }
 
+// deliverRuns persists pending completion evidence before resuming an eligible agent turn.
 func (a *App) deliverRuns() tea.Cmd {
 	if a.receiptSession != a.Session.ID || a.receiptGeneration != a.generation || a.agentStopped {
 		a.receiptSession, a.receiptGeneration = "", ""
 	}
+
 	if !a.canContinue() {
 		return nil
 	}
+
 	candidate, continueAgent := a.pendingEvidence()
 	if len(candidate.DeliveredRuns) == len(a.Session.DeliveredRuns) {
 		if a.receiptSession != "" {
@@ -165,6 +187,7 @@ func (a *App) deliverRuns() tea.Cmd {
 		}
 		return nil
 	}
+
 	if err := a.Store.Save(candidate); err != nil {
 		a.notice = "command evidence pending: " + err.Error()
 		return nil
@@ -173,23 +196,27 @@ func (a *App) deliverRuns() tea.Cmd {
 	for _, id := range candidate.DeliveredRuns {
 		delete(a.pendingRuns, id)
 	}
+
 	if continueAgent || a.receiptSession != "" {
 		return a.continueEvidence()
 	}
 	return nil
 }
 
+// showRun refreshes the output viewer while preserving frozen text during navigation.
 func (a *App) showRun(r runner.Record, output string) {
 	previous := a.popup
 	if previous != nil && previous.Reader != nil && previous.Record.ID == r.ID && previous.Reader.Frozen {
 		previous.Record = r
 		return
 	}
+
 	note := ""
 	if r.Finished.IsZero() && r.TailOffset > 0 {
 		output = r.Tail
 		note = fmt.Sprintf("[live tail from byte %d; captured prefix is retained in history]\n", r.TailOffset)
 	}
+
 	text := fmt.Sprintf("$ %s\n\ndirectory: %s\nstatus: %s · exit: %d\n%s\n\n%s%s", r.Command, r.Directory, r.Status, r.ExitCode, r.Error, note, output)
 	if r.Truncated && !r.Finished.IsZero() {
 		text += fmt.Sprintf("\n[retained prefix ends at byte %d; recent tail starts at byte %d]\n%s", len(r.Output), r.TailOffset, r.Tail)
@@ -204,6 +231,7 @@ func (a *App) showRun(r runner.Record, output string) {
 	}
 }
 
+// showText opens sanitized, wrapped text in a scrollable menu.
 func (a *App) showText(kind, title, text string) {
 	var items []item
 	for _, line := range strings.Split(ansi.Hardwrap(clean(text), max(20, min(a.width-12, 84)), true), "\n") {
@@ -212,12 +240,14 @@ func (a *App) showText(kind, title, text string) {
 	a.popup = &menu{Kind: kind, Title: title, Items: items}
 }
 
+// openHistory lists approved commands with their saved status and exit codes.
 func (a *App) openHistory() tea.Cmd {
 	records, err := a.jobList()
 	if err != nil {
 		a.notice = err.Error()
 		return nil
 	}
+
 	items := []item{}
 	for _, r := range records {
 		items = append(items, item{Label: r.Command, Value: r.ID, Detail: fmt.Sprintf("%s · %s · exit %d", r.Started.Local().Format("jan 02 15:04"), r.Status, r.ExitCode)})
@@ -226,26 +256,32 @@ func (a *App) openHistory() tea.Cmd {
 	return nil
 }
 
+// prepareProposal freezes variable expansion, execution settings and turn identity for an approval.
 func (a *App) prepareProposal(p *proposal) error {
 	if p.prepared {
 		return nil
 	}
+
 	if err := a.refreshVariables(); err != nil {
 		return err
 	}
+
 	resolved, err := a.Variables.Shell(p.Command)
 	if err != nil {
 		return err
 	}
 	p.Resolved, p.Variables = resolved, a.Variables
 	p.Background = p.Background || a.Config.Execution.Mode == "agent"
+
 	if a.generation == "" {
 		a.generation = session.ID()
 	}
+
 	p.timeout, err = time.ParseDuration(a.Config.Execution.CommandTimeout)
 	if err != nil {
 		return err
 	}
+
 	p.launch = runner.Record{
 		ID: session.ID(), Session: a.Session.ID, Command: resolved,
 		Directory: a.runDirectory(), Shell: a.Config.Shell[0], Source: p.Source,
@@ -259,6 +295,7 @@ func (a *App) prepareProposal(p *proposal) error {
 	return nil
 }
 
+// canContinue reports whether model continuation can proceed without disturbing active user input.
 func (a *App) canContinue() bool {
 	if a.busy || a.loading || a.editing || a.Prompt.String() != "" || a.visualMode != "" || a.focus == "terminal0" || a.focus == "terminal1" {
 		return false
@@ -266,6 +303,7 @@ func (a *App) canContinue() bool {
 	return a.popup == nil || a.popup.Kind == "run-output" && (a.popup.Reader == nil || !a.popup.Reader.Frozen)
 }
 
+// pendingEvidence assembles undelivered results for the current session and reports whether to continue the agent.
 func (a *App) pendingEvidence() (session.Session, bool) {
 	candidate := a.Session.Clone()
 	continueAgent := false
@@ -274,6 +312,7 @@ func (a *App) pendingEvidence() (session.Session, bool) {
 		records = append(records, r)
 	}
 	slices.SortFunc(records, func(a, b runner.Record) int { return a.Started.Compare(b.Started) })
+
 	for _, r := range records {
 		id := r.ID
 		if r.Session != candidate.ID {
@@ -292,5 +331,6 @@ func (a *App) pendingEvidence() (session.Session, bool) {
 			continueAgent = continueAgent || r.Generation == a.generation && !a.agentStopped && r.Status != "cancelled"
 		}
 	}
+
 	return candidate, continueAgent
 }

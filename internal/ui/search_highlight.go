@@ -7,6 +7,7 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
+// highlightRange highlights a display-column range while retaining styles outside it.
 func highlightRange(text string, start, end int, colorValue string, p palette) string {
 	foreground := p.BG
 	if foreground == "" {
@@ -16,6 +17,7 @@ func highlightRange(text string, start, end int, colorValue string, p palette) s
 	return ansi.Cut(text, 0, start) + style + ansi.Strip(ansi.Cut(text, start, end)) + reset + ansi.Cut(text, end, ansi.StringWidth(text))
 }
 
+// highlightMatches highlights case-insensitive matches using display widths for rune positions.
 func highlightMatches(text, query string, p palette) string {
 	needle := []rune(query)
 	if len(needle) == 0 {

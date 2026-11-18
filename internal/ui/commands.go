@@ -6,11 +6,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// runCommand dispatches a slash command after applying busy and demo restrictions.
 func (a *App) runCommand(line string) tea.Cmd {
 	line = strings.TrimSpace(strings.TrimLeft(line, "/:"))
 	a.rememberInput("/" + line)
 	name, arg, _ := strings.Cut(line, " ")
 	arg = strings.TrimSpace(arg)
+
 	if a.busy && name != "help" && name != "context" && name != "cancel" && name != "jobs" && name != "history" {
 		a.notice = "wait for the current operation or use /cancel"
 		return nil
@@ -23,6 +25,7 @@ func (a *App) runCommand(line string) tea.Cmd {
 			return nil
 		}
 	}
+
 	if strings.HasPrefix(name, "settings.") {
 		for _, cmd := range subcommands["settings"] {
 			if cmd.Name == name {
@@ -33,6 +36,7 @@ func (a *App) runCommand(line string) tea.Cmd {
 		a.notice = "unknown settings category"
 		return nil
 	}
+
 	switch name {
 	case "env":
 		return a.environmentCommand(arg, false)
@@ -55,11 +59,14 @@ func (a *App) runCommand(line string) tea.Cmd {
 	a.notice = "unknown command · /help"
 	return nil
 }
+
+// persist saves the session and reports success or failure through the notice bar.
 func (a *App) persist(message string) {
 	if a.demo {
 		a.notice = "demo state is not saved"
 		return
 	}
+
 	if err := a.Store.Save(a.Session); err != nil {
 		a.notice = "save failed: " + err.Error()
 	} else {

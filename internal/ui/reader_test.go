@@ -17,14 +17,18 @@ func TestReaderSupportsSearchVisualYankAndReadOnlyMotions(t *testing.T) {
 	if copied != "needle" || exit {
 		t.Fatalf("yank %q", copied)
 	}
+
 	r.key(key("/"), 8)
 	r.key(key("first"), 8)
 	r.key(tea.KeyMsg{Type: tea.KeyEnter}, 8)
+
 	if r.Buffer.Pos != 3 {
 		t.Fatalf("search position %d", r.Buffer.Pos)
 	}
+
 	original := r.Buffer.String()
 	r.key(key("dd"), 8)
+
 	if r.Buffer.String() != original {
 		t.Fatal("reader mutated text")
 	}

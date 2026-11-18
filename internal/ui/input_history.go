@@ -6,11 +6,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// rememberInput persists bounded input history while excluding environment and provider-setting commands.
 func (a *App) rememberInput(text string) {
 	text = strings.TrimSpace(text)
 	if a.demo || text == "" || strings.HasPrefix(text, "/set providers") || strings.HasPrefix(text, "/env") {
 		return
 	}
+
 	a.inputIndex = -1
 	n := len(a.inputHistory)
 	if n > 0 && a.inputHistory[n-1] == text {
@@ -33,6 +35,7 @@ func (a *App) rememberInput(text string) {
 	}
 }
 
+// historyKey navigates input history with arrows and restores the draft when moving past its end.
 func (a *App) historyKey(k tea.KeyMsg) bool {
 	if a.focus != "prompt" || a.Prompt.Mode != "insert" || (k.String() != "up" && k.String() != "down") {
 		return false
@@ -40,6 +43,7 @@ func (a *App) historyKey(k tea.KeyMsg) bool {
 	if len(a.inputHistory) == 0 {
 		return false
 	}
+
 	if a.inputIndex < 0 {
 		if k.String() == "down" {
 			return false

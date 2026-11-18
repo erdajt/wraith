@@ -2,6 +2,7 @@ package ui
 
 import "strings"
 
+// hintColor chooses the semantic color for a keybinding's action.
 func hintColor(action string, p palette) string {
 	words := strings.Fields(strings.ToLower(action))
 	if len(words) == 0 {
@@ -19,6 +20,7 @@ func hintColor(action string, p palette) string {
 	}
 }
 
+// keyHints colors keybinding descriptions while retaining muted separators.
 func keyHints(text string, p palette) string {
 	parts := strings.Split(clean(text), " · ")
 	for i, part := range parts {
@@ -34,6 +36,7 @@ func keyHints(text string, p palette) string {
 	return strings.Join(parts, ink(p.Muted, " · "))
 }
 
+// noticeText colors recognized bindings and commands within a sanitized notice.
 func (a *App) noticeText(text string, p palette) string {
 	phrases := [][2]string{
 		{a.Config.Keys["send"] + " sends", "send"},

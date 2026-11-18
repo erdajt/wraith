@@ -11,6 +11,7 @@ import (
 	"github.com/erdajt/wraith/internal/fsutil"
 )
 
+// memoryCommand handles instructions, pins, code-block navigation and external editing commands.
 func (a *App) memoryCommand(name, arg string) tea.Cmd {
 	switch name {
 	case "help", "h", "?":

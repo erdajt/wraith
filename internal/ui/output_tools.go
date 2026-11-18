@@ -9,6 +9,7 @@ import (
 	"github.com/erdajt/wraith/internal/session"
 )
 
+// jobRecord finds a live job snapshot or loads its saved command record.
 func (a *App) jobRecord(id string) (runner.Record, error) {
 	for _, job := range a.jobs.Snapshot() {
 		if job.Record.ID == id {
@@ -18,6 +19,7 @@ func (a *App) jobRecord(id string) (runner.Record, error) {
 	return a.history().Load(id)
 }
 
+// runPendingTool checks output access and budgets, persists bounded tool evidence and resumes the agent when ready.
 func (a *App) runPendingTool() tea.Cmd {
 	if a.agentStopped {
 		a.pendingTool = nil
@@ -31,6 +33,7 @@ func (a *App) runPendingTool() tea.Cmd {
 		a.notice = "output read limit reached · send a prompt to continue"
 		return nil
 	}
+
 	request := *a.pendingTool
 	for _, job := range a.jobs.Snapshot() {
 		if job.Record.ID == request.ID && job.Err != nil {
@@ -39,12 +42,14 @@ func (a *App) runPendingTool() tea.Cmd {
 			return nil
 		}
 	}
+
 	remaining := a.contextLimit() - a.Config.Predict - 128 - contextual.ChatUsed(a.Session, a.runtimeConfig(), a.chatInstructions())
 	available := min(a.Config.Execution.OutputContext, max(0, remaining-256))
 	budget := min(a.Config.Execution.OutputContext, available*3)
 	if budget < 256 {
 		return a.deferOutputRead()
 	}
+
 	nextLine := a.pollNext[request.ID]
 	r, err := a.jobRecord(request.ID)
 	text := "output tool denied: command is not in this session"
@@ -80,6 +85,7 @@ func (a *App) runPendingTool() tea.Cmd {
 						break
 					}
 				}
+
 				if request.Tool == "poll" {
 					if page.Next > 0 {
 						nextLine = page.Next
@@ -87,6 +93,7 @@ func (a *App) runPendingTool() tea.Cmd {
 						nextLine = page.Lines[len(page.Lines)-1].Number + 1
 					}
 				}
+
 				evidence = &session.Evidence{ID: r.ID, Kind: "output", Status: r.Status, ExitCode: r.ExitCode, Page: &page}
 				if request.Tool == "poll" && r.Finished.IsZero() && len(page.Lines) == 0 {
 					waiting, evidence.Kind = true, "waiting"
@@ -94,6 +101,7 @@ func (a *App) runPendingTool() tea.Cmd {
 			}
 		}
 	}
+
 	candidate := a.Session.Clone()
 	message := session.Message{Role: "user", Content: a.Variables.Redact(text)}
 	if evidence != nil {
@@ -103,6 +111,7 @@ func (a *App) runPendingTool() tea.Cmd {
 	if contextual.Fits(candidate, a.runtimeConfig(), a.chatInstructions()) != nil {
 		return a.deferOutputRead()
 	}
+
 	if err := a.Store.Save(candidate); err != nil {
 		a.notice = "output tool result not saved: " + err.Error()
 		a.pendingTool, a.agentStopped = nil, true
@@ -115,6 +124,7 @@ func (a *App) runPendingTool() tea.Cmd {
 		a.lastPoll[request.ID] = time.Now()
 	}
 	a.Session = candidate
+
 	if waiting {
 		a.notice = "waiting for background job " + r.ID + " · /jobs shows live output"
 		return nil
@@ -122,8 +132,10 @@ func (a *App) runPendingTool() tea.Cmd {
 	return a.continueEvidence()
 }
 
+// deferOutputRead requests compaction while retaining a pending read or pauses it if compaction cannot start.
 func (a *App) deferOutputRead() tea.Cmd {
 	a.notice = "output read pending; compact context before adding evidence"
+
 	if a.Config.Compact.Mode == "auto" {
 		cmd := a.startCompact()
 		if !a.busy {
@@ -131,6 +143,7 @@ func (a *App) deferOutputRead() tea.Cmd {
 		}
 		return cmd
 	}
+
 	a.popup = &menu{Kind: "overflow", Title: "compact before reading command output?", Items: []item{{"yes", "yes", "archive and compact"}, {"no", "no", "pause without consuming output"}}}
 	return nil
 }

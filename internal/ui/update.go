@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// Update dispatches ui, provider and terminal events to their state handlers.
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -81,6 +82,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.notice = m.Err.Error()
 			break
 		}
+
 		items := make([]item, 0, len(m.Models))
 		for _, model := range m.Models {
 			items = append(items, item{model.Name, model.Name, modelSize(model.Size)})
@@ -89,11 +91,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(items) == 0 {
 			a.notice = "no models found; configure a model catalog or choose a model id"
 		}
-
 	}
 	return a, nil
 }
 
+// modelSize formats a known model size in decimal gigabytes, leaving unknown sizes blank.
 func modelSize(size int64) string {
 	if size == 0 {
 		return ""

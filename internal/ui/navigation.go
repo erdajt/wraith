@@ -7,6 +7,7 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
+// jumpSelected moves the viewport and cursor to the selected message's first row.
 func (a *App) jumpSelected() {
 	for i, line := range a.transcript(max(10, a.mainWidth()-5)) {
 		if line.Message == a.selected {
@@ -18,10 +19,13 @@ func (a *App) jumpSelected() {
 		}
 	}
 }
+
+// findNext moves the chat cursor to the next search match, wrapping in either direction.
 func (a *App) findNext(reverse bool) {
 	if a.search == "" {
 		return
 	}
+
 	lines := a.transcript(max(10, a.mainWidth()-5))
 	if len(lines) == 0 {
 		return

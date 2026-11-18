@@ -14,6 +14,7 @@ import (
 
 type copiedMsg struct{ Err error }
 
+// selectionBounds orders visual selection endpoints by row and column.
 func (a *App) selectionBounds() (int, int, int, int) {
 	first, left, last, right := a.visualRow, a.visualColumn, a.chatCursor, a.chatColumn
 	if first > last || first == last && left > right {
@@ -23,6 +24,7 @@ func (a *App) selectionBounds() (int, int, int, int) {
 	return first, left, last, right
 }
 
+// selectedText collects selected text, expanding any touched code block to its full command.
 func (a *App) selectedText() string {
 	lines := a.transcript(max(10, a.mainWidth()-5))
 	first, left, last, right := a.selectionBounds()
@@ -50,6 +52,7 @@ func (a *App) selectedText() string {
 			}
 			continue
 		}
+
 		text := ansi.Strip(entry.Text)
 		start, end := 0, ansi.StringWidth(text)
 		if a.visualMode == "visual" {
@@ -65,6 +68,7 @@ func (a *App) selectedText() string {
 	return strings.Join(out, "\n")
 }
 
+// yank copies the visual selection or selected message to the configured registers.
 func (a *App) yank() tea.Cmd {
 	text := ""
 	if a.visualMode != "" {
@@ -81,6 +85,7 @@ func (a *App) yank() tea.Cmd {
 	return a.copyText(text, linewise)
 }
 
+// copyText updates the prompt register and optionally writes to the system clipboard.
 func (a *App) copyText(text string, linewise bool) tea.Cmd {
 	a.Prompt.Register = []rune(text)
 	a.Prompt.Linewise = linewise
@@ -93,21 +98,25 @@ func (a *App) copyText(text string, linewise bool) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
+
 		cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 		cmd.Stdin = strings.NewReader(text)
 		return copiedMsg{Err: cmd.Run()}
 	}
 }
 
+// selectionLine highlights selected display columns or the entirety of a touched code block.
 func (a *App) selectionLine(text string, row int, p palette, lines []rendered) string {
 	if a.visualMode == "" {
 		return text
 	}
+
 	first, left, last, right := a.selectionBounds()
 	blockSelected := visualBlockRow(lines, row, first, last)
 	if (row < first || row > last) && !blockSelected {
 		return text
 	}
+
 	width := ansi.StringWidth(text)
 	start, end := 0, width
 	if a.visualMode == "visual" && !visualBlockRow(lines, row, first, last) {
@@ -118,6 +127,7 @@ func (a *App) selectionLine(text string, row int, p palette, lines []rendered) s
 			end = min(end, right+1)
 		}
 	}
+
 	foreground := p.BG
 	if foreground == "" {
 		foreground = "#101419"
@@ -126,6 +136,7 @@ func (a *App) selectionLine(text string, row int, p palette, lines []rendered) s
 	return ansi.Cut(text, 0, start) + style + ansi.Strip(ansi.Cut(text, start, end)) + reset + ansi.Cut(text, end, width)
 }
 
+// visualBlockRow reports whether a row belongs to a code block touched by the selection.
 func visualBlockRow(lines []rendered, row, first, last int) bool {
 	if row < 0 || row >= len(lines) || lines[row].Block < 0 {
 		return false

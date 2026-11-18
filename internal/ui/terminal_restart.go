@@ -15,6 +15,7 @@ type restartTerminalMsg struct {
 	PTY   *terminal.PTY
 }
 
+// terminalExited schedules a shell restart unless an error or rapid-restart limit blocks it.
 func (a *App) terminalExited(m terminalMsg) tea.Cmd {
 	p := a.panes[m.Index]
 	if time.Since(p.Started) > 2*time.Second {
@@ -28,12 +29,14 @@ func (a *App) terminalExited(m terminalMsg) tea.Cmd {
 	return tea.Tick(150*time.Millisecond, func(time.Time) tea.Msg { return restartTerminalMsg{m.Index, m.PTY} })
 }
 
+// restartExitedTerminal replaces an exited shell while preserving pane visibility and application focus.
 func (a *App) restartExitedTerminal(m restartTerminalMsg) tea.Cmd {
 	select {
 	case <-a.done:
 		return nil
 	default:
 	}
+
 	p := a.panes[m.Index]
 	if p == nil || p.PTY != m.PTY {
 		return nil

@@ -8,6 +8,7 @@ import (
 	"github.com/erdajt/wraith/internal/terminal"
 )
 
+// terminalText flattens retained terminal rows, omitting wide-cell continuations and trailing blanks.
 func terminalText(s *terminal.Screen) string {
 	var lines []string
 	for _, rows := range [][][]terminal.Cell{s.History, s.Cells} {
@@ -29,6 +30,7 @@ func terminalText(s *terminal.Screen) string {
 	return strings.TrimRight(strings.Join(lines, "\n"), "\n")
 }
 
+// terminalReaderKey handles read-only terminal navigation and the triple-escape entry sequence.
 func (a *App) terminalReaderKey(index int, k tea.KeyMsg) (bool, tea.Cmd) {
 	p := a.panes[index]
 	if p.Reader != nil {
@@ -36,10 +38,12 @@ func (a *App) terminalReaderKey(index int, k tea.KeyMsg) (bool, tea.Cmd) {
 		if k.String() == a.Config.Keys["output_share"] && !a.Config.Execution.AutoShare {
 			return true, a.shareTerminal(index)
 		}
+
 		if k.String() == "r" && b.Pending == "" && b.Mode == "normal" {
 			p.Reader = newReader(terminalText(p.Screen))
 			return true, nil
 		}
+
 		_, h := a.paneSize(index)
 		text, exit := p.Reader.key(k, h-3)
 		if exit {
@@ -50,6 +54,7 @@ func (a *App) terminalReaderKey(index int, k tea.KeyMsg) (bool, tea.Cmd) {
 		}
 		return true, nil
 	}
+
 	if k.Type == tea.KeyEsc && p.Pending == "" {
 		if time.Since(p.EscapedAt) > time.Second {
 			p.Escapes = 0

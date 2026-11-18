@@ -29,6 +29,7 @@ func fixture(t *testing.T) *App {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	t.Cleanup(a.Close)
 	return a
 }
@@ -42,16 +43,20 @@ func TestModelAliasesDiscoverAndSwitchInstalledModels(t *testing.T) {
 				if r.Method != "GET" || r.URL.Path != "/api/tags" {
 					t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 				}
+
 				return response(`{"models":[{"name":"zeta","size":9000000000},{"name":"alpha","size":1000000000}]}`), nil
 			})
 			cmd := a.runCommand(alias)
 			if cmd == nil {
 				t.Fatal("missing model request")
 			}
+
 			a.Update(cmd())
+
 			if a.popup.Kind != "models" || a.popup.Items[0].Value != "alpha" {
 				t.Fatal("installed models not sorted")
 			}
+
 			a.Config.Thinking = "high"
 			a.menuKey(tea.KeyMsg{Type: tea.KeyEnter})
 			saved, err := a.Store.Load(a.Session.ID)
@@ -68,6 +73,7 @@ func TestDiscardOverflowDoesNotSendStaleDraft(t *testing.T) {
 	a.pendingPrompt = a.Prompt.String()
 	a.popup = &menu{Kind: "overflow"}
 	a.menuKey(tea.KeyMsg{Type: tea.KeyEsc})
+
 	if a.pendingPrompt != "" || a.Prompt.String() != "retain this draft" {
 		t.Fatal("closing overflow changed the draft or left a pending send")
 	}
@@ -79,13 +85,17 @@ func TestInvalidSavedConfigRetainsEditedFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if err = os.WriteFile(f.Path, []byte(`{"context":0}`), 0600); err != nil {
 		t.Fatal(err)
 	}
+
 	a.finishEdit(editedMsg{Kind: "config", File: f})
+
 	if _, err = os.Stat(f.Path); err != nil {
 		t.Fatal("invalid edits were deleted")
 	}
+
 	if a.Config.Context != 8192 || !strings.Contains(a.notice, f.Path) {
 		t.Fatal("invalid config replaced settings or recovery path missing")
 	}
@@ -94,12 +104,15 @@ func TestInvalidSavedConfigRetainsEditedFile(t *testing.T) {
 func TestDemoCommandsCannotWriteUserData(t *testing.T) {
 	a := fixture(t)
 	a.demo = true
+
 	for _, cmd := range []string{"remember change", "new", "export " + filepath.Join(a.Paths.Data, "export.md"), "restore x", "models"} {
 		a.runCommand(cmd)
 	}
+
 	if _, err := os.Stat(a.Paths.Data); !os.IsNotExist(err) {
 		t.Fatal("demo created data")
 	}
+
 	if a.Instructions != "" {
 		t.Fatal("demo changed persistent instructions")
 	}
@@ -107,16 +120,21 @@ func TestDemoCommandsCannotWriteUserData(t *testing.T) {
 
 func TestSpaceEventsSurvivePromptAndCommandEditing(t *testing.T) {
 	a := fixture(t)
+
 	for _, k := range []tea.KeyMsg{key("host"), {Type: tea.KeySpace, Runes: []rune{' '}}, key("name")} {
 		a.key(k)
 	}
+
 	if a.Prompt.String() != "host name" {
 		t.Fatalf("prompt lost space: %q", a.Prompt.String())
 	}
+
 	a.commandMode = true
+
 	for _, k := range []tea.KeyMsg{key("set"), {Type: tea.KeySpace, Runes: []rune{' '}}, key("context")} {
 		a.key(k)
 	}
+
 	if a.command != "set context" {
 		t.Fatalf("command lost space: %q", a.command)
 	}

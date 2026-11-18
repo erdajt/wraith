@@ -51,6 +51,7 @@ var settingDescriptions = map[string]string{
 	"edit":                      "Open the full config.yaml in your configured editor. Save and exit to validate and apply it. Invalid settings do not replace the active configuration; the temporary file remains available for correction.",
 }
 
+// settingHelp opens help for the selected setting and retains the menu for return navigation.
 func (a *App) settingHelp(k tea.KeyMsg) bool {
 	m := a.popup
 	if m.Searching || (m.Kind != "settings" && m.Kind != "value") || k.String() != a.Config.Keys["setting_help"] {

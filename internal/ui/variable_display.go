@@ -5,11 +5,13 @@ import (
 	"github.com/erdajt/wraith/internal/variables"
 )
 
+// expandStyled expands private references for local display and highlights resolved values.
 func (a *App) expandStyled(text string) string {
 	expanded, spans := a.Variables.Expand(text)
 	return a.styleVariableSpans(expanded, spans)
 }
 
+// styleVariableSpans colors resolved variable spans without shifting their display positions.
 func (a *App) styleVariableSpans(expanded string, spans []variables.Span) string {
 	runes := []rune(expanded)
 	for i := len(spans) - 1; i >= 0; i-- {

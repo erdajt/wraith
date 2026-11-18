@@ -7,6 +7,7 @@ import (
 	"github.com/erdajt/wraith/internal/session"
 )
 
+// confirmFork asks whether to fork the conversation before editing a user message.
 func (a *App) confirmFork(index int) tea.Cmd {
 	a.forkIndex = index
 	a.popup = &menu{Kind: "fork", Title: "fork conversation before this message?", Items: []item{
@@ -16,17 +17,20 @@ func (a *App) confirmFork(index int) tea.Cmd {
 	return nil
 }
 
+// forkPrompt saves the original session and opens the selected prompt in a new branch.
 func (a *App) forkPrompt() tea.Cmd {
 	index := a.forkIndex
 	if a.demo || a.busy || index < 0 || index >= len(a.Session.Messages) || a.Session.Messages[index].Role != "user" {
 		a.notice = "message is no longer available for editing"
 		return nil
 	}
+
 	original := a.Session.Clone()
 	if err := a.Store.Save(original); err != nil {
 		a.notice = err.Error()
 		return nil
 	}
+
 	branch := original.Clone()
 	branch.ID = session.ID()
 	branch.Title = "fork · " + original.Title
@@ -53,6 +57,7 @@ func (a *App) forkPrompt() tea.Cmd {
 	a.generation, a.agentStopped = "", true
 	a.proposal = nil
 	a.notice = "fork opened · edit the draft, then :w or " + a.Config.Keys["send"] + " sends · original is in /resume"
+
 	if err := a.refreshVariables(); err != nil {
 		a.notice = err.Error()
 	}

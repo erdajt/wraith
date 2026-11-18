@@ -12,6 +12,7 @@ import (
 	"github.com/erdajt/wraith/internal/store"
 )
 
+// startCompact caches and archives the session before starting asynchronous compaction.
 func (a *App) startCompact() tea.Cmd {
 	if a.loading {
 		a.notice = "wait for model loading before compacting"
@@ -29,6 +30,7 @@ func (a *App) startCompact() tea.Cmd {
 		a.notice = err.Error()
 		return nil
 	}
+
 	s := a.Session.Clone()
 	c := a.runtimeConfig()
 	c.Model = s.Model
@@ -38,6 +40,7 @@ func (a *App) startCompact() tea.Cmd {
 	if thinkingErr != nil {
 		think, _ = a.Info.Think("low")
 	}
+
 	if err := (store.Store{Root: filepath.Join(a.Paths.Cache, "compaction")}).Save(s); err != nil {
 		a.notice = "could not save recovery cache: " + err.Error()
 		return nil
@@ -47,6 +50,7 @@ func (a *App) startCompact() tea.Cmd {
 		a.notice = "could not archive context: " + err.Error()
 		return nil
 	}
+
 	timeout, _ := time.ParseDuration(c.Timeout)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	a.cancel = cancel
@@ -55,12 +59,14 @@ func (a *App) startCompact() tea.Cmd {
 	a.phase = "archiving context"
 	go func() {
 		defer cancel()
+
 		result, e := contextual.Compact(ctx, client, s, c, instructions, think, func(phase string) { a.post(progressMsg(phase)) })
 		a.post(compactMsg{result, archive, e})
 	}()
 	return a.next()
 }
 
+// finishCompact saves accepted compacted context and resumes pending work when still applicable.
 func (a *App) finishCompact(m compactMsg) tea.Cmd {
 	a.busy = false
 	a.compacting = false
@@ -72,6 +78,7 @@ func (a *App) finishCompact(m compactMsg) tea.Cmd {
 		a.notice = "compaction stopped: " + m.Err.Error()
 		return nil
 	}
+
 	m.Session.Archives = append(m.Session.Archives, m.Archive)
 	if err := a.Store.Save(m.Session); err != nil {
 		a.pendingPrompt = ""
@@ -86,6 +93,7 @@ func (a *App) finishCompact(m compactMsg) tea.Cmd {
 	a.follow = true
 	a.selected = max(0, len(a.Session.Messages)-1)
 	a.notice = "compacted · original context archived · pins and prior facts retained"
+
 	if a.pendingPrompt != "" {
 		pending := a.pendingPrompt
 		a.pendingPrompt = ""
@@ -94,6 +102,7 @@ func (a *App) finishCompact(m compactMsg) tea.Cmd {
 		}
 		a.notice += " · draft changed during compaction; review before sending"
 	}
+
 	if a.pendingTool != nil {
 		return a.runPendingTool()
 	}
@@ -101,15 +110,19 @@ func (a *App) finishCompact(m compactMsg) tea.Cmd {
 		a.pendingAgent = false
 		return a.startChat()
 	}
+
 	if a.proposal != nil {
 		return a.approve(*a.proposal)
 	}
 	return nil
 }
+
+// declineCompact persists a decline and starts compaction after the third refusal.
 func (a *App) declineCompact() tea.Cmd {
 	a.popup = nil
 	a.Session.Declines++
 	a.persist(fmt.Sprintf("compaction declined %d/3", a.Session.Declines))
+
 	if a.Session.Declines >= 3 {
 		return a.startCompact()
 	}

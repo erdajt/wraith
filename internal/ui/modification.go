@@ -7,18 +7,22 @@ import (
 	"github.com/erdajt/wraith/internal/vim"
 )
 
+// openModification opens a vim input field for command-change instructions.
 func (a *App) openModification() {
 	a.popup = &menu{Kind: "modify-command", Title: "modify command", Input: vim.New()}
 }
 
+// modificationKey submits command-change instructions or leaves an empty modification request in the draft.
 func (a *App) modificationKey(k tea.KeyMsg) tea.Cmd {
 	if a.proposal == nil {
 		a.popup = nil
 		return nil
 	}
+
 	if k.String() == "esc" && a.popup.Input.Mode == "normal" {
 		return a.approve(*a.proposal)
 	}
+
 	if k.String() == "enter" || k.String() == a.Config.Keys["send"] {
 		instructions := strings.TrimSpace(a.popup.Input.String())
 		p := *a.proposal
@@ -27,15 +31,18 @@ func (a *App) modificationKey(k tea.KeyMsg) tea.Cmd {
 		if draft != "" {
 			text += "\n" + draft
 		}
+
 		a.popup, a.proposal = nil, nil
 		a.Prompt.Set(text)
 		a.focus = "prompt"
+
 		if instructions == "" {
 			a.notice = "describe the command changes after modify:"
 			return nil
 		}
 		return a.submit()
 	}
+
 	a.popup.Input.Key(k.String(), string(k.Runes))
 	return nil
 }

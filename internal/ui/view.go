@@ -8,11 +8,13 @@ import (
 	"github.com/erdajt/wraith/internal/contextual"
 )
 
+// View composes the workspace frame, including transcript, prompt, status bars and overlays.
 func (a *App) View() string {
 	p := a.Config.Palette()
 	if a.width < 50 || a.height < 18 {
 		return "wraith needs a terminal at least 50 columns × 18 rows.\nresize the terminal · " + keyHints(a.Config.Keys["quit"]+" quit", p)
 	}
+
 	w := a.width
 	mainW := a.mainWidth()
 	bodyH := a.bodyHeight()
@@ -20,6 +22,7 @@ func (a *App) View() string {
 	for i := range rows {
 		rows[i] = base(p, "", w)
 	}
+
 	state := "offline"
 	if a.connected {
 		state = a.Config.Provider
@@ -69,6 +72,7 @@ func (a *App) View() string {
 		}
 		rows[3+y] = base(p, "  "+content, mainW) + base(p, "", w-mainW)
 	}
+
 	if len(a.Session.Messages) == 0 && !a.busy {
 		welcome := a.welcome(mainW, bodyH, p)
 		y := 3 + max(0, (bodyH-len(welcome))/2)
@@ -81,6 +85,7 @@ func (a *App) View() string {
 			y++
 		}
 	}
+
 	inputY := 3 + bodyH
 	label := " prompt "
 	if a.focus == "chat" {
@@ -95,6 +100,7 @@ func (a *App) View() string {
 		}
 		rows[inputY+1+y] = base(p, ink(p.Border, "│")+" "+fit(text, mainW-4)+" "+ink(p.Border, "│"), mainW) + base(p, "", w-mainW)
 	}
+
 	rows[inputY+5] = base(p, ink(p.Border, "╰"+strings.Repeat("─", mainW-2)+"╯"), mainW) + base(p, "", w-mainW)
 	status := a.noticeText(a.notice, p)
 	if a.loading {
@@ -114,6 +120,7 @@ func (a *App) View() string {
 	}
 	rows[a.height-2] = base(p, ink(p.Muted, fit(footer, w)), w)
 	rows[a.height-1] = base(p, ink(p.Border, "  "+clean(a.Session.Title)+"  ·  "+a.Session.ID[:8]), w)
+
 	if pane := a.panes[1]; pane != nil && pane.Visible {
 		pw, ph := a.paneSize(1)
 		a.overlay(rows, a.terminalFrame(1, pw, ph), w-pw, 3)
@@ -122,11 +129,13 @@ func (a *App) View() string {
 		pw, ph := a.paneSize(0)
 		a.overlay(rows, a.terminalFrame(0, pw, ph), (w-pw)/2, (a.height-ph)/2)
 	}
+
 	if a.popup == nil {
 		if box := a.completionFrame(); len(box) > 0 {
 			a.overlay(rows, box, 2, inputY-len(box))
 		}
 	}
+
 	if a.popup != nil {
 		if a.proposal != nil && (a.popup.Kind == "approval" || a.popup.Kind == "modify-command" || a.popup.Kind == "command-preview") {
 			for i := range rows {

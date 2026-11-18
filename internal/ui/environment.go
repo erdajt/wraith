@@ -9,10 +9,12 @@ import (
 	"github.com/erdajt/wraith/internal/variables"
 )
 
+// variableStore returns variable storage bound to the current conversation.
 func (a *App) variableStore() variables.Store {
 	return variables.Store{Root: filepath.Join(a.Paths.Config, "variables"), Conversation: a.Session.ID}
 }
 
+// refreshVariables reloads scoped bindings and updates the provider's private-variable snapshot.
 func (a *App) refreshVariables() error {
 	a.Variables = variables.Snapshot{}
 	a.variableInventory = ""
@@ -32,10 +34,12 @@ func (a *App) refreshVariables() error {
 	return nil
 }
 
+// chatInstructions combines persistent instructions with the value-free variable inventory.
 func (a *App) chatInstructions() string {
 	return a.Instructions + a.variableInventory
 }
 
+// environmentCommand manages scoped variables, requesting confirmation before global changes.
 func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 	scope := variables.Scope(a.Config.Environment.Scope)
 	prefix, rest, _ := strings.Cut(arg, " ")
@@ -49,6 +53,7 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 		a.popup = &menu{Kind: "env-global", Title: "global variables apply in every directory", Items: []item{{"cancel", "cancel", "leave variables unchanged"}, {"continue", "continue", "names and descriptions become available in all chats"}}}
 		return nil
 	}
+
 	if arg == "edit" || arg == "new" {
 		state, err := a.variableStore().Edit(a.Directory, scope)
 		if err != nil {
@@ -65,11 +70,13 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 		a.envScope = scope
 		return a.edit("environment", "", state.Text, -1)
 	}
+
 	state, err := a.variableStore().Load(a.Directory, scope)
 	if err != nil {
 		a.notice = err.Error()
 		return nil
 	}
+
 	if strings.HasPrefix(arg, "set ") || strings.HasPrefix(arg, "unset ") {
 		operation, input, _ := strings.Cut(arg, " ")
 		name, value, description := strings.TrimSpace(input), "", ""
@@ -81,6 +88,7 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 			}
 			name, value, description = entries[0].Name, entries[0].Value, entries[0].Description
 		}
+
 		text, e := variables.Rewrite(state.Text, name, value, operation == "unset")
 		if e == nil && description != "" {
 			text, e = variables.Rewrite(text, name, "", true)
@@ -101,6 +109,7 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 			a.notice = e.Error()
 			return nil
 		}
+
 		notice := "saved private variable " + name
 		if operation == "unset" {
 			notice = "removed private variable " + name
@@ -108,6 +117,7 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 				notice += " · another scoped binding remains active"
 			}
 		}
+
 		index := 0
 		if a.popup != nil && a.popup.Kind == "environment" {
 			index = a.popup.Index
@@ -119,10 +129,12 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 		a.notice = notice
 		return nil
 	}
+
 	if arg != "" {
 		a.notice = "usage: /env · /env edit · /env set NAME=value · /env unset NAME · /env conversation|directory|global"
 		return nil
 	}
+
 	var items []item
 	for _, entry := range state.Entries {
 		items = append(items, item{Label: entry.Name + "=" + entry.Value, Value: entry.Name, Detail: entry.Description})
@@ -133,6 +145,7 @@ func (a *App) environmentCommand(arg string, confirmed bool) tea.Cmd {
 	return nil
 }
 
+// environmentKey handles variable editing, scope selection and removal bindings.
 func (a *App) environmentKey(k tea.KeyMsg) (tea.Cmd, bool) {
 	prefix := string(a.envScope) + " "
 	switch k.String() {
@@ -155,6 +168,7 @@ func (a *App) environmentKey(k tea.KeyMsg) (tea.Cmd, bool) {
 	return nil, false
 }
 
+// variableDetails shows a local value alongside the redacted description shared with the model.
 func (a *App) variableDetails(name string) {
 	state, err := a.variableStore().Load(a.Directory, a.envScope)
 	if err != nil {

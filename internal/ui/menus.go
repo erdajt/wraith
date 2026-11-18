@@ -9,6 +9,7 @@ import (
 	"github.com/erdajt/wraith/internal/editor"
 )
 
+// menuKey routes popup input and dispatches the selected menu action.
 func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 	key := k.String()
 	m := a.popup
@@ -27,34 +28,41 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 	if a.menuSearch(k) {
 		return nil
 	}
+
 	if m.Kind == "pins" && !m.Searching {
 		if cmd, ok := a.pinKey(k); ok {
 			return cmd
 		}
 	}
+
 	if m.Kind == "leader" && !m.Searching && m.Query == "" {
 		if cmd, ok := a.leaderKey(k); ok {
 			return cmd
 		}
 	}
+
 	if m.Kind == "environment" && !m.Searching {
 		if cmd, ok := a.environmentKey(k); ok {
 			return cmd
 		}
 	}
+
 	if (m.Kind == "jobs" || m.Kind == "history") && key == a.Config.Keys["job_cancel"] && m.Index >= 0 && m.Index < len(m.Items) {
 		a.cancelJob(m.Items[m.Index].Value)
 		return nil
 	}
+
 	if m.Kind == "jobs" && key == "r" {
 		return a.openJobs()
 	}
+
 	if len(key) == 1 && key[0] >= '0' && key[0] <= '9' {
 		if len(m.Count) < 6 {
 			m.Count += key
 		}
 		return nil
 	}
+
 	count, _ := strconv.Atoi(m.Count)
 	count = max(1, count)
 	m.Count = ""
@@ -110,6 +118,7 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 		if m.Kind == "compact" {
 			return a.declineCompact()
 		}
+
 		if m.Kind == "overflow" {
 			a.pendingPrompt = ""
 			a.pendingAgent = false

@@ -9,12 +9,14 @@ import (
 	"github.com/erdajt/wraith/internal/editor"
 )
 
+// blockActions opens edit, run and preview actions for a selected code block.
 func (a *App) blockActions(block editor.Block) tea.Cmd {
 	a.selectedBlock = block
 	a.popup = &menu{Kind: "block-actions", Title: "code block · " + block.Language, Items: []item{{"edit", "edit", "save to stage in scratch shell"}, {"run", "run", "review and capture output"}, {"view", "view", "show the full block"}}}
 	return nil
 }
 
+// blockAction edits, previews or runs the selected block after an explicit user choice.
 func (a *App) blockAction(action string) tea.Cmd {
 	b := a.selectedBlock
 	switch action {
@@ -28,10 +30,12 @@ func (a *App) blockAction(action string) tea.Cmd {
 			a.notice = "command execution is disabled in demo mode"
 			return nil
 		}
+
 		if strings.Contains(b.Text, "wraith::") && editor.Extension(b.Language) != ".sh" {
 			a.notice = "review substituted source in your editor before staging"
 			return a.edit("block", b.Language, b.Text, -1)
 		}
+
 		path, command, err := editor.Stage(filepath.Join(a.Paths.Data, "snippets"), b.Language, b.Text)
 		if err != nil {
 			a.notice = err.Error()
@@ -47,12 +51,14 @@ func (a *App) blockAction(action string) tea.Cmd {
 	return nil
 }
 
+// selectedBlocks opens actions for a single code block or a picker for multiple blocks.
 func (a *App) selectedBlocks() tea.Cmd {
 	index := a.selected
 	if index < 0 || index >= len(a.Session.Messages) || a.Session.Messages[index].Role != "assistant" {
 		a.notice = "select an assistant response containing code"
 		return nil
 	}
+
 	blocks := editor.Blocks(a.messageAt(index))
 	if len(blocks) == 1 {
 		return a.blockActions(blocks[0])
@@ -61,6 +67,7 @@ func (a *App) selectedBlocks() tea.Cmd {
 		a.notice = "selected response has no complete code blocks"
 		return nil
 	}
+
 	items := []item{}
 	for i, b := range blocks {
 		first, _, _ := strings.Cut(b.Text, "\n")

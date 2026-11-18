@@ -13,6 +13,7 @@ func TestStartupLoadsChosenModelBeforeAnyChat(t *testing.T) {
 	var paths []string
 	a.Client.HTTP.Transport = transport(func(r *http.Request) (*http.Response, error) {
 		paths = append(paths, r.URL.Path)
+
 		switch r.URL.Path {
 		case "/api/tags":
 			return response(`{"models":[]}`), nil
@@ -27,13 +28,17 @@ func TestStartupLoadsChosenModelBeforeAnyChat(t *testing.T) {
 	})
 	cmd := a.probe()
 	a.Prompt.Set("keep this draft")
+
 	if a.submit() != nil || len(a.Session.Messages) != 0 {
 		t.Fatal("submitted while loading")
 	}
+
 	a.Update(cmd())
+
 	if a.loading || !a.connected || a.Prompt.String() != "keep this draft" {
 		t.Fatal("load state or draft wrong")
 	}
+
 	if !reflect.DeepEqual(paths, []string{"/api/tags", "/api/show", "/api/generate"}) {
 		t.Fatal(paths)
 	}
@@ -48,6 +53,7 @@ func TestStaleLoadCannotReplaceNewModelState(t *testing.T) {
 	a.Session.Model = "test-model"
 	a.probe()
 	a.Update(infoMsg{Serial: serial, Model: "test-model"})
+
 	if !a.loading || a.connected {
 		t.Fatal("stale load accepted after switching back")
 	}
@@ -68,6 +74,7 @@ func TestPreloadUsesModelCapacity(t *testing.T) {
 				var req struct {
 					Options ollama.Options `json:"options"`
 				}
+
 				if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 					t.Fatal(err)
 				}
@@ -83,6 +90,7 @@ func TestPreloadUsesModelCapacity(t *testing.T) {
 		if override > 0 {
 			want = override
 		}
+
 		if loaded != want || a.contextLimit() != want {
 			t.Fatalf("loaded %d, displayed %d, want %d", loaded, a.contextLimit(), want)
 		}

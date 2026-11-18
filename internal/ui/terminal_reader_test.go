@@ -19,17 +19,23 @@ func TestTerminalCopyModeSnapshotsSearchesAndYanks(t *testing.T) {
 	if r == nil {
 		t.Fatal("triple escape did not enter copy mode")
 	}
+
 	a.terminalReaderKey(1, key("/call"))
 	a.terminalReaderKey(1, tea.KeyMsg{Type: tea.KeyEnter})
 	a.terminalReaderKey(1, key("yf,"))
+
 	if string(a.Prompt.Register) != "call(a," {
 		t.Fatalf("copied %q", a.Prompt.Register)
 	}
+
 	s.Feed([]byte(" changed"))
+
 	if r.Buffer.String() != "first\ncall(a, bee)\nlast" {
 		t.Fatal("live output changed snapshot")
 	}
+
 	a.terminalReaderKey(1, key("i"))
+
 	if a.panes[1].Reader != nil {
 		t.Fatal("copy mode did not exit")
 	}

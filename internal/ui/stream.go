@@ -16,6 +16,7 @@ import (
 	"github.com/erdajt/wraith/internal/vim"
 )
 
+// submit dispatches commands or persists a prompt after privacy and context-budget checks.
 func (a *App) submit() tea.Cmd {
 	text := strings.TrimSpace(a.Prompt.String())
 	if text == "" {
@@ -25,6 +26,7 @@ func (a *App) submit() tea.Cmd {
 		a.Prompt = vim.New()
 		return a.runCommand(strings.TrimPrefix(text, "/"))
 	}
+
 	if name, _, assignment := strings.Cut(text, "="); assignment && !strings.ContainsAny(strings.TrimSpace(name), " \t\n") {
 		if a.busy || a.demo {
 			a.notice = "private variable changes are unavailable during an operation or demo"
@@ -33,6 +35,7 @@ func (a *App) submit() tea.Cmd {
 		a.Prompt = vim.New()
 		return a.environmentCommand("set "+text, false)
 	}
+
 	if a.loading {
 		a.notice = "model is loading · draft retained"
 		return nil
@@ -45,10 +48,12 @@ func (a *App) submit() tea.Cmd {
 		a.notice = "demo mode does not send prompts"
 		return nil
 	}
+
 	if err := a.refreshVariables(); err != nil {
 		a.notice = err.Error()
 		return nil
 	}
+
 	probe, _ := a.pendingEvidence()
 	probe.Messages = append(probe.Messages, session.Message{Role: "user", Content: text})
 	if err := contextual.Fits(probe, a.runtimeConfig(), a.chatInstructions()); err != nil {
@@ -60,6 +65,7 @@ func (a *App) submit() tea.Cmd {
 		a.popup = &menu{Kind: "overflow", Title: "compact before sending?", Items: []item{{"yes · compact and keep this draft", "yes", ""}, {"no · keep draft without sending", "no", ""}}}
 		return nil
 	}
+
 	a.rememberInput(text)
 	a.Prompt = vim.New()
 	a.agentReads, a.pendingTool = 0, nil
@@ -81,6 +87,7 @@ func (a *App) submit() tea.Cmd {
 	return a.startChat()
 }
 
+// startChat prepares session context and starts a cancellable response stream with corrective retries.
 func (a *App) startChat() tea.Cmd {
 	if a.loading {
 		a.notice = "model is loading"
@@ -93,12 +100,14 @@ func (a *App) startChat() tea.Cmd {
 		a.notice = err.Error()
 		return nil
 	}
+
 	if a.Config.Execution.AutoShare {
 		if err := a.syncTerminalEvidence(); err != nil {
 			a.notice = err.Error()
 			return nil
 		}
 	}
+
 	think, err := a.Info.Think(a.Config.Thinking)
 	if err != nil {
 		a.notice = err.Error() + "; /retry after changing /think"
@@ -113,6 +122,7 @@ func (a *App) startChat() tea.Cmd {
 		a.popup = &menu{Kind: "overflow", Title: "compact before continuing?", Items: []item{{"yes", "yes", "archive and compact"}, {"no", "no", "keep context without sending"}}}
 		return nil
 	}
+
 	timeout, _ := time.ParseDuration(a.Config.Timeout)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	a.cancel = cancel
@@ -121,13 +131,16 @@ func (a *App) startChat() tea.Cmd {
 	a.follow = true
 	a.partial = session.Message{Role: "assistant"}
 	a.phase = "connecting"
+
 	req := ollama.Request{RunIDs: a.Session.RunIDs(), ExecutionMode: a.Config.Execution.Mode, PrivateInventory: true, Model: a.Session.Model, Messages: contextual.ForChat(a.Session, a.Config, a.Instructions), Think: think, KeepAlive: a.Config.KeepAlive, Options: ollama.Options{Context: a.contextLimit(), Predict: a.Config.Predict, Temperature: a.Config.Temperature, Threads: a.Config.Threads}}
 	client := a.Client
 	a.streamStopped = false
 	a.streamSerial++
 	serial := a.streamSerial
+
 	go func() {
 		defer cancel()
+
 		r, e := client.ChatWithRepair(ctx, req, func(update provider.StreamUpdate) {
 			select {
 			case a.events <- streamMsg{Serial: serial, Chunk: update.Chunk, Retry: update.Retry, Problem: update.Problem, Rejected: update.Rejected}:
@@ -140,20 +153,24 @@ func (a *App) startChat() tea.Cmd {
 	return a.next()
 }
 
+// receive applies current stream events, persists completed responses and schedules follow-up actions.
 func (a *App) receive(m streamMsg) tea.Cmd {
 	if m.Serial != a.streamSerial {
 		return nil
 	}
+
 	if a.streamStopped {
 		if !m.Final {
 			return a.next()
 		}
 		m.Err = context.Canceled
 	}
+
 	if m.Retry > 0 {
 		a.partial = session.Message{Role: "assistant"}
 		a.phase = fmt.Sprintf("retrying %d/3 · %s", m.Retry, m.Problem)
 		a.notice = a.phase
+
 		if m.Rejected.Content != "" || m.Rejected.Thinking != "" {
 			rejected := m.Rejected
 			rejected.Interrupted = true
@@ -174,8 +191,10 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 		}
 		return a.next()
 	}
+
 	a.busy = false
 	a.cancel = nil
+
 	if m.Err != nil {
 		if m.Chunk.Message.Content != "" || m.Chunk.Message.Thinking != "" {
 			a.partial = m.Chunk.Message
@@ -189,6 +208,7 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 			a.notice += " · output limit reached"
 		}
 	}
+
 	a.partial.Content = contextual.RedactActions(a.partial.Content, a.Variables.Redact, a.Session.RunIDs())
 	a.partial.Thinking = a.Variables.Redact(a.partial.Thinking)
 	if a.partial.Content != "" || a.partial.Thinking != "" {
@@ -204,6 +224,7 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 	if m.Err != nil {
 		return nil
 	}
+
 	if a.Config.Execution.Mode == "agent" {
 		tool, err := contextual.RequestedTool(m.Chunk.Message.Content)
 		if err != nil {
@@ -231,18 +252,21 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 			a.proposal = &proposal{Command: request.Command, Reason: request.Reason, Text: request.Command, Language: "sh", Source: "model", Continue: true, Background: request.Background}
 		}
 	}
+
 	switch contextual.Decision(a.Config.Compact.Mode, a.Session.Declines, contextual.NeedsCompact(a.Session, a.runtimeConfig(), a.chatInstructions())) {
 	case "compact":
 		return a.startCompact()
 	case "ask":
 		a.popup = &menu{Kind: "compact", Title: fmt.Sprintf("context threshold reached · %d/3 declines", a.Session.Declines), Items: []item{{"yes · archive and compact", "yes", ""}, {"no · ask after the next response", "no", ""}}}
 	}
+
 	if a.popup == nil && a.proposal != nil {
 		return a.approve(*a.proposal)
 	}
 	return nil
 }
 
+// SessionWithoutLastAssistant copies the session without its final assistant message for input-usage estimation.
 func (a *App) SessionWithoutLastAssistant() session.Session {
 	s := a.Session.Clone()
 	if n := len(s.Messages); n > 0 && s.Messages[n-1].Role == "assistant" {
@@ -251,6 +275,7 @@ func (a *App) SessionWithoutLastAssistant() session.Session {
 	return s
 }
 
+// next waits for a model-work event or application shutdown.
 func (a *App) next() tea.Cmd {
 	return func() tea.Msg {
 		select {
@@ -261,6 +286,8 @@ func (a *App) next() tea.Cmd {
 		}
 	}
 }
+
+// post delivers a model-work event unless the application has closed.
 func (a *App) post(m tea.Msg) {
 	select {
 	case a.events <- m:
