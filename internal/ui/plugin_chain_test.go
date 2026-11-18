@@ -105,3 +105,34 @@ func TestSupersededEmptyEventLeavesStatusUntouched(t *testing.T) {
 		t.Fatal("empty event replaced the current status")
 	}
 }
+
+func TestLuaNativeInputEffectsKeepOrderAndExposeDetachedState(t *testing.T) {
+	a := pluginFixture(t, `
+wraith.keymap.set("prompt.insert", "jk", {keys="<Esc>"})
+wraith.commands.create("edit-native", function()
+  local input = wraith.input.get()
+  assert(input.mode == "prompt.insert" and input.cursor == 5)
+  input.cursor = 99
+  assert(wraith.input.get().cursor == 5)
+  wraith.input.set_mode("normal")
+  wraith.input.feed("0dwi界")
+  wraith.input.set_mode("normal")
+  wraith.notify("complete")
+end)
+`)
+	a.Prompt.Set("a cat")
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	defer cancel()
+	program := tea.NewProgram(callbackProgram{a, a.runCommand("edit-native")}, tea.WithContext(ctx), tea.WithInput(nil), tea.WithOutput(io.Discard), tea.WithoutRenderer(), tea.WithoutSignalHandler())
+	if _, err := program.Run(); err != nil {
+		t.Fatal(err)
+	}
+	if a.Prompt.String() != "界cat" || a.Prompt.Mode != "normal" || a.notice != "complete" {
+		t.Fatalf("native effect ordering failed: %q %s %s", a.Prompt.String(), a.Prompt.Mode, a.notice)
+	}
+	a.Prompt.Set("jk removes no text")
+	a.key(key("jk"))
+	if a.Prompt.Mode != "normal" || a.Prompt.String() != "jk removes no text" {
+		t.Fatal("lua native mapping did not execute nonrecursively")
+	}
+}

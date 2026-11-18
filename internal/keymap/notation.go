@@ -2,6 +2,7 @@ package keymap
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -86,4 +87,21 @@ func namedKey(name string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("unknown key notation: <%s>", name)
+}
+
+// ParseInput validates native editing keys without accepting workspace or terminal controls.
+func ParseInput(sequence string) ([]string, error) {
+	keys, err := Parse(sequence)
+	if err != nil {
+		return nil, err
+	}
+	for _, key := range keys {
+		if utf8.RuneCountInString(key) == 1 {
+			continue
+		}
+		if !slices.Contains([]string{"esc", "enter", "tab", "backspace", "delete", "up", "down", "left", "right", "home", "end", "pgup", "pgdown", "ctrl+r", "ctrl+d", "ctrl+u", "ctrl+f", "ctrl+b"}, key) {
+			return nil, fmt.Errorf("unsupported native input key: %s", key)
+		}
+	}
+	return keys, nil
 }

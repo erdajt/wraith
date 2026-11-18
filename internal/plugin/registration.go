@@ -18,11 +18,21 @@ func (e *engine) installRegistration(api *lua.LTable) {
 		"set": func(L *lua.LState) int {
 			e.registration(L)
 			mode, keys := L.CheckString(1), L.CheckString(2)
-			name, ok := L.Get(3).(lua.LString)
-			if !ok {
-				name = lua.LString(e.callback(L, L.Get(3)))
+			binding := keymap.Binding{Mode: mode, Keys: keys, Description: L.OptString(4, "lua mapping")}
+			switch target := L.Get(3).(type) {
+			case lua.LString:
+				binding.Action = string(target)
+			case *lua.LTable:
+				target.ForEach(func(key, value lua.LValue) {
+					input, ok := value.(lua.LString)
+					if key.String() != "keys" || !ok {
+						L.RaiseError("native mapping requires {keys = string}")
+					}
+					binding.Input = string(input)
+				})
+			default:
+				binding.Action = e.callback(L, target)
 			}
-			binding := keymap.Binding{Mode: mode, Keys: keys, Action: string(name), Description: L.OptString(4, "lua mapping")}
 			if _, err := keymap.New([]keymap.Binding{binding}); err != nil {
 				L.RaiseError("keymap.set: %v", err)
 			}

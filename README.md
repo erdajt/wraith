@@ -53,8 +53,8 @@ edit prompts with vim motions or your own editor. search and yank conversations.
 | context | per-model capacity, persistent instructions, exact pins, prompted/automatic/manual compaction, corrective retries and original archives |
 | shells | centered and side panes, configurable dimensions, real ptys, persistent shell state and vim scrollback copy mode |
 | providers | ollama, openai-compatible apis, anthropic, deepseek, codex cli and claude cli; configurable profiles and model catalogs |
-| sessions | compressed storage, directory-scoped resume/search, interrupted-response retry, archive restore and markdown export |
-| extensibility | real Lua configuration, local plugins, custom slash commands, modal callbacks, workspace APIs, lifecycle events and atomic reload |
+| sessions | compressed storage, directory-scoped resume/search, saved draft recovery, interrupted-response retry, archive restore and markdown export |
+| extensibility | real Lua configuration, local plugins, custom Ex/slash commands, native vim mappings, input modes, workspace APIs, lifecycle events and atomic reload |
 | appearance | ten themes, custom palettes, inherited backgrounds, themed cursors, an animated hooded mark and reduced motion |
 
 </details>
@@ -79,7 +79,9 @@ edit prompts with vim motions or your own editor. search and yank conversations.
 | space `b`, space `j` | blocks or jobs |
 | `alt+e`, `alt+s` | scratch shell or side shell |
 | `ctrl+\`, triple escape in a shell | return focus, or enter copy mode |
-| `q` in normal mode, `ctrl+q` | save and quit |
+| `q` or `:q` in normal mode | close one conversation window, exit the last |
+| `:qa`, `ctrl+q` | quit all windows; warn on an unsent draft |
+| `:wq`, `:q!`, `:qa!` | save draft and quit, or explicitly discard it |
 
 [leader hints](docs/assets/screenshots/leader.png) · [external editor](docs/assets/screenshots/editor.png) · [conversation search](docs/assets/screenshots/search.png)
 

@@ -45,7 +45,7 @@ func New(bindings []Binding) (*Registry, error) {
 			return nil, fmt.Errorf("keymap %q: choose one action or native input sequence", binding.Keys)
 		}
 		if binding.Input != "" {
-			if _, err := Parse(binding.Input); err != nil {
+			if _, err := ParseInput(binding.Input); err != nil {
 				return nil, fmt.Errorf("keymap %q input: %w", binding.Keys, err)
 			}
 		}

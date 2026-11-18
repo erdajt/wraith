@@ -42,7 +42,7 @@ func editorMode(mode, pending string) string {
 
 // feedInput applies bounded native editing keys without remapping or invoking workspace actions.
 func (a *App) feedInput(sequence string) tea.Cmd {
-	keys, err := keymap.Parse(sequence)
+	keys, err := keymap.ParseInput(sequence)
 	if err != nil {
 		a.notice = "input: " + err.Error()
 		return nil

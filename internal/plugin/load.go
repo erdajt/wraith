@@ -93,7 +93,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 		L.Pop(1)
 	}
 	for _, binding := range e.manifest.Config.Keymaps {
-		if !e.actions[binding.Action] && e.functions[binding.Action] == nil {
+		if binding.Input == "" && !e.actions[binding.Action] && e.functions[binding.Action] == nil {
 			return nil, nil, fmt.Errorf("keymap %q: unknown action %s", binding.Keys, binding.Action)
 		}
 	}

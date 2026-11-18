@@ -51,6 +51,9 @@ func TestInteractiveEditorAndPersistentShells(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bindings = append(bindings, []byte(`
+wraith.keymap.set("prompt.insert", "jk", {keys="<Esc>"})
+`)...)
 	if err := os.WriteFile(root+"/config/init.lua", bindings, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +131,9 @@ func TestInteractiveEditorAndPersistentShells(t *testing.T) {
 	send("\x17=")
 	waitFor("conversation window 3 · 50×9")
 	send("\x17o\ti")
-	send("draft with spaces\x05")
+	send("draft with spacesjk")
+	waitFor("NORMAL")
+	send("\x05")
 	waitFor("draft with spaces edited")
 	send("\x1be")
 	waitFor("scratch shell")

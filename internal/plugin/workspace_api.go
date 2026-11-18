@@ -77,6 +77,20 @@ func (e *engine) installWorkspace(api *lua.LTable) {
 			return 1
 		},
 	}))
+	api.RawSetString("input", L.SetFuncs(L.NewTable(), map[string]lua.LGFunction{
+		"get": func(L *lua.LState) int {
+			L.Push(e.snapshotValue(L, "input"))
+			return 1
+		},
+		"feed": func(L *lua.LState) int {
+			e.emit(L, Effect{Name: "input.feed", Argument: L.CheckString(1)})
+			return 0
+		},
+		"set_mode": func(L *lua.LState) int {
+			e.emit(L, Effect{Name: "input.set_mode", Argument: L.CheckString(1)})
+			return 0
+		},
+	}))
 	api.RawSetString("prompt", L.SetFuncs(L.NewTable(), map[string]lua.LGFunction{
 		"get": func(L *lua.LState) int {
 			L.Push(e.snapshotValue(L, "prompt"))

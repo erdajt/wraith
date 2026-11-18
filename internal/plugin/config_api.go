@@ -2,8 +2,10 @@ package plugin
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
+	"github.com/erdajt/wraith/internal/keymap"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -128,6 +130,25 @@ func (e *engine) emit(L *lua.LState, effect Effect) {
 	}
 	if len(e.effects) >= 64 || len(effect.Argument) > 64<<10 {
 		L.RaiseError("plugin action batch exceeds its limit")
+	}
+	if effect.Name == "input.feed" {
+		keys, err := keymap.ParseInput(effect.Argument)
+		if err != nil {
+			L.RaiseError("input.feed: %v", err)
+		}
+		count := len(keys)
+		for _, pending := range e.effects {
+			if pending.Name == "input.feed" {
+				previous, _ := keymap.ParseInput(pending.Argument)
+				count += len(previous)
+			}
+		}
+		if count > 128 {
+			L.RaiseError("native input batch exceeds 128 keys")
+		}
+	}
+	if effect.Name == "input.set_mode" && !slices.Contains([]string{"normal", "insert", "visual", "visual-line", "search"}, effect.Argument) {
+		L.RaiseError("invalid input mode: %s", effect.Argument)
 	}
 	e.effects = append(e.effects, effect)
 }

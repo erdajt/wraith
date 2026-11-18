@@ -176,3 +176,9 @@ window actions are `window.split_horizontal`, `window.split_vertical`, `window.l
 Lua can register the same mappings with `wraith.keymap.set(mode, sequence, action_or_function, description)`. custom commands use `command.NAME` actions and appear in completion. see the [plugin API](plugins.md) and [runnable example](examples/lua/init.lua).
 
 conflicting legacy `keys` entries are rejected after normalizing key names. explicit `keymaps` entries override defaults in their mode. mappings cannot replace an active approval dialog or send a draft from another input surface. editor handoffs retain buffered input until the editor returns; focus changes discard stale sequences.
+
+### native editor mappings
+
+Lua mappings can use `{keys = "<Esc>"}` or another native sequence instead of an action. YAML uses `input: "<Esc>"` with no `action` field. these mappings preserve counts and bypass recursive mapping lookup. full examples and input APIs are in [plugins](plugins.md#native-vim-mappings).
+
+`prompt`, `chat`, `output` and `terminal.copy` support `.normal`, `.visual`, `.operator`, `.argument` and `.search`; only prompt supports `.insert`. pending counts remain in normal or visual mode. literal find/replace targets and text-object selectors use argument mode. legacy `output`, `terminal.copy` and `search` mappings remain fallbacks; exact surface modes take precedence. raw shell input uses `terminal` and never accepts native editor sequences.

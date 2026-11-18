@@ -84,13 +84,13 @@ wraith.commands.create("review.note", function(ctx)
 end, "prepare a review prompt")
 ```
 
-`keymap.set(mode, sequence, action_or_function, description)` registers an override. descriptions are optional. use `/keymaps` to inspect active mappings. [keybindings](keybindings.md#mode-specific-mappings) lists notation and modes. counts and pending vim operators retain their own modes.
+`keymap.set(mode, sequence, action_or_function_or_keys, description)` registers an override. descriptions are optional. use `/keymaps` to inspect active mappings. [keybindings](keybindings.md#mode-specific-mappings) lists notation and modes. numeric prefixes retain the current normal/visual mappings. pending operators and literal arguments have separate modes.
 
 `keymap.del(mode, sequence)` removes configured overrides for that sequence; built-in defaults become available again. map to `noop` to consume a default key. registration happens during setup. edit the configuration and reload to replace mappings or commands.
 
 `commands.create(name, callback, description)` registers a slash command and a `command.NAME` action. command names use lowercase letters, digits and hyphens, with optional dotted children. built-in names and namespaces are reserved unless an existing command is explicitly replaced with `{replace = true}`. a trailing `!` is accepted. `commands.delete(name)` removes a custom command during setup and restores any builtin it replaced. custom commands appear in slash completion and `/help`. a virtual parent expands to its dotted children when selected.
 
-`wraith.action(name, argument)` queues a named operation from a callback. arguments are optional strings. host actions include `prompt.send`, `editor.open`, `focus.next`, `terminal.overlay`, `terminal.side`, `operation.cancel`, `app.quit`, `noop`, all `command.NAME` actions, and the `window.*` actions listed in [keybindings](keybindings.md). action calls do not synthesize terminal input.
+`wraith.action(name, argument)` queues a named operation from a callback. arguments are optional strings. host actions include `prompt.send`, `editor.open`, `focus.next`, `terminal.overlay`, `terminal.side`, `operation.cancel`, `app.quit`, `noop`, all `command.NAME` actions, and the `window.*` actions listed in [keybindings](keybindings.md). native `input.feed` edits the focused buffer; action calls never synthesize live shell input.
 
 bindings resolve once. an exception consumes the mapping and reports the error. ambiguous sequences use `key_timeout`; escape cancels the prefix. failed prefixes replay once into the same input owner. direct `ctrl+c` and `ctrl+q` remain available.
 
@@ -105,9 +105,12 @@ bindings resolve once. an exception consumes the mapping and reports the error. 
 | `wraith.windows.close(id)` | close that view; omitted id means the focused view |
 | `wraith.prompt.get()` | draft captured when the callback was queued |
 | `wraith.prompt.set(text)` | queue replacement of the shared draft |
+| `wraith.input.get()` | detached mode, cursor, selection, search and pending-key snapshot |
+| `wraith.input.feed(keys)` | queue a nonrecursive native editing sequence |
+| `wraith.input.set_mode(mode)` | choose normal, insert, visual, visual-line or search |
 | `wraith.notify(text)` | show a notice |
 
-each callback receives `ctx` with `argument`, `event`, `prompt`, `windows` and `session`. session messages contain role and content, limited to the latest 64 messages and 128 kib of content. `message_count` records the full count. a large message may be truncated. modifying snapshot tables does not change the app.
+each callback receives `ctx` with `argument`, `event`, `prompt`, `input`, `windows` and `session`. session messages contain role and content, limited to the latest 64 messages and 128 kib of content. `message_count` records the full count. a large message may be truncated. modifying snapshot tables does not change the app.
 
 operations run after the callback returns successfully. snapshot reads within that callback continue to describe its original state. split operations return no new id immediately; inspect a later window event to find it. an exception or timeout discards the callback's effect batch.
 
@@ -176,3 +179,22 @@ end, "pin a fact", { arguments = true })
 physical keys remain separate mappings. `q` in normal mode uses `window.close`; the quit key uses `app.quit`. bind them explicitly to `command.q` if they should follow your override. stable actions `window.close`, `window.close_force`, `app.quit`, `app.quit_force`, `app.save_quit` and `prompt.send` invoke the original operations. calling `command.q` from its own replacement recurses and hits the callback depth limit.
 
 callbacks keep dialog, input ownership and persistence guards. configuration does not grant command execution approval. `:w` and `:w!` send by default; `:wq` saves the draft and quits. invalid reloads retain the previous command definitions.
+
+## native vim mappings
+
+```lua
+wraith.keymap.set("prompt.insert", "jk", { keys = "<Esc>" })
+for _, mode in ipairs({ "prompt.normal", "prompt.visual", "chat.normal", "chat.visual" }) do
+  wraith.keymap.set(mode, "H", { keys = "^" })
+  wraith.keymap.set(mode, "L", { keys = "$" })
+end
+wraith.keymap.set("prompt.operator", "H", { keys = "^" })
+wraith.keymap.set("output.normal", "J", { keys = "5j" })
+wraith.keymap.set("terminal.copy.normal", "J", { keys = "5j" })
+```
+
+native sequences bypass mappings and workspace actions. `2H` keeps its count; pending `d`, `c` and `y` use operator mappings. `f`, `t`, `r` and text-object selectors use argument mappings, so a normal-mode mapping cannot replace a literal target. each sequence allows 16 keys and 256 bytes; callback batches allow 128 native keys. unsupported native controls reject the entire sequence before editing. callbacks can use `wraith.input.feed("0dw")` or change modes with `wraith.input.set_mode("visual")`.
+
+prompt editing supports insert, normal, visual, visual-line and search. conversations, command output and terminal copy buffers remain read-only. native input cannot open a command editor, approve a command, send the prompt, close the app or write into a live shell. invoke the corresponding named action for workspace operations. raw shells, approval dialogs, ordinary pickers and the Ex command line reject native editor input.
+
+`input.get().mode` includes the surface, such as `prompt.operator` or `output.visual`. `cursor`, `selection_start` and `selection_end` are zero-based rune offsets; selection end is exclusive and inactive bounds are `-1`. chat uses zero-based `row` and display-cell `column`, plus `anchor_row` and `anchor_column`. `count`, `pending`, `search` and chat `operator_count` describe queued intent. `available` identifies a surface that accepts native input. snapshots describe callback-start state, not earlier queued effects. changed readers, text, cursors, search or pending operators invalidate delayed callbacks.
