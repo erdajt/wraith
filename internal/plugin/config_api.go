@@ -163,6 +163,9 @@ func (e *engine) callback(L *lua.LState, value lua.LValue) string {
 		L.RaiseError("callback must be a function")
 	}
 	if len(e.functions) >= 512 {
+		e.pruneCallbacks()
+	}
+	if len(e.functions) >= 512 {
 		L.RaiseError("plugin callback limit reached")
 	}
 	e.serial++

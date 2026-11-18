@@ -49,6 +49,7 @@ func (e *engine) restoreRegistry(s registryState) {
 
 // refreshManifest rebuilds event subscriptions after a successful structural change.
 func (e *engine) refreshManifest() {
+	e.pruneCallbacks()
 	e.manifest.Events = nil
 	for event, ids := range e.events {
 		if len(ids) > 0 {
@@ -107,4 +108,32 @@ func (r *Runtime) publish(e *engine, revision uint64) bool {
 		r.mu.Unlock()
 		return true
 	}
+}
+
+// pruneCallbacks releases functions once no registration or pending effect can invoke them.
+func (e *engine) pruneCallbacks() {
+	retained := map[string]bool{}
+	for _, command := range e.manifest.Commands {
+		retained[command.Callback] = true
+	}
+	for _, binding := range e.manifest.Config.Keymaps {
+		retained[binding.Action] = true
+	}
+	for _, ids := range e.events {
+		for _, id := range ids {
+			retained[id] = true
+		}
+	}
+	for _, effect := range e.effects {
+		retained[effect.Name] = true
+	}
+	e.manifest.Callbacks = nil
+	for id := range e.functions {
+		if retained[id] {
+			e.manifest.Callbacks = append(e.manifest.Callbacks, id)
+		} else {
+			delete(e.functions, id)
+		}
+	}
+	slices.Sort(e.manifest.Callbacks)
 }

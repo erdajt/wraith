@@ -202,7 +202,10 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 				req = r.pending[req.event]
 				delete(r.pending, req.event)
 			}
-			stale := req.revision != r.revision
+			stale := req.event == "" && req.revision != r.revision
+			if req.event != "" {
+				req.config.Keymaps = slices.Clone(r.manifest.Config.Keymaps)
+			}
 			r.mu.Unlock()
 			result := Result{Err: errors.New("plugin registrations changed before callback dispatch")}
 			if !stale {

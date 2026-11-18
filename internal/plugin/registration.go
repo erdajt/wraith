@@ -9,6 +9,8 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
+var customEventName = regexp.MustCompile(`^[a-z][a-z0-9_-]*(\.[a-z][a-z0-9_-]*)+$`)
+
 var commandName = regexp.MustCompile(`^[a-z][a-z0-9-]*(\.[a-z0-9-]+)*!?$`)
 
 // installRegistration exposes live bindings, commands and event subscriptions.
@@ -107,13 +109,25 @@ func (e *engine) installRegistration(api *lua.LTable) {
 		"on": func(L *lua.LState) int {
 			e.registration(L)
 			name := L.CheckString(1)
-			if !slices.Contains([]string{"ready", "session_changed", "window_changed", "response_finished"}, name) {
+			if !slices.Contains([]string{"ready", "session_changed", "window_changed", "response_finished"}, name) && (!customEventName.MatchString(name) || len(name) > 128) {
 				L.RaiseError("unknown event: %s", name)
 			}
 			id := e.callback(L, L.Get(2))
 			e.events[name] = append(e.events[name], id)
 			L.Push(lua.LString(id))
 			return 1
+		},
+		"emit": func(L *lua.LState) int {
+			name := L.CheckString(1)
+			if !customEventName.MatchString(name) || len(name) > 128 {
+				L.RaiseError("events.emit requires a namespaced event")
+			}
+			value, err := decodeValue(L.Get(2))
+			if err != nil {
+				L.RaiseError("events.emit: %v", err)
+			}
+			e.emit(L, Effect{Name: "event.emit", Argument: name, Data: value})
+			return 0
 		},
 		"off": func(L *lua.LState) int {
 			if !e.setup && !e.closing {
