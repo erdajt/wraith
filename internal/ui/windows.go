@@ -36,6 +36,7 @@ func (a *App) focusWindow(id uint64) {
 		a.notice = "conversation window is no longer available"
 		return
 	}
+	a.Prompt.Pending, a.Prompt.Count, a.Prompt.OperatorCount = "", "", ""
 	a.chatCount, a.chatMotionPending, a.chatMotionCount = "", "", ""
 	a.chatG, a.chatZ = false, false
 	a.keyPending = nil
@@ -115,7 +116,6 @@ func (a *App) windowAction(action string) {
 func (a *App) focusDirection(direction string) {
 	if a.focus == "prompt" {
 		if direction == "k" {
-			a.Prompt.Pending, a.Prompt.Count = "", ""
 			a.focusWindow(a.windowID)
 		}
 		return

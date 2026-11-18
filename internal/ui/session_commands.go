@@ -10,7 +10,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/fsutil"
 	"github.com/erdajt/wraith/internal/session"
-	"github.com/erdajt/wraith/internal/vim"
 )
 
 // sessionCommand handles session navigation, export, retry and terminal restart commands.
@@ -38,7 +37,7 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 		a.selected = 0
 		a.offset = 0
 		a.follow = true
-		a.Prompt = vim.New()
+		a.resetPrompt("")
 		a.pendingPrompt = ""
 		a.notice = "new chat · persistent instructions retained"
 		return a.probe()

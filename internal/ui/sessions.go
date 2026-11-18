@@ -10,6 +10,7 @@ import (
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/provider"
 	"github.com/erdajt/wraith/internal/session"
+	"github.com/erdajt/wraith/internal/vim"
 )
 
 // resume loads a directory-scoped session and resets runtime navigation and agent state.
@@ -37,10 +38,11 @@ func (a *App) resume(id string) tea.Cmd {
 	a.Config.Provider = s.Provider
 	a.Client = provider.New(a.Config)
 	a.Session = s
-	a.Prompt.Set(s.Draft)
+	draft := s.Draft
 	if override != nil {
-		a.Prompt.Set(*override)
+		draft = *override
 	}
+	a.resetPrompt(draft)
 	a.resetChatNavigation()
 	a.agentSteps, a.agentReads, a.pendingTool = 0, 0, nil
 	a.generation, a.agentStopped = "", true
@@ -55,6 +57,15 @@ func (a *App) resume(id string) tea.Cmd {
 	a.notice = "resumed " + s.Title
 	a.reconcileJobs()
 	return a.probe()
+}
+
+// resetPrompt opens a session draft without carrying undo or input-recall state across sessions.
+func (a *App) resetPrompt(text string) {
+	a.Prompt = vim.New()
+	a.Prompt.Text = []rune(text)
+	a.Prompt.Pos = len(a.Prompt.Text)
+	a.inputIndex = -1
+	a.inputDraft, a.inputDraftPosition = "", 0
 }
 
 // restore forks an archived session under a new id and resumes it.

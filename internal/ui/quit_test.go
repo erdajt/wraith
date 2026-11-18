@@ -246,3 +246,69 @@ func TestWriteFailureRetainsExactSavedAndLiveDraft(t *testing.T) {
 		t.Fatal("failed send altered saved draft or current input")
 	}
 }
+
+func TestSessionTransitionsIsolateUndoAndRecalledDrafts(t *testing.T) {
+	for _, transition := range []string{"resume", "fork", "clear"} {
+		t.Run(transition, func(t *testing.T) {
+			a := fixture(t)
+			a.Prompt.Set("previous session draft")
+			a.inputHistory = []string{"submitted prompt"}
+			a.historyKey(tea.KeyMsg{Type: tea.KeyUp})
+			want := ""
+			switch transition {
+			case "resume":
+				s := session.New(a.Config.Model)
+				s.Directory, s.Provider, s.Draft = a.Directory, a.Config.Provider, "resumed draft"
+				if err := a.Store.Save(s); err != nil {
+					t.Fatal(err)
+				}
+				a.resume(s.ID)
+				want = s.Draft
+			case "fork":
+				a.Session.Messages = []session.Message{{Role: "user", Content: "forked draft"}}
+				a.forkIndex = 0
+				a.forkPrompt()
+				want = "forked draft"
+			case "clear":
+				a.sessionCommand("clear", "")
+			}
+
+			a.Prompt.Mode = "insert"
+			a.historyKey(tea.KeyMsg{Type: tea.KeyDown})
+			a.Prompt.Key("esc", "")
+			a.Prompt.Key("u", "u")
+			if a.Prompt.String() != want || a.inputIndex != -1 || a.inputDraft != "" {
+				t.Fatalf("transition retained another draft: %q", a.Prompt.String())
+			}
+			a.Prompt.Key("A", "A")
+			a.Prompt.Key("runes", " edited")
+			a.Prompt.Key("esc", "")
+			a.Prompt.Key("u", "u")
+			if a.Prompt.String() != want {
+				t.Fatal("local edit could not be undone")
+			}
+		})
+	}
+}
+
+func TestFocusChangesCancelOutgoingPromptOperators(t *testing.T) {
+	for _, action := range []string{"focus.next", "focus.up", "window.split_vertical"} {
+		t.Run(action, func(t *testing.T) {
+			a := fixture(t)
+			a.Prompt.Mode = "normal"
+			a.feedInput("2d3")
+			a.runAction(action, "")
+			if a.focus != "chat" || a.Prompt.Pending != "" || a.Prompt.Count != "" || a.Prompt.OperatorCount != "" {
+				t.Fatal("outgoing prompt operator survived focus change")
+			}
+			cmd := a.key(key("q"))
+			if action == "window.split_vertical" {
+				if len(a.windows) != 1 {
+					t.Fatal("inactive prompt prevented closing split")
+				}
+			} else if cmd == nil {
+				t.Fatal("inactive prompt prevented quit")
+			}
+		})
+	}
+}

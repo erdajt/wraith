@@ -47,7 +47,7 @@ func (a *App) forkPrompt() tea.Cmd {
 	}
 	a.remapConversation(a.Session.Messages, branch.Messages)
 	a.Session = branch
-	a.Prompt.Set(branch.Draft)
+	a.resetPrompt(branch.Draft)
 	a.Prompt.Mode = "normal"
 	a.Prompt.Pos = 0
 	a.focus = "prompt"

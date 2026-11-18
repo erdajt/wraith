@@ -61,6 +61,7 @@ func (a *App) builtinActions() map[string]action {
 			if a.focus == "chat" {
 				a.focus = "prompt"
 			} else {
+				a.Prompt.Pending, a.Prompt.Count, a.Prompt.OperatorCount = "", "", ""
 				a.focus = "chat"
 				a.ensureChatCursor()
 			}
