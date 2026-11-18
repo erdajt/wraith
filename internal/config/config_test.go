@@ -1,10 +1,58 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 )
+
+func TestNumericSettingsRejectNonfiniteValues(t *testing.T) {
+	for _, setting := range []struct{ name, format, low, high string }{
+		{"temperature", "temperature: %s\n", "0", "2"},
+		{"threshold", "compact:\n  threshold: %s\n", "0.5", "0.95"},
+		{"overlay_width", "terminal:\n  overlay_width: %s\n", "0.3", "0.95"},
+		{"overlay_height", "terminal:\n  overlay_height: %s\n", "0.3", "0.95"},
+		{"split_width", "terminal:\n  split_width: %s\n", "0.25", "0.7"},
+	} {
+		t.Run(setting.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "config.yaml")
+			for _, value := range []string{".nan", ".inf", "-.inf", setting.low, setting.high} {
+				if err := os.WriteFile(path, []byte(fmt.Sprintf(setting.format, value)), 0600); err != nil {
+					t.Fatal(err)
+				}
+				_, err := Load(path)
+				valid := value == setting.low || value == setting.high
+				if (err == nil) != valid {
+					t.Fatalf("value %s: %v", value, err)
+				}
+			}
+		})
+	}
+}
+
+func TestProviderExtraMustBeJSONEncodable(t *testing.T) {
+	for _, value := range []string{"{nested: [.nan]}", "{nested: [.inf]}", "{nested: {true: value}}"} {
+		t.Run(value, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "config.yaml")
+			input := "providers:\n  ollama:\n    kind: ollama\n    extra: " + value + "\n"
+			if err := os.WriteFile(path, []byte(input), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := Load(path); err == nil {
+				t.Fatal("accepted extra values that cannot enter a provider request")
+			}
+		})
+	}
+
+	c := Default()
+	p := c.Providers["ollama"]
+	p.Extra = map[string]any{"nested": []any{true, 0.5, "value", nil}}
+	c.Providers["ollama"] = p
+	if err := c.Validate(); err != nil {
+		t.Fatalf("valid json values rejected: %v", err)
+	}
+}
 
 func TestConfigRoundTripAndPermissions(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "config.json")

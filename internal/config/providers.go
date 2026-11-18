@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"slices"
@@ -83,6 +84,9 @@ func (c Config) ValidateProviders() error {
 			return fmt.Errorf("provider %s has an unsupported action_protocol", name)
 		}
 
+		if _, err := json.Marshal(p.Extra); err != nil {
+			return fmt.Errorf("provider %s extra must contain json values: %w", name, err)
+		}
 		for key := range p.Extra {
 			if slices.Contains([]string{"messages", "system", "model", "stream", "tools", "tool_choice", "parallel_tool_calls", "action_protocol"}, key) {
 				return fmt.Errorf("provider %s extra cannot replace %s", name, key)

@@ -250,7 +250,7 @@ func (c Config) Validate() error {
 	if c.Threads < 0 || c.Threads > 512 {
 		return errors.New("threads must be between 0 and 512")
 	}
-	if c.Temperature < 0 || c.Temperature > 2 {
+	if !(c.Temperature >= 0 && c.Temperature <= 2) {
 		return errors.New("temperature must be between 0 and 2")
 	}
 
@@ -282,7 +282,9 @@ func (c Config) Validate() error {
 		}
 	}
 
-	if c.Terminal.OverlayWidth < 0.3 || c.Terminal.OverlayWidth > 0.95 || c.Terminal.OverlayHeight < 0.3 || c.Terminal.OverlayHeight > 0.95 || c.Terminal.SplitWidth < 0.25 || c.Terminal.SplitWidth > 0.7 {
+	if !(c.Terminal.OverlayWidth >= 0.3 && c.Terminal.OverlayWidth <= 0.95) ||
+		!(c.Terminal.OverlayHeight >= 0.3 && c.Terminal.OverlayHeight <= 0.95) ||
+		!(c.Terminal.SplitWidth >= 0.25 && c.Terminal.SplitWidth <= 0.7) {
 		return errors.New("terminal pane proportions are out of range")
 	}
 	if c.Terminal.Scrollback < 0 || c.Terminal.Scrollback > 100000 {
@@ -304,7 +306,7 @@ func (c Config) Validate() error {
 	if !slices.Contains([]string{"ask", "auto", "manual"}, c.Compact.Mode) {
 		return errors.New("compact.mode must be ask, auto or manual")
 	}
-	if c.Compact.Threshold < 0.5 || c.Compact.Threshold > 0.95 {
+	if !(c.Compact.Threshold >= 0.5 && c.Compact.Threshold <= 0.95) {
 		return errors.New("compact.threshold must be between 0.5 and 0.95")
 	}
 	if c.Compact.KeepTurns < 1 || c.Compact.KeepTurns > 20 {
