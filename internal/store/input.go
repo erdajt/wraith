@@ -13,11 +13,13 @@ import (
 	"github.com/erdajt/wraith/internal/fsutil"
 )
 
+// inputPath derives the input-history path from the canonical directory.
 func (s Store) inputPath(directory string) string {
 	hash := sha256.Sum256([]byte(canonicalDirectory(directory)))
 	return filepath.Join(s.Root, "input", hex.EncodeToString(hash[:])+".json.gz")
 }
 
+// Inputs loads the saved input history for a directory.
 func (s Store) Inputs(directory string) ([]string, error) {
 	f, err := os.Open(s.inputPath(directory))
 	if errors.Is(err, os.ErrNotExist) {
@@ -27,11 +29,13 @@ func (s Store) Inputs(directory string) ([]string, error) {
 		return nil, err
 	}
 	defer f.Close()
+
 	z, err := gzip.NewReader(f)
 	if err != nil {
 		return nil, err
 	}
 	defer z.Close()
+
 	b, err := io.ReadAll(io.LimitReader(z, (4<<20)+1))
 	if err != nil {
 		return nil, err
@@ -39,6 +43,7 @@ func (s Store) Inputs(directory string) ([]string, error) {
 	if len(b) > 4<<20 {
 		return nil, errors.New("input history exceeds decompression limit")
 	}
+
 	var entries []string
 	if err := json.Unmarshal(b, &entries); err != nil {
 		return nil, err
@@ -46,6 +51,7 @@ func (s Store) Inputs(directory string) ([]string, error) {
 	return entries, nil
 }
 
+// SaveInputs atomically saves a directory's input history.
 func (s Store) SaveInputs(directory string, entries []string) error {
 	return fsutil.Atomic(s.inputPath(directory), func(w io.Writer) error {
 		z := gzip.NewWriter(w)

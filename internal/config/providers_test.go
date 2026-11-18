@@ -17,10 +17,12 @@ func TestProviderConfigurationRejectsMalformedEndpointsAndOverrides(t *testing.T
 	} {
 		c := Default()
 		edit(&c)
+
 		if c.Validate() == nil {
 			t.Fatal("invalid provider accepted")
 		}
 	}
+
 	if err := Default().Validate(); err != nil {
 		t.Fatal(err)
 	}
@@ -32,17 +34,22 @@ func TestProviderThinkingValuesAndDefaultModel(t *testing.T) {
 	if err := os.WriteFile(path, []byte(text), 0600); err != nil {
 		t.Fatal(err)
 	}
+
 	c, err := Load(path)
 	if err != nil || c.Model != "configured-model" || c.Thinking != "xhigh" {
 		t.Fatalf("profile: %s %s %v", c.Model, c.Thinking, err)
 	}
+
 	c.Thinking = "unadvertised"
+
 	if c.Validate() == nil {
 		t.Fatal("unknown effort accepted")
 	}
+
 	if err := os.WriteFile(path, []byte(text+"model: explicit-model\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
+
 	c, err = Load(path)
 	if err != nil || c.Model != "explicit-model" {
 		t.Fatal("explicit model overridden")

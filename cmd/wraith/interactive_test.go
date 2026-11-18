@@ -18,11 +18,13 @@ func TestTUIHelperProcess(t *testing.T) {
 	if root == "" {
 		t.Skip("subprocess entry point")
 	}
+
 	err := run([]string{"--config-dir", root + "/config", "--data-dir", root + "/data", "--cache-dir", root + "/cache"}, os.Stdout)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+
 	os.Exit(0)
 }
 
@@ -34,19 +36,23 @@ func TestInteractiveEditorAndPersistentShells(t *testing.T) {
 	if err := os.WriteFile(edit, []byte("printf ' edited' >> \"$1\"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
+
 	c := config.Default()
 	c.AutoStart = false
 	c.Host = "http://127.0.0.1:1"
 	c.Shell = []string{"/bin/sh", "-i"}
 	c.Editor = []string{"/bin/sh", edit}
+
 	if err := config.Save(root+"/config/config.json", c); err != nil {
 		t.Fatal(err)
 	}
+
 	p, err := terminal.Start([]string{os.Args[0], "-test.run=^TestTUIHelperProcess$"}, "", 100, 30)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer p.Close()
+
 	screen := terminal.NewScreen(100, 30, 100)
 	waitFor := func(want string) {
 		t.Helper()
@@ -57,11 +63,13 @@ func TestInteractiveEditorAndPersistentShells(t *testing.T) {
 				if !ok || event.Err != nil {
 					t.Fatalf("tui exited before %q: %v", want, event.Err)
 				}
+
 				if reply := screen.Feed(event.Data); len(reply) > 0 {
 					if err := p.Write(reply); err != nil {
 						t.Fatal(err)
 					}
 				}
+
 				visible := ansi.Strip(strings.Join(screen.Lines(false, "", ""), "\n"))
 				if strings.Contains(visible, want) {
 					return
@@ -73,6 +81,7 @@ func TestInteractiveEditorAndPersistentShells(t *testing.T) {
 	}
 	send := func(s string) {
 		t.Helper()
+
 		if err := p.Write([]byte(s)); err != nil {
 			t.Fatal(err)
 		}

@@ -26,6 +26,7 @@ type Provider struct {
 	Extra         map[string]any    `json:"extra" yaml:"extra"`
 }
 
+// DefaultProviders returns the built-in local, api and cli provider profiles.
 func DefaultProviders() map[string]Provider {
 	return map[string]Provider{
 		"ollama":    {Kind: "ollama"},
@@ -37,10 +38,12 @@ func DefaultProviders() map[string]Provider {
 	}
 }
 
+// ValidateProviders checks provider profiles, model catalogs and transport settings.
 func (c Config) ValidateProviders() error {
 	if _, ok := c.Providers[c.Provider]; !ok {
 		return fmt.Errorf("unknown provider: %s", c.Provider)
 	}
+
 	for name, p := range c.Providers {
 		if p.Context < 0 {
 			return fmt.Errorf("provider %s context must be zero for automatic or a positive integer", name)
@@ -50,12 +53,14 @@ func (c Config) ValidateProviders() error {
 				return fmt.Errorf("provider %s model contexts need a model id and positive capacity", name)
 			}
 		}
+
 		if strings.TrimSpace(name) == "" {
 			return fmt.Errorf("provider names cannot be empty")
 		}
 		if !slices.Contains([]string{"ollama", "openai", "anthropic", "codex-cli", "claude-cli"}, p.Kind) {
 			return fmt.Errorf("provider %s has an unsupported kind", name)
 		}
+
 		if strings.HasSuffix(p.Kind, "-cli") {
 			if len(p.Command) == 0 || strings.TrimSpace(p.Command[0]) == "" {
 				return fmt.Errorf("provider %s needs a command", name)
@@ -66,17 +71,20 @@ func (c Config) ValidateProviders() error {
 				return fmt.Errorf("provider %s needs an http base_url without credentials or query parameters", name)
 			}
 		}
+
 		if !slices.Contains([]string{"", "reasoning_effort", "thinking", "adaptive"}, p.ThinkingMode) {
 			return fmt.Errorf("provider %s has an unsupported thinking_mode", name)
 		}
 		if !slices.Contains([]string{"", "max_tokens", "max_completion_tokens"}, p.TokenField) {
 			return fmt.Errorf("provider %s has an unsupported token_field", name)
 		}
+
 		for key := range p.Extra {
 			if slices.Contains([]string{"messages", "system", "model", "stream", "tools", "tool_choice"}, key) {
 				return fmt.Errorf("provider %s extra cannot replace %s", name, key)
 			}
 		}
 	}
+
 	return nil
 }

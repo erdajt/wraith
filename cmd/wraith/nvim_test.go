@@ -17,6 +17,7 @@ func TestNeovimTerminalEditorAndCopyMode(t *testing.T) {
 	if err != nil {
 		t.Skip("neovim is not installed")
 	}
+
 	root := t.TempDir()
 	t.Setenv("WRAITH_TEST_WORKSPACE", root)
 	t.Setenv("TERM", "xterm-256color")
@@ -26,15 +27,18 @@ func TestNeovimTerminalEditorAndCopyMode(t *testing.T) {
 	c.Clipboard = nil
 	c.Editor = []string{nvim, "--clean", "-n"}
 	c.Shell = []string{"/bin/sh", "-i"}
+
 	if err := config.Save(root+"/config/config.yaml", c); err != nil {
 		t.Fatal(err)
 	}
+
 	command := "terminal '" + strings.ReplaceAll(os.Args[0], "'", "'\\''") + "' -test.run=^TestTUIHelperProcess$"
 	p, err := terminal.Start([]string{nvim, "--clean", "-n", "-c", command, "-c", "startinsert"}, "", 110, 36)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer p.Close()
+
 	screen := terminal.NewScreen(110, 36, 100)
 	wait := func(want string) {
 		t.Helper()
@@ -45,11 +49,13 @@ func TestNeovimTerminalEditorAndCopyMode(t *testing.T) {
 				if !ok || e.Err != nil {
 					t.Fatalf("terminal exited before %q: %v", want, e.Err)
 				}
+
 				if reply := screen.Feed(e.Data); len(reply) > 0 {
 					if err := p.Write(reply); err != nil {
 						t.Fatal(err)
 					}
 				}
+
 				if strings.Contains(ansi.Strip(strings.Join(screen.Lines(false, "", ""), "\n")), want) {
 					return
 				}
@@ -60,6 +66,7 @@ func TestNeovimTerminalEditorAndCopyMode(t *testing.T) {
 	}
 	send := func(s string) {
 		t.Helper()
+
 		if err := p.Write([]byte(s)); err != nil {
 			t.Fatal(err)
 		}
@@ -83,10 +90,12 @@ func TestNeovimTerminalEditorAndCopyMode(t *testing.T) {
 	time.Sleep(350 * time.Millisecond)
 	send("printf '%s%s\\n' restarted- shell\r")
 	wait("restarted-shell")
+
 	for range 3 {
 		send("\x1b")
 		time.Sleep(100 * time.Millisecond)
 	}
+
 	wait("share to agent")
 	send("/restarted-shell\r")
 	time.Sleep(100 * time.Millisecond)

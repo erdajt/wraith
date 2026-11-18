@@ -10,21 +10,25 @@ import (
 	"github.com/erdajt/wraith/internal/session"
 )
 
+// canonicalDirectory normalizes a directory and resolves symlinks when possible.
 func canonicalDirectory(path string) string {
 	if path == "" {
 		return ""
 	}
+
 	if real, err := filepath.EvalSymlinks(path); err == nil {
 		path = real
 	}
 	return filepath.Clean(path)
 }
 
+// ListDirectory lists sessions whose canonical directory matches directory.
 func (s Store) ListDirectory(directory string) ([]session.Session, error) {
 	all, err := s.List()
 	if err != nil {
 		return nil, err
 	}
+
 	var found []session.Session
 	for _, chat := range all {
 		if chat.Directory != "" && canonicalDirectory(chat.Directory) == canonicalDirectory(directory) {
@@ -34,14 +38,17 @@ func (s Store) ListDirectory(directory string) ([]session.Session, error) {
 	return found, nil
 }
 
+// LoadDirectory loads a session only if it belongs to directory.
 func (s Store) LoadDirectory(id, directory string) (session.Session, error) {
 	chat, err := s.Load(id)
 	if err != nil {
 		return session.Session{}, errors.New("invalid session id")
 	}
+
 	if chat.Directory == "" {
 		return session.Session{}, errors.New("session has no recorded original directory; export it to recover the conversation")
 	}
+
 	if canonicalDirectory(chat.Directory) != canonicalDirectory(directory) {
 		path := chat.Directory
 		if home, err := os.UserHomeDir(); err == nil {
@@ -53,5 +60,6 @@ func (s Store) LoadDirectory(id, directory string) (session.Session, error) {
 		}
 		return session.Session{}, fmt.Errorf("you are in a different directory; original conversation occurred at: %s", path)
 	}
+
 	return chat, nil
 }

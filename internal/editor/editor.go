@@ -21,10 +21,12 @@ type Block struct {
 	Message        int
 }
 
+// Prepare creates a private editing file with a baseline for detecting saves.
 func Prepare(dir, extension, text string) (*File, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
 	}
+
 	f, err := os.CreateTemp(dir, "edit-*"+extension)
 	if err != nil {
 		return nil, err
@@ -38,6 +40,7 @@ func Prepare(dir, extension, text string) (*File, error) {
 	if err = f.Close(); err != nil {
 		return nil, err
 	}
+
 	stamp := time.Unix(946684800, 0)
 	if err = os.Chtimes(path, stamp, stamp); err != nil {
 		return nil, err
@@ -45,38 +48,48 @@ func Prepare(dir, extension, text string) (*File, error) {
 	return &File{Path: path, original: []byte(text), stamp: stamp}, nil
 }
 
+// Command builds the configured editor invocation without starting it.
 func (f *File) Command(argv []string) (*exec.Cmd, error) {
 	if len(argv) == 0 {
 		return nil, errors.New("editor is empty")
 	}
+
 	args := append(append([]string(nil), argv[1:]...), f.Path)
 	return exec.Command(argv[0], args...), nil
 }
 
+// Result returns edited content and whether a successful editor exit saved the file.
 func (f *File) Result(exit error) (string, bool, error) {
 	if exit != nil {
 		return "", false, exit
 	}
+
 	b, err := fsutil.ReadLimit(f.Path, 4<<20)
 	if err != nil {
 		return "", false, err
 	}
+
 	info, err := os.Stat(f.Path)
 	if err != nil {
 		return "", false, err
 	}
 	return string(b), !bytes.Equal(b, f.original) || !info.ModTime().Equal(f.stamp), nil
 }
+
+// Remove removes the temporary editing file, ignoring cleanup errors.
 func (f *File) Remove() { _ = os.Remove(f.Path) }
 
+// Blocks extracts complete markdown fences and their language labels.
 func Blocks(text string) []Block {
 	var out []Block
 	var current *Block
 	var lines []string
 	fence := ""
+
 	for _, line := range strings.Split(text, "\n") {
 		trim := strings.TrimLeft(line, " ")
 		indent := len(line) - len(trim)
+
 		if current == nil {
 			if indent <= 3 && (strings.HasPrefix(trim, "```") || strings.HasPrefix(trim, "~~~")) {
 				ch := trim[0]
@@ -101,9 +114,11 @@ func Blocks(text string) []Block {
 			lines = append(lines, line)
 		}
 	}
+
 	return out
 }
 
+// Extension maps a code-block language to an editing-file extension.
 func Extension(lang string) string {
 	switch lang {
 	case "sh", "bash", "shell", "zsh", "console":
@@ -127,6 +142,7 @@ func Extension(lang string) string {
 	}
 }
 
+// Stage saves code and returns shell input for review without executing it.
 func Stage(dir, lang, text string) (string, string, error) {
 	if lang == "wraith-run" || strings.HasPrefix(strings.TrimSpace(text), "wraith-run") {
 		return "", "", errors.New("internal command request cannot be staged as shell input")
@@ -134,10 +150,12 @@ func Stage(dir, lang, text string) (string, string, error) {
 	if strings.ContainsRune(text, 0) {
 		return "", "", errors.New("code contains a null byte")
 	}
+
 	f, err := Prepare(dir, Extension(lang), text)
 	if err != nil {
 		return "", "", err
 	}
+
 	var argv []string
 	switch lang {
 	case "sh", "bash", "shell", "console", "zsh":
@@ -153,10 +171,12 @@ func Stage(dir, lang, text string) (string, string, error) {
 	default:
 		return f.Path, "", nil
 	}
+
 	for i, a := range argv {
 		argv[i] = Quote(a)
 	}
 	return f.Path, strings.Join(argv, " "), nil
 }
 
+// Quote quotes a literal argument for a posix shell.
 func Quote(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'" }

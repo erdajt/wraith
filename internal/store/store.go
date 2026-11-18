@@ -24,10 +24,12 @@ var validArchive = regexp.MustCompile(`^[a-f0-9]{24}-[a-f0-9]{24}\.json\.gz$`)
 
 type Store struct{ Root string }
 
+// Lock takes an exclusive data-directory lock and returns its release function.
 func (s Store) Lock() (func(), error) {
 	if err := os.MkdirAll(s.Root, 0o700); err != nil {
 		return nil, err
 	}
+
 	f, err := os.OpenFile(filepath.Join(s.Root, ".lock"), os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
 		return nil, err
@@ -36,21 +38,29 @@ func (s Store) Lock() (func(), error) {
 		_ = f.Close()
 		return nil, errors.New("another wraith process owns this data directory")
 	}
-	return func() { _ = unix.Flock(int(f.Fd()), unix.LOCK_UN); _ = f.Close() }, nil
+
+	return func() {
+		_ = unix.Flock(int(f.Fd()), unix.LOCK_UN)
+		_ = f.Close()
+	}, nil
 }
 
+// Save validates the session id and saves a compressed session with an updated timestamp.
 func (s Store) Save(v session.Session) error {
 	if !validID.MatchString(v.ID) {
 		return errors.New("invalid session id")
 	}
+
 	v.Updated = time.Now().UTC()
 	return compressed(filepath.Join(s.Root, "sessions", v.ID+".json.gz"), v)
 }
 
+// Load loads a session and verifies its id against the requested filename.
 func (s Store) Load(id string) (session.Session, error) {
 	if !validID.MatchString(id) {
 		return session.Session{}, errors.New("invalid session id")
 	}
+
 	v, err := read(filepath.Join(s.Root, "sessions", id+".json.gz"))
 	if err == nil && v.ID != id {
 		return v, errors.New("session id does not match file")
@@ -58,26 +68,32 @@ func (s Store) Load(id string) (session.Session, error) {
 	return v, err
 }
 
+// Archive writes a compressed snapshot under a new archive name.
 func (s Store) Archive(v session.Session) (string, error) {
 	if !validID.MatchString(v.ID) {
 		return "", errors.New("invalid session id")
 	}
+
 	name := v.ID + "-" + session.ID() + ".json.gz"
 	return name, compressed(filepath.Join(s.Root, "archives", name), v)
 }
 
+// ReadArchive validates an archive name before loading its session.
 func (s Store) ReadArchive(name string) (session.Session, error) {
 	if !validArchive.MatchString(name) {
 		return session.Session{}, errors.New("invalid archive name")
 	}
+
 	return read(filepath.Join(s.Root, "archives", name))
 }
 
+// List loads saved sessions ordered by most recent update.
 func (s Store) List() ([]session.Session, error) {
 	paths, err := filepath.Glob(filepath.Join(s.Root, "sessions", "*.json.gz"))
 	if err != nil {
 		return nil, err
 	}
+
 	var out []session.Session
 	for _, p := range paths {
 		v, e := read(p)
@@ -86,10 +102,12 @@ func (s Store) List() ([]session.Session, error) {
 		}
 		out = append(out, v)
 	}
+
 	sort.Slice(out, func(i, j int) bool { return out[i].Updated.After(out[j].Updated) })
 	return out, nil
 }
 
+// compressed atomically writes a session as compressed json.
 func compressed(path string, v session.Session) error {
 	return fsutil.Atomic(path, func(w io.Writer) error {
 		z := gzip.NewWriter(w)
@@ -101,6 +119,7 @@ func compressed(path string, v session.Session) error {
 	})
 }
 
+// read loads a session with a decompression limit and validates its format.
 func read(path string) (session.Session, error) {
 	var v session.Session
 	f, err := os.Open(path)
@@ -108,11 +127,13 @@ func read(path string) (session.Session, error) {
 		return v, err
 	}
 	defer f.Close()
+
 	z, err := gzip.NewReader(f)
 	if err != nil {
 		return v, err
 	}
 	defer z.Close()
+
 	b, err := io.ReadAll(io.LimitReader(z, maxSession+1))
 	if err != nil {
 		return v, err
@@ -120,6 +141,7 @@ func read(path string) (session.Session, error) {
 	if len(b) > maxSession {
 		return v, errors.New("session exceeds decompression limit")
 	}
+
 	if err = json.Unmarshal(b, &v); err != nil {
 		return v, err
 	}

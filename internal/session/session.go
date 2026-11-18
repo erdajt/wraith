@@ -45,17 +45,25 @@ type Session struct {
 	Usage         Usage     `json:"usage"`
 }
 
-func ID() string { var b [12]byte; _, _ = rand.Read(b[:]); return hex.EncodeToString(b[:]) }
+// ID returns a random 24-character hexadecimal identifier.
+func ID() string {
+	var b [12]byte
+	_, _ = rand.Read(b[:])
+	return hex.EncodeToString(b[:])
+}
 
+// New creates an empty session for model with a new id and timestamps.
 func New(model string) Session {
 	now := time.Now().UTC()
 	dir, _ := os.Getwd()
 	if real, err := filepath.EvalSymlinks(dir); err == nil {
 		dir = real
 	}
+
 	return Session{Directory: dir, Version: 1, ID: ID(), Title: "untitled", Model: model, Created: now, Updated: now}
 }
 
+// Clone copies the session and its mutable conversation state.
 func (s Session) Clone() Session {
 	s.RunReferences = append([]string(nil), s.RunReferences...)
 	s.DeliveredRuns = append([]string(nil), s.DeliveredRuns...)
@@ -64,6 +72,7 @@ func (s Session) Clone() Session {
 	for i := range s.Messages {
 		s.Messages[i].Evidence = s.Messages[i].Evidence.Clone()
 	}
+
 	s.Facts = append([]string(nil), s.Facts...)
 	s.Pins = append([]string(nil), s.Pins...)
 	s.Archives = append([]string(nil), s.Archives...)

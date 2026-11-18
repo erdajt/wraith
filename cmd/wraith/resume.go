@@ -2,6 +2,7 @@ package main
 
 import "strings"
 
+// resumeArgs normalizes optional resume ids while preserving flags and positional prompts.
 func resumeArgs(args []string) []string {
 	var out []string
 	for i := 0; i < len(args); i++ {
@@ -10,21 +11,25 @@ func resumeArgs(args []string) []string {
 			out = append(out, args[i:]...)
 			break
 		}
+
 		name := strings.TrimLeft(arg, "-")
 		if !strings.Contains(arg, "=") && strings.Contains("|session|provider|model|theme|config-dir|data-dir|cache-dir|width|height|", "|"+name+"|") && i+1 < len(args) {
 			out = append(out, arg, args[i+1])
 			i++
 			continue
 		}
+
 		if strings.HasPrefix(arg, "--resume=") {
 			out = append(out, "--resume", "--session", strings.TrimPrefix(arg, "--resume="))
 			continue
 		}
+
 		out = append(out, arg)
 		if arg == "--resume" && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
 			i++
 			out = append(out, "--session", args[i])
 		}
+
 		if arg == "--" {
 			out = append(out, args[i+1:]...)
 			break

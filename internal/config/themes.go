@@ -16,6 +16,7 @@ type Palette struct {
 	Warn        string `json:"warn" yaml:"warn"`
 }
 
+// BuiltinThemes returns the built-in named color palettes.
 func BuiltinThemes() map[string]Palette {
 	return map[string]Palette{
 		"rose-pine": {
@@ -81,11 +82,13 @@ func BuiltinThemes() map[string]Palette {
 	}
 }
 
+// Palette resolves the selected custom or built-in palette and hint colors.
 func (c Config) Palette() Palette {
 	p, ok := c.Themes[c.Theme]
 	if !ok {
 		p = BuiltinThemes()[c.Theme]
 	}
+
 	if p.Variable == "" {
 		p.Variable = "#73f5bd"
 	}
@@ -98,17 +101,20 @@ func (c Config) Palette() Palette {
 	if p.HintCancel == "" {
 		p.HintCancel = "#f9e2af"
 	}
+
 	if c.Appearance.Background == "inherit" {
 		p.BG = ""
 	}
 	return p
 }
 
+// validateThemes checks palette names and required color values.
 func (c Config) validateThemes() error {
 	for name, p := range c.Themes {
 		if name == "" {
 			return fmt.Errorf("theme name is empty")
 		}
+
 		for key, value := range map[string]string{"variable": p.Variable, "hint_quit": p.HintQuit, "hint_refresh": p.HintRefresh, "hint_cancel": p.HintCancel} {
 			if value != "" && !validColor(value) {
 				return fmt.Errorf("theme %s %s color requires #rrggbb", name, key)
@@ -120,10 +126,12 @@ func (c Config) validateThemes() error {
 			}
 		}
 	}
+
 	if _, ok := BuiltinThemes()[c.Theme]; !ok {
 		if _, ok := c.Themes[c.Theme]; !ok {
 			return fmt.Errorf("unknown theme: %s", c.Theme)
 		}
 	}
+
 	return nil
 }

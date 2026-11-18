@@ -24,6 +24,7 @@ import (
 
 var version = "dev"
 
+// main runs the application and reports failures to stderr with a nonzero exit status.
 func main() {
 	if err := run(os.Args[1:], os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, "wraith:", err)
@@ -31,6 +32,7 @@ func main() {
 	}
 }
 
+// run dispatches cli commands or starts an interactive session with configuration overrides.
 func run(args []string, out io.Writer) error {
 	flags := flag.NewFlagSet("wraith", flag.ContinueOnError)
 	flags.SetOutput(out)
@@ -47,16 +49,19 @@ func run(args []string, out io.Writer) error {
 	cacheDir := flags.String("cache-dir", "", "override the cache directory")
 	width := flags.Int("width", 110, "snapshot width")
 	height := flags.Int("height", 34, "snapshot height")
+
 	if err := flags.Parse(resumeArgs(args)); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
 		}
 		return err
 	}
+
 	if *showVersion {
 		fmt.Fprintln(out, "wraith", version)
 		return nil
 	}
+
 	p, err := config.Locations()
 	if err != nil {
 		return err
@@ -73,6 +78,7 @@ func run(args []string, out io.Writer) error {
 			*v.target = abs
 		}
 	}
+
 	c := config.Default()
 	if !*demo && !*snapshot {
 		c, err = config.LoadDirectory(p.Config)
@@ -80,18 +86,21 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 	}
+
 	if *backend != "" {
 		profile, ok := c.Providers[*backend]
 		if !ok {
 			return fmt.Errorf("unknown provider: %s", *backend)
 		}
 		c.Provider = *backend
+
 		if profile.Model != "" {
 			c.Model = profile.Model
 		} else if *model == "" {
 			return errors.New("choose a provider model with --model or configure its default in config.yaml")
 		}
 	}
+
 	if *model != "" {
 		c.Model = *model
 	}
@@ -101,6 +110,7 @@ func run(args []string, out io.Writer) error {
 	if err = c.Validate(); err != nil {
 		return err
 	}
+
 	s := store.Store{Root: p.Data}
 	if flags.NArg() > 0 {
 		switch flags.Arg(0) {
@@ -112,6 +122,7 @@ func run(args []string, out io.Writer) error {
 		case "models":
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
+
 			client, e := localProvider(c, p)
 			if e != nil {
 				return e
@@ -120,6 +131,7 @@ func run(args []string, out io.Writer) error {
 			if e != nil {
 				return e
 			}
+
 			for _, m := range models {
 				fmt.Fprintf(out, "%-65s %.1f gb\n", m.Name, float64(m.Size)/1e9)
 			}
@@ -133,6 +145,7 @@ func run(args []string, out io.Writer) error {
 			if e != nil {
 				return e
 			}
+
 			for _, v := range list {
 				fmt.Fprintf(out, "%s  %s  %s\n", v.ID, v.Updated.Local().Format("2006-01-02 15:04"), v.Title)
 			}
@@ -141,6 +154,7 @@ func run(args []string, out io.Writer) error {
 			if flags.NArg() != 2 {
 				return errors.New("usage: wraith export session-id")
 			}
+
 			v, e := s.Load(flags.Arg(1))
 			if e != nil {
 				return e
@@ -152,15 +166,18 @@ func run(args []string, out io.Writer) error {
 					return fmt.Errorf("export privacy: %w", e)
 				}
 			}
+
 			state, e := (variables.Store{Root: filepath.Join(p.Config, "variables"), Conversation: v.ID}).Load(directory, variables.Directory)
 			if e != nil {
 				return fmt.Errorf("export privacy: %w", e)
 			}
+
 			_, e = io.WriteString(out, state.Snapshot.Redact(ui.Export(v)))
 			return e
 		default:
 		}
 	}
+
 	var resumeProblem error
 	chat := session.New(c.Model)
 	chat.Provider = c.Provider
@@ -170,6 +187,7 @@ func run(args []string, out io.Writer) error {
 			return e
 		}
 		defer unlock()
+
 		if *id != "" {
 			loaded, loadErr := s.LoadDirectory(*id, chat.Directory)
 			if loadErr != nil {
@@ -181,6 +199,7 @@ func run(args []string, out io.Writer) error {
 				chat = loaded
 			}
 		}
+
 		if *backend != "" {
 			chat.Provider = c.Provider
 			chat.Model = c.Model
@@ -188,11 +207,13 @@ func run(args []string, out io.Writer) error {
 		if *model != "" {
 			chat.Model = *model
 		}
+
 		if !*resume || *id != "" {
 			if err = s.Save(chat); err != nil {
 				return err
 			}
 		}
+
 		memory := filepath.Join(p.Config, "instructions.md")
 		if _, e = os.Stat(memory); errors.Is(e, os.ErrNotExist) {
 			if e = fsutil.Bytes(memory, []byte("")); e != nil {
@@ -200,15 +221,19 @@ func run(args []string, out io.Writer) error {
 			}
 		}
 	}
+
 	a, err := ui.New(c, p, chat, *demo || *snapshot)
 	if err != nil {
 		return err
 	}
 	defer a.Close()
+
 	a.Prompt.Set(strings.Join(flags.Args(), " "))
+
 	if *resume && *id == "" {
 		a.OpenSessions()
 	}
+
 	if resumeProblem != nil {
 		if resumeProblem.Error() == "invalid session id" {
 			a.InvalidSession(*id)
@@ -216,21 +241,26 @@ func run(args []string, out io.Writer) error {
 			a.SessionError(resumeProblem)
 		}
 	}
+
 	if *snapshot {
 		_, _ = a.Update(tea.WindowSizeMsg{Width: max(50, *width), Height: max(18, *height)})
 		_, err = fmt.Fprintln(out, a.View())
 		return err
 	}
+
 	options := []tea.ProgramOption{tea.WithAltScreen(), tea.WithOutput(out)}
 	if c.Appearance.Mouse {
 		options = append(options, tea.WithMouseCellMotion())
 	}
+
 	_, err = tea.NewProgram(a, options...).Run()
 	return err
 }
 
+// doctor prints local configuration and checks executables, provider access and thinking support.
 func doctor(c config.Config, p config.Paths, out io.Writer) error {
 	fmt.Fprintf(out, "wraith %s\nconfig  %s\ndata    %s\ncache   %s\nollama  %s\nmodel   %s\n", version, p.Config, p.Data, p.Cache, c.Host, c.Model)
+
 	for _, entry := range []struct {
 		name string
 		argv []string
@@ -242,8 +272,10 @@ func doctor(c config.Config, p config.Paths, out io.Writer) error {
 			fmt.Fprintf(out, "%s  %s\n", entry.name, path)
 		}
 	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
 	client, err := localProvider(c, p)
 	if err != nil {
 		return err
@@ -253,6 +285,7 @@ func doctor(c config.Config, p config.Paths, out io.Writer) error {
 		return err
 	}
 	fmt.Fprintf(out, "installed models  %d\n", len(models))
+
 	info, err := client.Show(ctx, c.Model)
 	if err != nil {
 		return err
@@ -261,20 +294,24 @@ func doctor(c config.Config, p config.Paths, out io.Writer) error {
 	if _, err = info.Think(c.Thinking); err != nil {
 		return err
 	}
+
 	fmt.Fprintln(out, "configuration and model connection are ready")
 	fmt.Fprintln(out, "after generating, use ollama ps to check gpu placement")
 	return nil
 }
 
+// localProvider creates a provider client with the current directory's private-variable snapshot.
 func localProvider(c config.Config, p config.Paths) (*provider.Client, error) {
 	directory, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
+
 	state, err := (variables.Store{Root: filepath.Join(p.Config, "variables")}).Load(directory, variables.Directory)
 	if err != nil {
 		return nil, err
 	}
+
 	client := provider.New(c)
 	client.Variables = state.Snapshot
 	return client, nil

@@ -12,18 +12,23 @@ func TestConfigRoundTripAndPermissions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	c.Editor = []string{"nvim", "-u", "NONE"}
 	c.Theme = "ember"
+
 	if err = Save(p, c); err != nil {
 		t.Fatal(err)
 	}
+
 	got, err := Load(p)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if got.Editor[2] != "NONE" || got.Theme != "ember" {
 		t.Fatalf("config lost fields: %+v", got)
 	}
+
 	info, _ := os.Stat(p)
 	if info.Mode().Perm() != 0o600 {
 		t.Fatalf("permissions: %v", info.Mode())
@@ -39,10 +44,12 @@ func TestRejectInvalidConfig(t *testing.T) {
 		"keys":      func(c *Config) { c.Keys["send"] = c.Keys["quit"] },
 		"thinking":  func(c *Config) { c.Thinking = "extreme" },
 	}
+
 	for name, change := range tests {
 		t.Run(name, func(t *testing.T) {
 			c := Default()
 			change(&c)
+
 			if c.Validate() == nil {
 				t.Fatal("accepted invalid config")
 			}
@@ -55,6 +62,7 @@ func TestUnknownConfigFieldsFail(t *testing.T) {
 	if err := os.WriteFile(p, []byte(`{"verison":1}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
+
 	if _, err := Load(p); err == nil {
 		t.Fatal("accepted misspelled field")
 	}
@@ -66,6 +74,7 @@ func TestRejectMalformedTrailingData(t *testing.T) {
 		if err := os.WriteFile(path, []byte(`{"version":1}`+suffix), 0600); err != nil {
 			t.Fatal(err)
 		}
+
 		if _, err := Load(path); err == nil {
 			t.Fatalf("accepted trailing %q", suffix)
 		}
@@ -76,13 +85,16 @@ func TestContextHasNoApplicationCeiling(t *testing.T) {
 	for _, size := range []int{1, 8192, 32768, 1000000} {
 		c := Default()
 		c.Context = size
+
 		if err := c.Validate(); err != nil {
 			t.Fatalf("context %d: %v", size, err)
 		}
 	}
+
 	for _, size := range []int{0, -1} {
 		c := Default()
 		c.Context = size
+
 		if c.Validate() == nil {
 			t.Fatalf("accepted context %d", size)
 		}
@@ -101,15 +113,18 @@ func TestExecutionLimitsValidateAndSurvivePartialConfig(t *testing.T) {
 			if err := os.WriteFile(path, []byte(input), 0600); err != nil {
 				t.Fatal(err)
 			}
+
 			if _, err := Load(path); err == nil {
 				t.Fatal("invalid execution limits accepted")
 			}
 		})
 	}
+
 	path := filepath.Join(t.TempDir(), "config.json")
 	if err := os.WriteFile(path, []byte(`{"execution":{"mode":"blocks"}}`), 0600); err != nil {
 		t.Fatal(err)
 	}
+
 	c, err := Load(path)
 	if err != nil || c.Execution.MaxJobs != 4 || c.Execution.MaxReads != 16 || c.Execution.CommandTimeout != "10m" {
 		t.Fatalf("old config lost defaults: %+v %v", c.Execution, err)
@@ -122,20 +137,25 @@ func TestEnvironmentScopePersistsAndRejectsUnknownValues(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "config.yaml")
 			c := Default()
 			c.Environment.Scope = scope
+
 			if err := Save(path, c); err != nil {
 				t.Fatal(err)
 			}
+
 			loaded, err := Load(path)
 			if err != nil || loaded.Environment.Scope != scope {
 				t.Fatalf("scope not persisted: %q, %v", loaded.Environment.Scope, err)
 			}
 		})
 	}
+
 	c := Default()
 	if c.Environment.Scope != "directory" {
 		t.Fatal("directory is not the default")
 	}
+
 	c.Environment.Scope = "unknown"
+
 	if c.Validate() == nil {
 		t.Fatal("unknown scope accepted")
 	}

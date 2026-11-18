@@ -14,12 +14,15 @@ func TestEvidenceRedactsValuesWithoutCorruptingIdentifiers(t *testing.T) {
 	if !strings.Contains(rendered, e.ID) || !strings.Contains(rendered, `"line":1`) || !strings.Contains(rendered, "wraith::TOKEN wraith::FIELD") {
 		t.Fatalf("structural corruption: %s", rendered)
 	}
+
 	if e.Page.Lines[0].Text != "ab line" {
 		t.Fatal("render mutated evidence")
 	}
+
 	original := Session{Messages: []Message{e.Message()}}
 	copied := original.Clone()
 	copied.Messages[0].Evidence.Page.Lines[0].Text = "changed"
+
 	if original.Messages[0].Evidence.Page.Lines[0].Text != "ab line" {
 		t.Fatal("clone shares evidence storage")
 	}
@@ -32,6 +35,7 @@ func TestBackgroundReceiptDoesNotPromiseStartupOrPrivateReads(t *testing.T) {
 		if !strings.Contains(text, "accepted") || !strings.Contains(text, "status: starting") {
 			t.Fatal("receipt claimed successful process startup")
 		}
+
 		if strings.Contains(text, "poll by id") == hidden {
 			t.Fatal("receipt advertised the wrong output policy")
 		}
