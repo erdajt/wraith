@@ -69,7 +69,11 @@ func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emi
 			result.Message.Content = content.String()
 			result.Message.Role = "assistant"
 		} else if err != nil {
-			return result, err
+			var action *ollama.ActionError
+			if !errors.As(err, &action) {
+				return result, err
+			}
+			rejected = action
 		} else {
 			_, rejected = c.Variables.Validate(result.Message.Content, true)
 			if rejected == nil {
@@ -144,7 +148,7 @@ func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emi
 				return last, prepareErr
 			}
 
-			if request.Options.Context > 0 && contextual.Estimate(prepared.Messages)+request.Options.Predict+128 > request.Options.Context {
+			if !requestFits(prepared) {
 				if len(excerpt) == 0 {
 					return last, errors.New("response repair stopped: corrective instructions exceed context budget")
 				}

@@ -8,22 +8,23 @@ import (
 )
 
 type Provider struct {
-	Environment   []string          `json:"-" yaml:"-"`
-	Context       int               `json:"context" yaml:"context"`
-	ModelContexts map[string]int    `json:"model_contexts" yaml:"model_contexts"`
-	Kind          string            `json:"kind" yaml:"kind"`
-	BaseURL       string            `json:"base_url" yaml:"base_url"`
-	APIKey        string            `json:"api_key" yaml:"api_key"`
-	KeyEnv        string            `json:"key_env" yaml:"key_env"`
-	Headers       map[string]string `json:"headers" yaml:"headers"`
-	Model         string            `json:"model" yaml:"model"`
-	Models        []string          `json:"models" yaml:"models"`
-	Command       []string          `json:"command" yaml:"command"`
-	SystemPrompt  string            `json:"system_prompt" yaml:"system_prompt"`
-	Thinking      []string          `json:"thinking" yaml:"thinking"`
-	ThinkingMode  string            `json:"thinking_mode" yaml:"thinking_mode"`
-	TokenField    string            `json:"token_field" yaml:"token_field"`
-	Extra         map[string]any    `json:"extra" yaml:"extra"`
+	Environment    []string          `json:"-" yaml:"-"`
+	Context        int               `json:"context" yaml:"context"`
+	ModelContexts  map[string]int    `json:"model_contexts" yaml:"model_contexts"`
+	Kind           string            `json:"kind" yaml:"kind"`
+	ActionProtocol string            `json:"action_protocol" yaml:"action_protocol"`
+	BaseURL        string            `json:"base_url" yaml:"base_url"`
+	APIKey         string            `json:"api_key" yaml:"api_key"`
+	KeyEnv         string            `json:"key_env" yaml:"key_env"`
+	Headers        map[string]string `json:"headers" yaml:"headers"`
+	Model          string            `json:"model" yaml:"model"`
+	Models         []string          `json:"models" yaml:"models"`
+	Command        []string          `json:"command" yaml:"command"`
+	SystemPrompt   string            `json:"system_prompt" yaml:"system_prompt"`
+	Thinking       []string          `json:"thinking" yaml:"thinking"`
+	ThinkingMode   string            `json:"thinking_mode" yaml:"thinking_mode"`
+	TokenField     string            `json:"token_field" yaml:"token_field"`
+	Extra          map[string]any    `json:"extra" yaml:"extra"`
 }
 
 // DefaultProviders returns the built-in local, api and cli provider profiles.
@@ -78,9 +79,12 @@ func (c Config) ValidateProviders() error {
 		if !slices.Contains([]string{"", "max_tokens", "max_completion_tokens"}, p.TokenField) {
 			return fmt.Errorf("provider %s has an unsupported token_field", name)
 		}
+		if !slices.Contains([]string{"", "auto", "native", "text"}, p.ActionProtocol) || p.ActionProtocol == "native" && strings.HasSuffix(p.Kind, "-cli") {
+			return fmt.Errorf("provider %s has an unsupported action_protocol", name)
+		}
 
 		for key := range p.Extra {
-			if slices.Contains([]string{"messages", "system", "model", "stream", "tools", "tool_choice"}, key) {
+			if slices.Contains([]string{"messages", "system", "model", "stream", "tools", "tool_choice", "parallel_tool_calls", "action_protocol"}, key) {
 				return fmt.Errorf("provider %s extra cannot replace %s", name, key)
 			}
 		}

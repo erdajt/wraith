@@ -138,20 +138,39 @@ func (c *Client) Chat(ctx context.Context, request ollama.Request, emit func(oll
 	}
 	c, request = private, sanitized
 
-	if request.Options.Context > 0 && contextual.Estimate(request.Messages)+request.Options.Predict+128 > request.Options.Context {
+	if !requestFits(request) {
 		return ollama.Response{}, fmt.Errorf("redacted request exceeds context budget; compact, shorten private metadata or increase context")
 	}
 
+	var result ollama.Response
 	switch c.Profile.Kind {
 	case "ollama":
-		return c.Client.Chat(ctx, request, emit)
+		result, err = c.Client.Chat(ctx, request, emit)
 	case "openai":
-		return c.api().OpenAI(ctx, request, emit)
+		result, err = c.api().OpenAI(ctx, request, emit)
 	case "anthropic":
-		return c.api().Anthropic(ctx, request, emit)
+		result, err = c.api().Anthropic(ctx, request, emit)
 	case "codex-cli", "claude-cli":
 		return CLI(ctx, c.Profile, request, emit)
 	default:
 		return ollama.Response{}, fmt.Errorf("unsupported provider kind: %s", c.Profile.Kind)
 	}
+
+	calls := result.Calls
+	result.Calls = nil
+	if err != nil || len(calls) == 0 {
+		return result, err
+	}
+	if !result.Done || result.Reason == "length" || len(request.Tools) == 0 {
+		return result, &ollama.ActionError{Problem: "native action was incomplete or unavailable"}
+	}
+	content, err := contextual.NormalizeAction(request.ExecutionMode, result.Message.Content, calls)
+	if err != nil {
+		return result, &ollama.ActionError{Problem: err.Error()}
+	}
+	if ctx.Err() != nil {
+		return result, ctx.Err()
+	}
+	result.Message.Content = content
+	return result, nil
 }

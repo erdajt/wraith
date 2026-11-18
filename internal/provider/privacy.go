@@ -3,6 +3,7 @@ package provider
 import (
 	"errors"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/erdajt/wraith/internal/contextual"
@@ -35,6 +36,9 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 
 	copy.Profile.Extra = map[string]any{}
 	for name, value := range c.Profile.Extra {
+		if slices.Contains([]string{"messages", "system", "model", "stream", "tools", "tool_choice", "parallel_tool_calls", "action_protocol"}, name) {
+			return nil, request, errors.New("provider extra cannot replace the request contract")
+		}
 		if c.Variables.Contains(name) {
 			return nil, request, errors.New("private variable collides with a provider option name")
 		}
@@ -76,6 +80,15 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 	if policy != "" && len(request.Messages) > 0 && request.Messages[0].Role == "system" {
 		request.Messages[0].Content = strings.Replace(request.Messages[0].Content, "\n\n"+policy, "", 1)
 	}
+	native, err := c.nativeActions(request)
+	if err != nil {
+		return nil, request, err
+	}
+	request.Tools = nil
+	if native {
+		request.Tools = contextual.ActionTools(request.ExecutionMode)
+		policy = contextual.NativePolicy(request.ExecutionMode)
+	}
 
 	compactPolicy := ""
 	switch request.CompactionTask {
@@ -105,7 +118,11 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 		request.Messages[i].Thinking = ""
 	}
 
-	if correction := (&contextual.ActionProtocolError{Target: request.RepairAction}).Correction(); correction != "" && len(request.Messages) > 0 {
+	correction := (&contextual.ActionProtocolError{Target: request.RepairAction}).Correction()
+	if native && request.RepairAction != "" {
+		correction = "Clarify execution intent. Request execution only through request_command with concrete command and reason strings. Use read_output only for authorized job output in agent mode. For examples, use ordinary shell blocks. Nothing from the rejected answer was executed."
+	}
+	if correction != "" && len(request.Messages) > 0 {
 		request.Messages[len(request.Messages)-1].Content += "\n" + correction
 	}
 
