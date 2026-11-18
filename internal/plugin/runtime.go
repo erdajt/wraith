@@ -218,6 +218,9 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 				result = e.invoke(r.ctx, req)
 			}
 			r.mu.Lock()
+			if err := r.ctx.Err(); err != nil {
+				result = Result{Err: err}
+			}
 			if result.Manifest != nil {
 				r.nextRevision++
 				result.Revision, r.pendingRevision = r.nextRevision, r.nextRevision
