@@ -50,6 +50,7 @@ func TestOpenAINativeFailuresNeverReturnCalls(t *testing.T) {
 		"data: " + `{"choices":[{"delta":{"tool_calls":[{"index":1,"id":"two"}]}}]}` + "\n\n",
 		"data: " + `{"choices":[{"delta":{"tool_calls":[{"index":0,"id":"two"}]}}]}` + "\n\n",
 		"data: " + `{"error":{"message":"failed"}}` + "\n\n",
+		"data: " + `{"choices":[{"finish_reason":"tool_calls"}]}` + "\n\ndata: [DONE]\n\ndata: " + `{"choices":[{"delta":{"content":"late"}}]}` + "\n\n",
 	} {
 		api := &API{Config: config.DefaultProviders()["openai"], HTTP: &http.Client{Transport: transport(func(r *http.Request) (*http.Response, error) { return response(first + tail), nil })}}
 		result, err := api.OpenAI(t.Context(), ollama.Request{Tools: contextual.ActionTools("agent")}, func(chunk ollama.Response) {

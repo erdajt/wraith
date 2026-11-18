@@ -71,8 +71,13 @@ func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.R
 	var call ollama.Call
 	callID := ""
 	called := false
+	ended := false
 	err = readSSE(response.Body, func(_ string, data []byte) error {
+		if ended {
+			return errors.New("provider stream continued after completion")
+		}
 		if string(data) == "[DONE]" {
+			ended = true
 			result.Done = result.Reason != ""
 			return nil
 		}
