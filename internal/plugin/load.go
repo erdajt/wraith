@@ -71,6 +71,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	api.RawSetString("api_version", lua.LNumber(1))
 	L.SetGlobal("wraith", api)
 	e.installConfig(api)
+	e.installRegistration(api)
 
 	fn, err := loadFile(L, root, "init.lua")
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -84,6 +85,11 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 			e.cleanup = append(e.cleanup, cleanup)
 		}
 		L.Pop(1)
+	}
+	for _, binding := range e.manifest.Config.Keymaps {
+		if !e.actions[binding.Action] && e.functions[binding.Action] == nil {
+			return nil, nil, fmt.Errorf("keymap %q: unknown action %s", binding.Keys, binding.Action)
+		}
 	}
 	if err := e.manifest.Config.Validate(); err != nil {
 		return nil, nil, err
