@@ -1,6 +1,9 @@
 package vim
 
-import "testing"
+import (
+	"strconv"
+	"testing"
+)
 
 func TestBufferUndoRestoresUnicode(t *testing.T) {
 	b := New()
@@ -105,6 +108,9 @@ func TestMultilineInsertAndCounts(t *testing.T) {
 
 func FuzzEditing(f *testing.F) {
 	f.Add("hello world", "dwiabc\x1bu")
+	f.Add("one two three four five six seven", "2d3wu\x122y3w")
+	f.Add("α beta\n界 gamma", "iword\nnext\x1b/界\rnvly")
+	controls := map[rune]string{'\x1b': "esc", '\r': "enter", '\n': "enter", '\t': "tab", '\b': "backspace", '\x7f': "delete", '\x12': "ctrl+r"}
 	f.Fuzz(func(t *testing.T, text, seq string) {
 		if len(text)+len(seq) > 4096 {
 			t.Skip()
@@ -113,13 +119,52 @@ func FuzzEditing(f *testing.F) {
 		b := normal(text)
 
 		for _, r := range seq {
-			b.Key(string(r), string(r))
+			key, text := string(r), string(r)
+			if control, ok := controls[r]; ok {
+				key, text = control, ""
+			}
+			if (key == "p" || key == "P") && b.Mode != "insert" && b.Mode != "search" && b.Pending == "" {
+				count, _ := strconv.Atoi(b.Count)
+				if len(b.Register) > ((64<<10)-len(b.Text))/max(1, min(count, 9999)) {
+					t.Skip("counted paste exceeds fuzz allocation budget")
+				}
+			}
+			b.Key(key, text)
 
 			if b.Pos < 0 || b.Pos > len(b.Text) {
 				t.Fatal("cursor out of bounds")
 			}
+			if left, right := b.Selection(); left >= 0 && (left > right || left > len(b.Text) || right > len(b.Text)+1) {
+				t.Fatal("selection out of bounds")
+			}
+			if len(b.Text) > 64<<10 {
+				t.Skip("expanded text exceeds fuzz budget")
+			}
 		}
 	})
+}
+
+func TestVisualDeletesAndUndoClearSelection(t *testing.T) {
+	for _, tt := range []struct {
+		sequence       []string
+		text, register string
+	}{
+		{[]string{"v", "l", "x"}, "pha beta", "al"},
+		{[]string{"v", "l", "X"}, "", "alpha beta"},
+		{[]string{"A", "runes", "esc", "v", "u"}, "alpha beta", ""},
+	} {
+		b := normal("alpha beta")
+		keys(b, tt.sequence...)
+		if b.String() != tt.text || string(b.Register) != tt.register {
+			t.Fatalf("%v: text %q, register %q", tt.sequence, b.String(), string(b.Register))
+		}
+		if b.Mode != "normal" {
+			t.Fatalf("%v retained visual mode", tt.sequence)
+		}
+		if left, right := b.Selection(); left != -1 || right != -1 {
+			t.Fatalf("%v retained stale selection: %d:%d", tt.sequence, left, right)
+		}
+	}
 }
 
 func TestLiteralReplaceAndBigWordMotions(t *testing.T) {

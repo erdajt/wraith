@@ -116,6 +116,9 @@ func (b *Buffer) restore(redo bool) {
 	*source = (*source)[:len(*source)-1]
 	b.Text = v.Text
 	b.Pos = v.Pos
+	if b.Mode == "visual" || b.Mode == "visual-line" {
+		b.Mode = "normal"
+	}
 	b.clamp()
 }
 

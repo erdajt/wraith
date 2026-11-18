@@ -117,6 +117,12 @@ func (b *Buffer) Key(key, text string) {
 	b.Count = ""
 
 	if b.Mode == "visual" || b.Mode == "visual-line" {
+		if key == "x" || key == "X" {
+			if key == "X" {
+				b.Mode = "visual-line"
+			}
+			key = "d"
+		}
 		if key == "d" || key == "c" || key == "y" {
 			a, z := min(b.Anchor, b.Pos), max(b.Anchor, b.Pos)+1
 			line := b.Mode == "visual-line"
