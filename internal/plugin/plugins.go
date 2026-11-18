@@ -91,10 +91,8 @@ func (e *engine) loadPlugin(name string, options *lua.LTable) (err error) {
 		if record.owner == parentOwner {
 			record.dependencies = append(record.dependencies, owner)
 			e.packages[parent] = record
-			for _, hooks := range [][]cleanupHook{e.cleanup, e.disposing} {
-				for i := range hooks {
-					hooks[i].dependencies = e.cleanupDependencies(hooks[i].owner)
-				}
+			for i := range e.cleanup {
+				e.cleanup[i].dependencies = e.cleanupDependencies(e.cleanup[i].owner)
 			}
 		}
 	}

@@ -237,3 +237,41 @@ func TestLateDependenciesDisposeAfterParentAcrossUnloadAndRollback(t *testing.T)
 		})
 	}
 }
+
+func TestDisposedDependencyEdgesSurviveUnrelatedLoad(t *testing.T) {
+	marker := filepath.Join(t.TempDir(), "cleanup")
+	r := openTestRuntime(t, fmt.Sprintf(`
+ local function record(text) local f=assert(io.open(%q,"a")); f:write(text); f:close() end
+ package.preload.child=function() return {setup=function() end,teardown=function() record("child\n") end} end
+ package.preload.parent=function() return {
+  setup=function() wraith.plugins.load("child") end,
+  teardown=function() record("parent\n") end
+ } end
+ package.preload.unrelatedchild=function() return {setup=function() end} end
+ package.preload.unrelated=function() return {setup=function() wraith.plugins.load("unrelatedchild") end} end
+ wraith.plugins.load("parent")
+ wraith.commands.create("mix",function()
+  wraith.plugins.unload("parent")
+  wraith.plugins.load("unrelated")
+  wraith.plugins.unload("child")
+ end)
+ `, marker))
+	m := r.Manifest()
+	ch, err := r.Submit(m.Commands[0].Callback, "", nil, m.Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := receiveResult(t, ch)
+	if got.Err != nil || got.Manifest == nil {
+		t.Fatalf("mixed lifecycle: %+v", got)
+	}
+	if err := r.Acknowledge(got.Revision, true); err != nil {
+		t.Fatal(err)
+	}
+	r.Close()
+	<-r.Done()
+	content, err := os.ReadFile(marker)
+	if err != nil || string(content) != "parent\nchild\n" {
+		t.Fatalf("dependency order: %q, %v", content, err)
+	}
+}
