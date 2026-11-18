@@ -74,3 +74,42 @@ func TestSplitsRespectInputAndMinimumGeometry(t *testing.T) {
 		}
 	}
 }
+
+func TestWindowChordsReachNormalAndPendingConversationModes(t *testing.T) {
+	for _, mode := range []string{"prompt", "chat", "operator"} {
+		for _, last := range []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune{'v'}}, {Type: tea.KeyCtrlV}} {
+			t.Run(mode+last.String(), func(t *testing.T) {
+				a := fixture(t)
+				a.width, a.height = 120, 40
+				a.Prompt.Mode = "normal"
+				if mode != "prompt" {
+					a.focus = "chat"
+				}
+				if mode == "operator" {
+					a.chatMotionPending = "y"
+				}
+				a.key(tea.KeyMsg{Type: tea.KeyCtrlW})
+				a.key(last)
+				if len(a.windows) != 2 || a.focus != "chat" {
+					t.Fatalf("split chord lost in %s: %s", mode, a.notice)
+				}
+			})
+		}
+	}
+}
+
+func TestWindowActionsCancelPendingConversationOperators(t *testing.T) {
+	for _, action := range []string{">", "=", "o", "+"} {
+		t.Run(action, func(t *testing.T) {
+			a := fixture(t)
+			a.width, a.height, a.focus = 120, 40, "chat"
+			a.windowAction("v")
+			a.chatMotionPending, a.chatMotionCount, a.chatCount = "y", "2", "3"
+			a.key(tea.KeyMsg{Type: tea.KeyCtrlW})
+			a.key(key(action))
+			if a.chatMotionPending != "" || a.chatMotionCount != "" || a.chatCount != "" {
+				t.Fatal("window action retained an unfinished text operator")
+			}
+		})
+	}
+}

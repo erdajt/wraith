@@ -47,6 +47,14 @@ func TestInteractiveEditorAndPersistentShells(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	bindings, err := os.ReadFile("../../docs/examples/lua/windows.lua")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(root+"/config/init.lua", bindings, 0600); err != nil {
+		t.Fatal(err)
+	}
+
 	p, err := terminal.Start([]string{os.Args[0], "-test.run=^TestTUIHelperProcess$"}, "", 100, 30)
 	if err != nil {
 		t.Fatal(err)
@@ -87,6 +95,35 @@ func TestInteractiveEditorAndPersistentShells(t *testing.T) {
 		}
 	}
 	waitFor("W R A I T H")
+	send("\x1b")
+	waitFor("NORMAL")
+	send("\x17\x16")
+	waitFor("conversation window 2 · 2 open")
+	send("\x08")
+	waitFor("conversation window 1 · 2 open")
+	send("\x0c\x17s")
+	waitFor("conversation window 3 · 3 open")
+	send("\x0b")
+	waitFor("conversation window 2 · 3 open")
+	send("\x0a")
+	waitFor("conversation window 3 · 3 open")
+	send("\x17>")
+	waitFor("conversation window 3 · 55×9")
+	send("\x17+")
+	waitFor("conversation window 3 · 55×10")
+	if err := p.Resize(48, 16); err != nil {
+		t.Fatal(err)
+	}
+	screen.Resize(48, 16)
+	waitFor("wraith needs a terminal")
+	if err := p.Resize(100, 30); err != nil {
+		t.Fatal(err)
+	}
+	screen.Resize(100, 30)
+	waitFor("W R A I T H")
+	send("\x17=")
+	waitFor("conversation window 3 · 50×9")
+	send("\x17o\ti")
 	send("draft with spaces\x05")
 	waitFor("draft with spaces edited")
 	send("\x1be")

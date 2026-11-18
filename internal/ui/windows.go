@@ -47,6 +47,8 @@ func (a *App) focusWindow(id uint64) {
 
 // windowAction applies a split, focus, close or proportion change to conversation windows.
 func (a *App) windowAction(action string) {
+	a.chatCount, a.chatMotionPending, a.chatMotionCount = "", "", ""
+	a.chatG, a.chatZ = false, false
 	places := a.windowPlaces()
 	switch action {
 	case "s", "v":
@@ -95,7 +97,14 @@ func (a *App) windowAction(action string) {
 		if action == "-" || action == "<" {
 			delta = -delta
 		}
-		a.windowTree.resize(a.windowID, action == ">" || action == "<", delta)
+		if !a.windowTree.resize(a.windowID, action == ">" || action == "<", delta) {
+			a.notice = "no divider in that direction"
+			return
+		}
+	}
+	if action == "+" || action == "-" || action == ">" || action == "<" || action == "=" {
+		w, h := a.chatSize()
+		a.notice = fmt.Sprintf("conversation window %d · %d×%d", a.windowID, w, h)
 	}
 	for _, place := range a.windowPlaces() {
 		a.windowTranscript(a.windows[place.id], max(10, place.width-5), place.id == a.windowID && a.focus == "chat")

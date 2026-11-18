@@ -106,9 +106,12 @@ var windowActions = []struct{ name, key, description string }{
 // buildKeymaps validates named actions and installs configured overrides over built-in chords.
 func (a *App) buildKeymaps(c config.Config) (*keymap.Registry, error) {
 	var bindings []keymap.Binding
-	for _, mode := range []string{"chat.normal", "chat.visual"} {
+	for _, mode := range []string{"prompt.normal", "chat.normal", "chat.visual", "chat.operator"} {
 		for _, spec := range windowActions {
 			bindings = append(bindings, keymap.Binding{Mode: mode, Keys: "<C-w>" + spec.key, Action: spec.name, Description: spec.description})
+			if spec.key == "s" || spec.key == "v" {
+				bindings = append(bindings, keymap.Binding{Mode: mode, Keys: "<C-w><C-" + spec.key + ">", Action: spec.name, Description: spec.description})
+			}
 		}
 	}
 	for _, spec := range [][2]string{{"send", "prompt.send"}, {"editor", "editor.open"}, {"focus", "focus.next"}} {

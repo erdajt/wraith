@@ -63,7 +63,7 @@ visual selection yanks prose character by character. if a selection touches a co
 
 ### conversation windows
 
-with conversation focus, press `ctrl+w`, then a key:
+with conversation focus or the prompt in normal mode, press `ctrl+w`, then a key:
 
 | key | action |
 | --- | --- |
@@ -76,6 +76,8 @@ with conversation focus, press `ctrl+w`, then a key:
 | `=` | equalize sibling sizes |
 | `+`, `-` | grow or shrink height |
 | `>`, `<` | grow or shrink width |
+
+`ctrl+w ctrl+s` and `ctrl+w ctrl+v` also split while control stays held. the [lua window profile](examples/lua/windows.lua) adds `ctrl+h/j/k/l` navigation in conversation modes and prompt normal mode. resize actions report the focused pane dimensions.
 
 these windows show the same conversation. each keeps its own cursor, scroll, search and selection. the prompt, thinking expansion and messages remain shared. `:q` and `:qa` still quit the app; use `ctrl+w c` to close a window. raw terminals and prompt insert mode keep their own `ctrl+w` behavior.
 
