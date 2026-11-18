@@ -26,17 +26,21 @@ type Query struct {
 type OutputLine = session.OutputLine
 type Page = session.OutputPage
 
+// ReadOutput returns a bounded, redacted search window only when output sharing is allowed.
 func ReadOutput(record Record, query Query, snapshot variables.Snapshot) (Page, error) {
 	page := Page{Lines: []OutputLine{}, Truncated: record.Truncated}
+
 	if !record.ShareOutput || record.OutputHidden {
 		return page, errors.New("output is private; user sharing is required")
 	}
+
 	if len(query.Pattern) > 4096 || query.From < 0 || query.Before < 0 || query.After < 0 || query.Before > 10 || query.After > 10 || query.Limit < 0 || query.Limit > 200 {
 		return page, errors.New("invalid output query bounds")
 	}
 	if query.Limit == 0 {
 		query.Limit = 80
 	}
+
 	pattern := query.Pattern
 	if query.IgnoreCase {
 		pattern = strings.ToLower(pattern)
@@ -47,6 +51,7 @@ func ReadOutput(record Record, query Query, snapshot variables.Snapshot) (Page, 
 		}
 		return strings.Contains(text, pattern)
 	}
+
 	if query.Regex {
 		pattern := query.Pattern
 		if query.IgnoreCase {
@@ -58,6 +63,7 @@ func ReadOutput(record Record, query Query, snapshot variables.Snapshot) (Page, 
 		}
 		match = expression.MatchString
 	}
+
 	lines := map[int64]string{}
 	parts := []struct {
 		text                string
@@ -73,6 +79,7 @@ func ReadOutput(record Record, query Query, snapshot variables.Snapshot) (Page, 
 			skipFirst, complete bool
 		}{record.Tail, record.TailLine, true, !record.Finished.IsZero()})
 	}
+
 	for _, part := range parts {
 		for part.text != "" {
 			line, rest, terminated := strings.Cut(part.text, "\n")
@@ -80,6 +87,7 @@ func ReadOutput(record Record, query Query, snapshot variables.Snapshot) (Page, 
 			if !terminated && !part.complete {
 				break
 			}
+
 			if !part.skipFirst {
 				if len(line) > 1<<20 {
 					line = "[overlong output line omitted]"
@@ -98,10 +106,12 @@ func ReadOutput(record Record, query Query, snapshot variables.Snapshot) (Page, 
 				}
 				lines[part.line] = line
 			}
+
 			part.skipFirst = false
 			part.line++
 		}
 	}
+
 	page.Stats = session.OutputStats{ObservedBytes: max(record.Observed, int64(len(record.Output))), PrefixBytes: len(record.Output), TailBytes: len(record.Tail), RetainedLines: len(lines)}
 	if !record.Started.IsZero() {
 		finished := record.Finished
@@ -113,11 +123,13 @@ func ReadOutput(record Record, query Query, snapshot variables.Snapshot) (Page, 
 	if record.TailOffset > int64(len(record.Output)) {
 		page.Stats.GapFrom, page.Stats.GapTo = int64(len(record.Output)), record.TailOffset
 	}
+
 	var numbers []int64
 	for number := range lines {
 		numbers = append(numbers, number)
 	}
 	sort.Slice(numbers, func(i, j int) bool { return numbers[i] < numbers[j] })
+
 	selected := map[int64]bool{}
 	for _, number := range numbers {
 		if match(lines[number]) {
@@ -127,11 +139,13 @@ func ReadOutput(record Record, query Query, snapshot variables.Snapshot) (Page, 
 			}
 		}
 	}
+
 	size := 0
 	for _, number := range numbers {
 		if number < query.From || !selected[number] {
 			continue
 		}
+
 		text := lines[number]
 		if len(page.Lines) >= query.Limit || size+len(text) > 16<<10 {
 			page.Next = number
@@ -140,5 +154,6 @@ func ReadOutput(record Record, query Query, snapshot variables.Snapshot) (Page, 
 		page.Lines = append(page.Lines, OutputLine{Number: number, Text: text})
 		size += len(text)
 	}
+
 	return page, nil
 }
