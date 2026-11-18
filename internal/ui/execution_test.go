@@ -1,16 +1,67 @@
 package ui
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/editor"
+	"github.com/erdajt/wraith/internal/runner"
 	"github.com/erdajt/wraith/internal/session"
+	"github.com/erdajt/wraith/internal/variables"
 )
+
+func TestFailedLaunchRestoresApprovalAndFrozenCommand(t *testing.T) {
+	for _, hidden := range []bool{false, true} {
+		t.Run(map[bool]string{false: "shared", true: "hidden"}[hidden], func(t *testing.T) {
+			a := fixture(t)
+			a.Config.Execution.MaxJobs = 1
+			a.jobs.SetLimit(1)
+			blocker := runner.Record{ID: session.ID(), Session: a.Session.ID, Command: "sleep 30", Shell: "/bin/sh", Directory: t.TempDir()}
+			if err := a.jobs.Start(context.Background(), blocker, time.Minute); err != nil {
+				t.Fatal(err)
+			}
+
+			a.environmentCommand("set TARGET=first.example", false)
+			a.approve(proposal{Command: "printf wraith::TARGET", Reason: "read target", Background: true})
+			original := *a.proposal
+			if hidden {
+				a.popup.Index = 1
+			}
+			a.menuKey(tea.KeyMsg{Type: tea.KeyEnter})
+			if a.popup == nil || a.popup.Kind != "approval" || a.proposal == nil || !strings.Contains(a.notice, "job limit") {
+				t.Fatal("failed launch left invisible approval ownership")
+			}
+			if a.proposal.launch.ID != original.launch.ID || a.proposal.HideOutput != hidden || len(a.jobs.Snapshot()) != 1 {
+				t.Fatal("failed launch changed identity, privacy or started a job")
+			}
+
+			state, err := a.variableStore().Edit(a.Directory, variables.Directory)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := a.variableStore().Save(a.Directory, variables.Directory, state.Revision, "TARGET=second.example\n"); err != nil {
+				t.Fatal(err)
+			}
+			a.jobs.Cancel(blocker.ID)
+			finishJobs(t, a)
+			a.menuKey(tea.KeyMsg{Type: tea.KeyEnter})
+			finishJobs(t, a)
+			record, err := a.history().Load(original.launch.ID)
+			if err != nil || record.Output != "first.example" || record.OutputHidden != hidden {
+				t.Fatalf("retry changed the approved payload: %+v, %v", record, err)
+			}
+			if a.proposal != nil {
+				t.Fatal("successful retry retained approval ownership")
+			}
+		})
+	}
+}
 
 func TestBlockNeedsApprovalAndSavesOutput(t *testing.T) {
 	a := fixture(t)

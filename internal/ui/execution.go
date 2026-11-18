@@ -89,7 +89,7 @@ func (a *App) runApproved() tea.Cmd {
 
 	a.jobs.SetLimit(a.Config.Execution.MaxJobs)
 	if err := a.jobs.Start(context.Background(), record, p.timeout); err != nil {
-		a.proposal = &p
+		a.approve(p)
 		a.notice = "command launch: " + err.Error()
 		return nil
 	}
