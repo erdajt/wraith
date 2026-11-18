@@ -20,7 +20,10 @@ type registryState struct {
 	functions       map[string]*lua.LFunction
 	events          map[string][]string
 	actions, loaded map[string]bool
-	cleanup         []*lua.LFunction
+	cleanup         []cleanupHook
+	disposing       []cleanupHook
+	effects         []Effect
+	dirty           bool
 }
 
 // cloneManifest detaches nested configuration and registration values across runtime ownership.
@@ -37,14 +40,26 @@ func (e *engine) captureRegistry() registryState {
 	for name, ids := range e.events {
 		events[name] = slices.Clone(ids)
 	}
-	return registryState{cloneManifest(e.manifest), maps.Clone(e.functions), events, maps.Clone(e.actions), maps.Clone(e.loaded), slices.Clone(e.cleanup)}
+	return registryState{cloneManifest(e.manifest), maps.Clone(e.functions), events, maps.Clone(e.actions), maps.Clone(e.loaded), slices.Clone(e.cleanup), slices.Clone(e.disposing), slices.Clone(e.effects), e.dirty}
 }
 
 // restoreRegistry drops staged registrations without pretending to roll back arbitrary Lua state.
-func (e *engine) restoreRegistry(s registryState) {
+func (e *engine) restoreRegistry(s registryState) []cleanupHook {
+	retained := map[uint64]bool{}
+	for _, hook := range append(slices.Clone(s.cleanup), s.disposing...) {
+		retained[hook.id] = true
+	}
+	var discarded []cleanupHook
+	for _, hook := range append(slices.Clone(e.cleanup), e.disposing...) {
+		if !retained[hook.id] {
+			discarded = append(discarded, hook)
+		}
+	}
 	e.manifest, e.functions, e.events = s.manifest, s.functions, s.events
 	e.actions, e.loaded, e.cleanup = s.actions, s.loaded, s.cleanup
+	e.disposing, e.effects, e.dirty = s.disposing, s.effects, s.dirty
 	e.rollback = nil
+	return discarded
 }
 
 // refreshManifest rebuilds event subscriptions after a successful structural change.
@@ -94,18 +109,24 @@ func (r *Runtime) Acknowledge(revision uint64, accepted bool) error {
 func (r *Runtime) publish(e *engine, revision uint64) bool {
 	select {
 	case <-r.ctx.Done():
-		e.restoreRegistry(*e.rollback)
+		hooks := e.restoreRegistry(*e.rollback)
+		r.reportCleanup(e.disposeHooks(hooks))
 		return false
 	case decision := <-r.ack:
-		defer close(decision.done)
 		if decision.revision != revision || !decision.accepted {
-			e.restoreRegistry(*e.rollback)
+			hooks := e.restoreRegistry(*e.rollback)
+			close(decision.done)
+			r.reportCleanup(e.disposeHooks(hooks))
 			return true
 		}
 		e.rollback = nil
 		r.mu.Lock()
 		r.manifest, r.revision = cloneManifest(e.manifest), revision
 		r.mu.Unlock()
+		hooks := e.disposing
+		e.disposing = nil
+		close(decision.done)
+		r.reportCleanup(e.disposeHooks(hooks))
 		return true
 	}
 }

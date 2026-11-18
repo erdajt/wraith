@@ -58,6 +58,8 @@ func (c *completion) resolve(result Result) {
 }
 
 type Runtime struct {
+	diagnostics                             []string
+	notices                                 chan string
 	queue                                   chan request
 	done                                    chan struct{}
 	ctx                                     context.Context
@@ -75,7 +77,8 @@ type engine struct {
 	manifest  Manifest
 	functions map[string]*lua.LFunction
 	events    map[string][]string
-	cleanup   []*lua.LFunction
+	cleanup   []cleanupHook
+	disposing []cleanupHook
 	actions   map[string]bool
 	builtins  map[string]bool
 	effects   []Effect
@@ -99,7 +102,7 @@ func Open(parent context.Context, directory string, c config.Config, actions []s
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(parent)
-	r := &Runtime{queue: make(chan request, 128), ack: make(chan publicationDecision, 1), done: make(chan struct{}), ctx: ctx, cancel: cancel, pending: map[string]request{}, waiting: map[*completion]struct{}{}}
+	r := &Runtime{notices: make(chan string, 64), queue: make(chan request, 128), ack: make(chan publicationDecision, 1), done: make(chan struct{}), ctx: ctx, cancel: cancel, pending: map[string]request{}, waiting: map[*completion]struct{}{}}
 	ready := make(chan error, 1)
 	go r.serve(directory, detached, actions, ready)
 	go func() {
@@ -178,6 +181,7 @@ func (r *Runtime) Done() <-chan struct{} { return r.done }
 // serve owns every VM access from candidate loading through callback execution and teardown.
 func (r *Runtime) serve(directory string, c config.Config, actions []string, ready chan<- error) {
 	defer close(r.done)
+	defer close(r.notices)
 	defer r.cancel()
 	defer r.cancelWaiters()
 	e, err := load(r.ctx, directory, c, actions)
@@ -186,10 +190,11 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 		return
 	}
 	defer e.L.Close()
-	defer e.teardown(0)
+	defer func() { r.reportCleanup(e.teardown(0)) }()
 
 	r.mu.Lock()
 	r.manifest = cloneManifest(e.manifest)
+	r.diagnostics = slices.Clone(e.manifest.Diagnostics)
 	r.mu.Unlock()
 	ready <- nil
 	for {
@@ -232,7 +237,8 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 	e.dirty = false
 	defer func() {
 		if result.Err != nil {
-			e.restoreRegistry(before)
+			hooks := e.restoreRegistry(before)
+			result.Err = errors.Join(result.Err, e.disposeHooks(hooks))
 		}
 	}()
 	ctx, cancel := context.WithTimeout(parent, 250*time.Millisecond)
@@ -281,16 +287,4 @@ func (r *Runtime) cancelWaiters() {
 		reply.resolve(Result{Err: context.Canceled})
 		delete(r.waiting, reply)
 	}
-}
-
-// teardown closes registered hooks in reverse order under a shared cleanup deadline.
-func (e *engine) teardown(start int) {
-	e.closing = true
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-	defer cancel()
-	e.L.SetContext(ctx)
-	for i := len(e.cleanup) - 1; i >= start && ctx.Err() == nil; i-- {
-		_ = e.L.CallByParam(lua.P{Fn: e.cleanup[i], NRet: 0, Protect: true})
-	}
-	e.cleanup = e.cleanup[:start]
 }

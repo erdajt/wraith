@@ -17,8 +17,8 @@ import (
 )
 
 // load initializes trusted user code without sourcing project files or environment module paths.
-func load(parent context.Context, directory string, c config.Config, actions []string) (*engine, error) {
-	directory, err := filepath.Abs(directory)
+func load(parent context.Context, directory string, c config.Config, actions []string) (out *engine, err error) {
+	directory, err = filepath.Abs(directory)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	ok := false
 	defer func() {
 		if !ok {
-			e.teardown(0)
+			err = errors.Join(err, e.teardown(0))
 			L.Close()
 		}
 	}()
@@ -67,7 +67,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 			return nil, err
 		}
 		if cleanup, ok := L.Get(-1).(*lua.LFunction); ok {
-			e.cleanup = append(e.cleanup, cleanup)
+			e.addCleanup(cleanup)
 		}
 		L.Pop(1)
 	}
