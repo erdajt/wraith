@@ -1,0 +1,109 @@
+package ui
+
+import (
+	"context"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/erdajt/wraith/internal/config"
+	"github.com/erdajt/wraith/internal/plugin"
+)
+
+type pluginReloadMsg struct {
+	Runtime      *plugin.Runtime
+	Serial       uint64
+	Owner, Draft string
+	Digest       [32]byte
+	Err          error
+}
+
+// LoadPlugin prepares and validates a candidate without replacing an active runtime.
+func LoadPlugin(ctx context.Context, directory string, c config.Config) (*plugin.Runtime, error) {
+	r, err := plugin.Open(ctx, directory, c, PluginActions())
+	if err != nil {
+		return nil, err
+	}
+	if err := ValidatePlugin(r.Manifest()); err != nil {
+		r.Close()
+		return nil, err
+	}
+	return r, nil
+}
+
+// reloadPlugins loads yaml and lua on a worker while the active workspace remains usable.
+func (a *App) reloadPlugins() tea.Cmd {
+	if a.busy || a.loading || a.editing || !a.actionAllowed("command.reload") {
+		a.notice = "finish the current operation before reloading init.lua"
+		return nil
+	}
+	if a.pluginLoadCancel != nil {
+		a.pluginLoadCancel()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	a.pluginLoadCancel = cancel
+	a.pluginSerial++
+	m := pluginReloadMsg{Serial: a.pluginSerial, Owner: a.keyOwner(), Draft: a.Prompt.String(), Digest: configDigest(a.Config)}
+	directory := a.Paths.Config
+	a.notice = "loading init.lua"
+	return func() tea.Msg {
+		c, err := config.LoadDirectory(directory)
+		if err == nil {
+			m.Runtime, err = LoadPlugin(ctx, directory, c)
+		}
+		m.Err = err
+		select {
+		case <-a.done:
+			if m.Runtime != nil {
+				m.Runtime.Close()
+			}
+			cancel()
+			return nil
+		default:
+			return m
+		}
+	}
+}
+
+// finishPluginReload atomically installs validated configuration and rejects stale candidates.
+func (a *App) finishPluginReload(m pluginReloadMsg) tea.Cmd {
+	installed := false
+	defer func() {
+		if !installed && m.Runtime != nil {
+			m.Runtime.Close()
+		}
+	}()
+	if m.Serial != a.pluginSerial {
+		return nil
+	}
+	cancel := a.pluginLoadCancel
+	a.pluginLoadCancel = nil
+	defer func() {
+		if !installed && cancel != nil {
+			cancel()
+		}
+	}()
+	if m.Err != nil {
+		a.PluginError(m.Err)
+		return nil
+	}
+	if m.Owner != a.keyOwner() || m.Draft != a.Prompt.String() || m.Digest != configDigest(a.Config) {
+		a.notice = "lua reload discarded after workspace changed"
+		return nil
+	}
+	manifest := m.Runtime.Manifest()
+	oldActions := a.actions
+	a.actions = a.pluginActions(manifest)
+	cmd, err := a.applyPluginConfig(manifest.Config)
+	if err != nil {
+		a.actions = oldActions
+		a.PluginError(err)
+		return nil
+	}
+	old := a.plugins
+	a.plugins, a.pluginManifest = m.Runtime, manifest
+	installed = true
+	if old != nil {
+		old.Close()
+	}
+	a.notice = "init.lua reloaded · pending key sequences cleared"
+	return tea.Batch(cmd, a.callPlugin("", "ready", ""))
+}

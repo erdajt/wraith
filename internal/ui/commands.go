@@ -41,6 +41,8 @@ func (a *App) runCommand(line string) tea.Cmd {
 	}
 
 	switch name {
+	case "reload":
+		return a.reloadPlugins()
 	case "keymaps":
 		var lines []string
 		for _, binding := range a.keymaps.Bindings() {

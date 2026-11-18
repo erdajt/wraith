@@ -15,6 +15,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/fsutil"
+	"github.com/erdajt/wraith/internal/plugin"
 	"github.com/erdajt/wraith/internal/provider"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/store"
@@ -80,10 +81,22 @@ func run(args []string, out io.Writer) error {
 	}
 
 	c := config.Default()
+	var extensions *plugin.Runtime
+	var luaProblem error
 	if !*demo && !*snapshot {
 		c, err = config.LoadDirectory(p.Config)
 		if err != nil {
 			return err
+		}
+	}
+
+	if !*demo && !*snapshot {
+		extensions, luaProblem = ui.LoadPlugin(context.Background(), p.Config, c)
+		if luaProblem == nil {
+			defer extensions.Close()
+			c = extensions.Manifest().Config
+		} else {
+			fmt.Fprintln(os.Stderr, "wraith: init.lua:", luaProblem)
 		}
 	}
 
@@ -222,11 +235,14 @@ func run(args []string, out io.Writer) error {
 		}
 	}
 
-	a, err := ui.New(c, p, chat, *demo || *snapshot)
+	a, err := ui.New(c, p, chat, *demo || *snapshot, extensions)
 	if err != nil {
 		return err
 	}
 	defer a.Close()
+	if luaProblem != nil {
+		a.PluginError(luaProblem)
+	}
 
 	a.Prompt.Set(strings.Join(flags.Args(), " "))
 

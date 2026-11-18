@@ -87,10 +87,11 @@ type terminalMsg struct {
 }
 
 type App struct {
-	plugins        *plugin.Runtime
-	pluginManifest plugin.Manifest
-	pluginSerial   uint64
-	pluginDepth    int
+	pluginLoadCancel context.CancelFunc
+	plugins          *plugin.Runtime
+	pluginManifest   plugin.Manifest
+	pluginSerial     uint64
+	pluginDepth      int
 
 	editorKeys      []queuedKeysMsg
 	keyPending      []tea.KeyMsg
@@ -261,7 +262,7 @@ func (a *App) Init() tea.Cmd {
 	if a.demo {
 		return a.ticker()
 	}
-	return tea.Batch(a.ticker(), a.probe())
+	return tea.Batch(a.ticker(), a.probe(), a.callPlugin("", "ready", ""))
 }
 
 // ticker schedules the next animation and job-update tick.
@@ -272,6 +273,9 @@ func (a *App) ticker() tea.Cmd {
 // Close cancels active work and closes owned shell panes once.
 func (a *App) Close() {
 	a.once.Do(func() {
+		if a.pluginLoadCancel != nil {
+			a.pluginLoadCancel()
+		}
 		if a.plugins != nil {
 			a.plugins.Close()
 		}
