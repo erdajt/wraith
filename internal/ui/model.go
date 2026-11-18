@@ -178,6 +178,7 @@ type App struct {
 	demo                           bool
 	showThinking                   bool
 	pendingPrompt                  string
+	resumePrompt                   *string
 }
 
 // New initializes the workspace, loads private context and recovers command history outside demo mode.
@@ -208,6 +209,7 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool, extensio
 
 	a := &App{inputIndex: -1, Directory: dir, Config: c, Paths: p, Store: store.Store{Root: p.Data}, Session: s, Client: provider.New(c), Instructions: string(instructions), Prompt: vim.New(), width: 100, height: 30, conversationView: &conversationView{chatCursor: -1, follow: true}, focus: "prompt", events: make(chan tea.Msg, 128), done: make(chan struct{}), demo: demo, notice: "/help commands · " + c.Keys["send"] + " send · " + c.Keys["editor"] + " editor"}
 
+	a.Prompt.Set(s.Draft)
 	a.windowID, a.nextWindowID = 1, 1
 	a.windows = map[uint64]*conversationView{1: a.conversationView}
 	a.windowTree = &windowNode{id: 1}

@@ -12,7 +12,10 @@ func (a *App) runCommand(line string) tea.Cmd {
 	a.rememberInput("/" + line)
 	name, arg, _ := strings.Cut(line, " ")
 	arg = strings.TrimSpace(arg)
-	if name == "q" || name == "qa" || name == "quit" {
+	switch name {
+	case "q", "q!", "qa", "qa!", "wq", "w", "w!":
+		return a.runAction("command."+name, arg)
+	case "quit":
 		return a.quit()
 	}
 

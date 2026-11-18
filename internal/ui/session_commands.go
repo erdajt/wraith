@@ -122,19 +122,3 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 	}
 	return nil
 }
-
-// quit preserves a partial reply before closing and keeps the session open when saving fails.
-func (a *App) quit() tea.Cmd {
-	if a.busy && !a.compacting && (a.partial.Content != "" || a.partial.Thinking != "") {
-		partial := a.partial
-		partial.Interrupted = true
-		a.Session.Messages = append(a.Session.Messages, partial)
-		if err := a.Store.Save(a.Session); err != nil {
-			a.Session.Messages = a.Session.Messages[:len(a.Session.Messages)-1]
-			a.notice = "save failed; session remains open: " + err.Error()
-			return nil
-		}
-	}
-	a.Close()
-	return tea.Quit
-}

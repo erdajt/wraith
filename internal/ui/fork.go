@@ -35,6 +35,7 @@ func (a *App) forkPrompt() tea.Cmd {
 	branch.ID = session.ID()
 	branch.Title = "fork · " + original.Title
 	branch.Created = time.Now().UTC()
+	branch.Draft = original.Messages[index].Content
 	branch.Messages = branch.Messages[:index]
 	branch.SharedRuns = nil
 	branch.DeliveredRuns = nil
@@ -46,7 +47,7 @@ func (a *App) forkPrompt() tea.Cmd {
 	}
 	a.remapConversation(a.Session.Messages, branch.Messages)
 	a.Session = branch
-	a.Prompt.Set(original.Messages[index].Content)
+	a.Prompt.Set(branch.Draft)
 	a.Prompt.Mode = "normal"
 	a.Prompt.Pos = 0
 	a.focus = "prompt"

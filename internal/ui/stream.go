@@ -18,7 +18,8 @@ import (
 
 // submit dispatches commands or persists a prompt after privacy and context-budget checks.
 func (a *App) submit() tea.Cmd {
-	text := strings.TrimSpace(a.Prompt.String())
+	draft := a.Prompt.String()
+	text := strings.TrimSpace(draft)
 	if text == "" {
 		return nil
 	}
@@ -77,6 +78,7 @@ func (a *App) submit() tea.Cmd {
 	a.generation, a.agentStopped = session.ID(), false
 	a.proposal = nil
 	original := a.Session
+	probe.Draft = ""
 	a.Session = probe
 	if a.Session.Title == "untitled" {
 		r := []rune(text)
@@ -84,7 +86,7 @@ func (a *App) submit() tea.Cmd {
 	}
 	if err := a.Store.Save(a.Session); err != nil {
 		a.Session = original
-		a.Prompt.Set(text)
+		a.Prompt.Set(draft)
 		a.notice = err.Error()
 		return nil
 	}

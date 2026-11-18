@@ -108,5 +108,9 @@ func TestNeovimTerminalEditorAndCopyMode(t *testing.T) {
 	send("p")
 	wait("restarted-shell")
 	send("\x11")
+	wait("unsent draft")
+	send("\x1b")
+	time.Sleep(100 * time.Millisecond)
+	send(":qa!\r")
 	wait("Process exited")
 }

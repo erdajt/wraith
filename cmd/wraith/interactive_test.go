@@ -145,6 +145,12 @@ func TestInteractiveEditorAndPersistentShells(t *testing.T) {
 	send("printf '\\n%s:%s\\n' independent \"${WRAITH_TEST_STATE-unset}\"\r")
 	waitFor("independent:unset")
 	send("\x11")
+	waitFor("unsent draft")
+	send("\x1bs")
+	waitFor("draft with spaces edited")
+	send("\x1b")
+	waitFor("NORMAL")
+	send(":qa!\r")
 	deadline := time.After(5 * time.Second)
 	for {
 		select {

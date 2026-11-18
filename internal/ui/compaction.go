@@ -79,6 +79,7 @@ func (a *App) finishCompact(m compactMsg) tea.Cmd {
 		return nil
 	}
 
+	m.Session.Draft = a.Session.Draft
 	m.Session.Archives = append(m.Session.Archives, m.Archive)
 	if err := a.Store.Save(m.Session); err != nil {
 		a.pendingPrompt = ""

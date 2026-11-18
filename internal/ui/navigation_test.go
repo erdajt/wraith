@@ -44,6 +44,11 @@ func TestNormalQuitDoesNotConsumeInsertOrShellInput(t *testing.T) {
 	}
 
 	a.Prompt.Mode = "normal"
+	if cmd := a.key(key("q")); cmd != nil || !strings.Contains(a.notice, "unsent draft") {
+		t.Fatal("normal q discarded an unsent draft")
+	}
+	a.Prompt.Set("")
+	a.Prompt.Mode = "normal"
 	cmd := a.key(key("q"))
 	if cmd == nil {
 		t.Fatal("normal q did not quit")

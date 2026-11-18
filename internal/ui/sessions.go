@@ -14,6 +14,8 @@ import (
 
 // resume loads a directory-scoped session and resets runtime navigation and agent state.
 func (a *App) resume(id string) tea.Cmd {
+	override := a.resumePrompt
+	a.resumePrompt = nil
 	s, err := a.Store.LoadDirectory(id, a.Directory)
 	if err != nil {
 		cmd := a.sessionCommand("new", "")
@@ -35,6 +37,10 @@ func (a *App) resume(id string) tea.Cmd {
 	a.Config.Provider = s.Provider
 	a.Client = provider.New(a.Config)
 	a.Session = s
+	a.Prompt.Set(s.Draft)
+	if override != nil {
+		a.Prompt.Set(*override)
+	}
 	a.resetChatNavigation()
 	a.agentSteps, a.agentReads, a.pendingTool = 0, 0, nil
 	a.generation, a.agentStopped = "", true
@@ -104,7 +110,12 @@ func Export(s session.Session) string {
 }
 
 // OpenSessions opens the saved-session picker for the current directory.
-func (a *App) OpenSessions() { a.sessionCommand("sessions", "") }
+func (a *App) OpenSessions(prompt ...string) {
+	a.sessionCommand("sessions", "")
+	if len(prompt) > 0 && a.popup != nil && a.popup.Kind == "sessions" {
+		a.resumePrompt = &prompt[0]
+	}
+}
 
 // InvalidSession displays an invalid-id notice after startup has opened a new session.
 func (a *App) InvalidSession(id string) {

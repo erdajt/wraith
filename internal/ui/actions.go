@@ -37,17 +37,16 @@ func (a *App) builtinActions() map[string]action {
 				a.notice = "invalid conversation window id"
 				return nil
 			}
-			if id != 0 {
-				a.focusWindow(id)
-			}
-			a.windowAction("c")
-			return nil
+			return a.closeWorkspace(closeRequest{Window: id})
 		}},
 
-		"operation.cancel": {"cancel model work or interrupt the focused shell", func(string) tea.Cmd { return a.cancelInput() }},
-		"noop":             {"consume the binding", func(string) tea.Cmd { return nil }},
-		"app.quit":         {"save and quit", func(string) tea.Cmd { return a.quit() }},
-		"prompt.send":      {"send the draft", func(string) tea.Cmd { return a.submit() }},
+		"operation.cancel":   {"cancel model work or interrupt the focused shell", func(string) tea.Cmd { return a.cancelInput() }},
+		"noop":               {"consume the binding", func(string) tea.Cmd { return nil }},
+		"app.quit":           {"save and quit", func(string) tea.Cmd { return a.quit() }},
+		"app.quit_force":     {"discard draft and quit", func(string) tea.Cmd { return a.closeWorkspace(closeRequest{All: true, Force: true}) }},
+		"app.save_quit":      {"save draft and quit", func(string) tea.Cmd { return a.closeWorkspace(closeRequest{All: true, Save: true}) }},
+		"window.close_force": {"discard draft and close this view", func(string) tea.Cmd { return a.closeWorkspace(closeRequest{Force: true}) }},
+		"prompt.send":        {"send the draft", func(string) tea.Cmd { return a.submit() }},
 		"editor.open": {"edit the focused message or draft", func(string) tea.Cmd {
 			if a.focus == "chat" {
 				return a.editResponse()
@@ -88,11 +87,14 @@ func (a *App) builtinActions() map[string]action {
 	}
 	for _, spec := range windowActions {
 		actions[spec.name] = action{spec.description, func(string) tea.Cmd {
+			if spec.key == "c" {
+				return a.closeWorkspace(closeRequest{})
+			}
 			a.windowAction(strings.ReplaceAll(spec.key, "<lt>", "<"))
 			return nil
 		}}
 	}
-	for alias, target := range map[string]string{"command.q": "app.quit", "command.qa": "app.quit", "command.h": "command.help", "command.w": "prompt.send"} {
+	for alias, target := range map[string]string{"command.q": "window.close", "command.q!": "window.close_force", "command.qa": "app.quit", "command.qa!": "app.quit_force", "command.wq": "app.save_quit", "command.w!": "prompt.send", "command.h": "command.help", "command.w": "prompt.send"} {
 		actions[alias] = actions[target]
 	}
 	return actions
@@ -172,7 +174,7 @@ func (a *App) runAction(name, arg string) tea.Cmd {
 
 // actionAllowed preserves input ownership for mapped actions and plugin effects.
 func (a *App) actionAllowed(name string) bool {
-	if name == "noop" || name == "app.quit" || name == "operation.cancel" || name == "notify" || strings.HasPrefix(name, "lua.callback.") {
+	if name == "noop" || (name == "app.quit" || name == "app.quit_force" || name == "app.save_quit") || name == "operation.cancel" || name == "notify" || strings.HasPrefix(name, "lua.callback.") {
 		return true
 	}
 	if a.editing || a.popup != nil || a.proposal != nil {

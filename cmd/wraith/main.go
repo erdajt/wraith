@@ -244,10 +244,16 @@ func run(args []string, out io.Writer) error {
 		a.PluginError(luaProblem)
 	}
 
-	a.Prompt.Set(strings.Join(flags.Args(), " "))
+	if len(flags.Args()) > 0 {
+		a.Prompt.Set(strings.Join(flags.Args(), " "))
+	}
 
 	if *resume && *id == "" {
-		a.OpenSessions()
+		if len(flags.Args()) > 0 {
+			a.OpenSessions(strings.Join(flags.Args(), " "))
+		} else {
+			a.OpenSessions()
+		}
 	}
 
 	if resumeProblem != nil {

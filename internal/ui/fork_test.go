@@ -10,6 +10,7 @@ import (
 func TestUserEditForksOnlyAfterConfirmation(t *testing.T) {
 	a := fixture(t)
 	a.Session.Messages = []session.Message{{Role: "user", Content: "first"}, {Role: "assistant", Content: "reply"}, {Role: "user", Content: "revise me"}, {Role: "assistant", Content: "newer reply"}}
+	a.Session.Draft = "unrelated saved draft"
 	a.selected = 2
 	original := a.Session.ID
 	a.editResponse()
@@ -32,8 +33,18 @@ func TestUserEditForksOnlyAfterConfirmation(t *testing.T) {
 	}
 
 	saved, err := a.Store.Load(original)
-	if err != nil || len(saved.Messages) != 4 {
+	if err != nil || len(saved.Messages) != 4 || saved.Draft != "unrelated saved draft" {
 		t.Fatal("original branch lost")
+	}
+
+	branch, err := a.Store.Load(a.Session.ID)
+	if err != nil || branch.Draft != "revise me" {
+		t.Fatal("fork did not persist its own editable draft")
+	}
+	a.Prompt.Set("")
+	a.resume(branch.ID)
+	if a.Prompt.String() != "revise me" {
+		t.Fatal("resuming fork lost the selected prompt")
 	}
 
 	if a.busy {

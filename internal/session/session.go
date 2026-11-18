@@ -37,6 +37,7 @@ type Session struct {
 	Created       time.Time `json:"created"`
 	Updated       time.Time `json:"updated"`
 	Messages      []Message `json:"messages"`
+	Draft         string    `json:"draft,omitempty"`
 	Summary       string    `json:"summary,omitempty"`
 	Facts         []string  `json:"facts,omitempty"`
 	Pins          []string  `json:"pins,omitempty"`

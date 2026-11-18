@@ -10,6 +10,9 @@ import (
 func (a *App) keyDefault(k tea.KeyMsg) tea.Cmd {
 	key := k.String()
 	if key == a.Config.Keys["quit"] || (key == "q" && a.chatMotionPending == "" && a.Prompt.Pending == "" && a.popup == nil && !a.commandMode && !a.searchMode && ((a.focus == "chat" && a.visualMode == "") || (a.focus == "prompt" && a.Prompt.Mode == "normal"))) {
+		if key == "q" {
+			return a.runAction("window.close", "")
+		}
 		return a.quit()
 	}
 
@@ -43,9 +46,6 @@ func (a *App) keyDefault(k tea.KeyMsg) tea.Cmd {
 				return nil
 			}
 			a.commandMode = false
-			if strings.TrimSpace(value) == "w" {
-				return a.submit()
-			}
 			return a.runCommand(value)
 		}
 

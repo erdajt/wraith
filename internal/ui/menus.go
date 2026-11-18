@@ -68,6 +68,9 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 	m.Count = ""
 	switch key {
 	case "esc", "q":
+		if m.Kind == "sessions" {
+			a.resumePrompt = nil
+		}
 		if m.Kind == "setting-help" {
 			a.popup = a.helpReturn
 			a.helpReturn = nil

@@ -23,6 +23,12 @@ an invalid id reports `invalid session id` and starts fresh. an id from another 
 
 resume restores the recorded provider and model. explicit startup `--provider` and `--model` flags can override them. the profile must still exist in the config. conversation-scoped variables return with their session; directory and global variables follow their own scopes.
 
+## unsent drafts
+
+`:wq` saves the exact prompt and quits. resuming restores it into the input field without sending it. drafts are stored separately from messages and are excluded from model requests. a positional startup prompt overrides the restored draft, including when selecting a session from the resume picker.
+
+`:q` closes one conversation window or exits the last. `:qa` exits all windows. a nonempty prompt blocks either operation; `:q!` and `:qa!` discard it explicitly. `:w` and `:w!` send the prompt. save failures keep the input and windows open. submitting a saved draft removes its stored copy in the same write that adds the user message.
+
 ## edit and fork
 
 select a user message in the conversation and press `ctrl+e`. the confirmation explains that editing forks the chat at that point. accepting creates a new session with the earlier messages and places the selected prompt in the input. later messages are absent from the fork; the original session retains them.
