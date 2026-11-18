@@ -25,6 +25,9 @@ func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.R
 		tokens = "max_tokens"
 	}
 	body[tokens] = req.Options.Predict
+	if len(req.Tools) > 0 {
+		body["tools"], body["parallel_tool_calls"] = req.Tools, false
+	}
 
 	if req.Format != nil {
 		body["response_format"] = map[string]string{"type": "json_object"}
@@ -65,6 +68,9 @@ func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.R
 	defer response.Body.Close()
 
 	var content, thinking strings.Builder
+	var call ollama.Call
+	callID := ""
+	called := false
 	err = readSSE(response.Body, func(_ string, data []byte) error {
 		if string(data) == "[DONE]" {
 			result.Done = result.Reason != ""
@@ -73,10 +79,19 @@ func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.R
 
 		var chunk struct {
 			Choices []struct {
+				Index int `json:"index"`
 				Delta struct {
 					Content   string `json:"content"`
 					Reasoning string `json:"reasoning_content"`
-					Tools     []any  `json:"tool_calls"`
+					Tools     []struct {
+						Index    int    `json:"index"`
+						ID       string `json:"id"`
+						Type     string `json:"type"`
+						Function struct {
+							Name      string `json:"name"`
+							Arguments string `json:"arguments"`
+						} `json:"function"`
+					} `json:"tool_calls"`
 				} `json:"delta"`
 				Finish string `json:"finish_reason"`
 			} `json:"choices"`
@@ -101,8 +116,22 @@ func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.R
 		}
 
 		for _, choice := range chunk.Choices {
-			if len(choice.Delta.Tools) > 0 {
-				return errors.New("provider returned an unsupported native tool call")
+			for _, delta := range choice.Delta.Tools {
+				if len(req.Tools) == 0 || choice.Index != 0 || delta.Index != 0 || result.Reason != "" || result.Done || delta.Type != "" && delta.Type != "function" {
+					return &ollama.ActionError{Problem: "native request is unavailable, duplicated or out of order"}
+				}
+				if delta.ID != "" {
+					if callID != "" && callID != delta.ID {
+						return &ollama.ActionError{Problem: "native request changed its call id"}
+					}
+					callID = delta.ID
+				}
+				called = true
+				call.Name += delta.Function.Name
+				call.Arguments = append(call.Arguments, delta.Function.Arguments...)
+				if len(call.Name) > 128 || len(call.Arguments) > 32768 || len(callID) > 256 {
+					return &ollama.ActionError{Problem: "native request exceeds its size limit"}
+				}
 			}
 
 			content.WriteString(choice.Delta.Content)
@@ -125,6 +154,13 @@ func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.R
 	result.EvalDuration = time.Since(start).Nanoseconds()
 	if err == nil && !result.Done {
 		err = errors.New("provider stream ended before completion")
+	}
+	if err == nil && called {
+		if result.Reason != "tool_calls" || callID == "" {
+			err = &ollama.ActionError{Problem: "native request ended without a successful tool completion"}
+		} else {
+			result.Calls = []ollama.Call{call}
+		}
 	}
 	return result, err
 }
