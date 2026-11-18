@@ -113,3 +113,35 @@ func TestWindowActionsCancelPendingConversationOperators(t *testing.T) {
 		})
 	}
 }
+
+func TestDirectionalFocusIncludesSharedDraft(t *testing.T) {
+	a := fixture(t)
+	a.width, a.height = 120, 40
+	a.Prompt.Set("unfinished draft")
+	a.windowAction("v")
+	a.windowAction("s")
+	bottom := a.windowID
+	a.runAction("focus.down", "")
+	if a.focus != "prompt" || a.Prompt.String() != "unfinished draft" {
+		t.Fatal("bottom pane could not focus shared draft")
+	}
+	for _, direction := range []string{"left", "right", "down"} {
+		a.runAction("focus."+direction, "")
+		if a.focus != "prompt" {
+			t.Fatal("focus crossed a missing prompt edge")
+		}
+	}
+	a.runAction("focus.up", "")
+	if a.focus != "chat" || a.windowID != bottom || a.Prompt.Mode != "insert" {
+		t.Fatal("return from draft lost pane or editing mode")
+	}
+	a.runAction("focus.up", "")
+	if a.windowID == bottom {
+		t.Fatal("pane above was skipped")
+	}
+	a.popup = &menu{Kind: "approval"}
+	a.runAction("focus.down", "")
+	if a.focus != "chat" || a.popup == nil {
+		t.Fatal("navigation escaped approval ownership")
+	}
+}

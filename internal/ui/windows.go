@@ -110,3 +110,30 @@ func (a *App) windowAction(action string) {
 		a.windowTranscript(a.windows[place.id], max(10, place.width-5), place.id == a.windowID && a.focus == "chat")
 	}
 }
+
+// focusDirection navigates conversation panes and the shared prompt without changing draft mode.
+func (a *App) focusDirection(direction string) {
+	if a.focus == "prompt" {
+		if direction == "k" {
+			a.Prompt.Pending, a.Prompt.Count = "", ""
+			a.focusWindow(a.windowID)
+		}
+		return
+	}
+	if a.focus != "chat" {
+		return
+	}
+
+	places := append(a.windowPlaces(), windowPlace{0, windowRect{0, 3 + a.bodyHeight(), a.mainWidth(), 6}})
+	id := neighbor(places, a.windowID, direction)
+	if id != 0 {
+		a.focusWindow(id)
+		return
+	}
+	a.chatCount, a.chatMotionPending, a.chatMotionCount = "", "", ""
+	a.chatG, a.chatZ = false, false
+	a.keyPending = nil
+	a.commandMode, a.searchMode = false, false
+	a.focus = "prompt"
+	a.notice = "prompt focused"
+}

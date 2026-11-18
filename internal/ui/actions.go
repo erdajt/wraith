@@ -68,6 +68,12 @@ func (a *App) builtinActions() map[string]action {
 		"terminal.overlay": {"toggle the centered shell", func(string) tea.Cmd { return a.toggleTerminal(0) }},
 		"terminal.side":    {"toggle the side shell", func(string) tea.Cmd { return a.toggleTerminal(1) }},
 	}
+	for name, direction := range map[string]string{"left": "h", "down": "j", "up": "k", "right": "l"} {
+		actions["focus."+name] = action{"focus " + name + " across conversation and prompt", func(string) tea.Cmd {
+			a.focusDirection(direction)
+			return nil
+		}}
+	}
 	for _, spec := range commandSpecs {
 		actions["command."+spec.Name] = action{spec.Description, func(arg string) tea.Cmd {
 			return a.runCommand(strings.TrimSpace(spec.Name + " " + arg))

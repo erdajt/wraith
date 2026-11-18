@@ -77,7 +77,7 @@ with conversation focus or the prompt in normal mode, press `ctrl+w`, then a key
 | `+`, `-` | grow or shrink height |
 | `>`, `<` | grow or shrink width |
 
-`ctrl+w ctrl+s` and `ctrl+w ctrl+v` also split while control stays held. the [lua window profile](examples/lua/windows.lua) adds `ctrl+h/j/k/l` navigation in conversation modes and prompt normal mode. resize actions report the focused pane dimensions.
+`ctrl+w ctrl+s` and `ctrl+w ctrl+v` also split while control stays held. the [lua window profile](examples/lua/windows.lua) adds `ctrl+h/j/k/l` navigation across the conversation and prompt in editing and navigation modes. `ctrl+j` from a bottom pane enters the shared prompt; `ctrl+k` from the prompt returns to its previous pane. this profile assigns those control keys to navigation even in insert mode. resize actions report the focused pane dimensions.
 
 these windows show the same conversation. each keeps its own cursor, scroll, search and selection. the prompt, thinking expansion and messages remain shared. `:q` and `:qa` still quit the app; use `ctrl+w c` to close a window. raw terminals and prompt insert mode keep their own `ctrl+w` behavior.
 
@@ -170,7 +170,7 @@ modes are `prompt.insert`, `prompt.normal`, `prompt.visual`, `prompt.operator`, 
 
 `key_timeout` is 50–5000 milliseconds. an exact mapping with longer children waits for another key, then runs at timeout. an unmatched sequence falls back to configured workspace bindings before reaching its original editor. fallback window chords keep their prefix across key presses; expired prefixes replay once. escape cancels a pending sequence. changing focus or installing new mappings discards pending keys. `ctrl+q` and `ctrl+c` remain direct quit/cancel fallbacks; control-c still interrupts a focused shell.
 
-window actions are `window.split_horizontal`, `window.split_vertical`, `window.left`, `window.down`, `window.up`, `window.right`, `window.next`, `window.close`, `window.only`, `window.equalize`, `window.grow_height`, `window.shrink_height`, `window.grow_width` and `window.shrink_width`. other workspace actions are `prompt.send`, `editor.open`, `focus.next`, `terminal.overlay`, `terminal.side`, `app.quit`, `operation.cancel` and `noop`. every listed slash command has a `command.NAME` action, including settings categories. bind `noop` to consume a sequence without running an operation.
+window actions are `window.split_horizontal`, `window.split_vertical`, `window.left`, `window.down`, `window.up`, `window.right`, `window.next`, `window.close`, `window.only`, `window.equalize`, `window.grow_height`, `window.shrink_height`, `window.grow_width` and `window.shrink_width`. directional workspace actions are `focus.left`, `focus.down`, `focus.up` and `focus.right`; they include the shared prompt. other workspace actions are `prompt.send`, `editor.open`, `focus.next`, `terminal.overlay`, `terminal.side`, `app.quit`, `operation.cancel` and `noop`. every listed slash command has a `command.NAME` action, including settings categories. bind `noop` to consume a sequence without running an operation.
 
 Lua can register the same mappings with `wraith.keymap.set(mode, sequence, action_or_function, description)`. custom commands use `command.NAME` actions and appear in completion. see the [plugin API](plugins.md) and [runnable example](examples/lua/init.lua).
 
