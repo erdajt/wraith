@@ -43,6 +43,67 @@ func TestEveryProviderRequestRedactsConversationAndPreservesCaller(t *testing.T)
 	}
 }
 
+func TestOllamaStartupChecksPrivateRoutingBeforeIO(t *testing.T) {
+	for _, operation := range []string{"probe", "start", "load"} {
+		for _, location := range []string{"base", "profile", "model"} {
+			if location == "model" && operation != "load" {
+				continue
+			}
+			t.Run(operation+"/"+location, func(t *testing.T) {
+				client := New(config.Default())
+				client.Variables = variables.NewSnapshot([]variables.Entry{{Name: "TOKEN", Value: "private-routing-token"}}, nil)
+				model := "public-model"
+				switch location {
+				case "base":
+					client.Base = "http://ollama.invalid/private-routing-token"
+				case "profile":
+					client.Profile.BaseURL = "http://ollama.invalid/private-routing-token"
+				case "model":
+					model = "private-routing-token"
+				}
+				calls := 0
+				client.HTTP.Transport = transport(func(*http.Request) (*http.Response, error) {
+					calls++
+					return response(`{"models":[],"done":true}`), nil
+				})
+
+				log := filepath.Join(t.TempDir(), "server.log")
+				var err error
+				if operation == "load" {
+					err = client.Load(t.Context(), model, "1m", ollama.Options{})
+				} else {
+					err = client.EnsureServer(t.Context(), operation == "start", log)
+				}
+				if err == nil || calls != 0 || strings.Contains(err.Error(), "private-routing-token") {
+					t.Fatalf("private metadata crossed startup boundary: calls=%d, err=%v", calls, err)
+				}
+				if _, err := os.Stat(log); !os.IsNotExist(err) {
+					t.Fatal("rejected startup created a server log")
+				}
+			})
+		}
+	}
+}
+
+func TestOllamaStartupAcceptsPublicRouting(t *testing.T) {
+	client := New(config.Default())
+	client.Variables = variables.NewSnapshot([]variables.Entry{{Name: "TARGET", Value: "private.example"}}, nil)
+	var paths []string
+	client.HTTP.Transport = transport(func(r *http.Request) (*http.Response, error) {
+		paths = append(paths, r.URL.Path)
+		return response(`{"models":[],"done":true}`), nil
+	})
+	if err := client.EnsureServer(t.Context(), false, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.Load(t.Context(), "public-model", "1m", ollama.Options{}); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(paths, ",") != "/api/tags,/api/generate" {
+		t.Fatalf("unexpected startup requests: %v", paths)
+	}
+}
+
 func TestPrivateRequestScrubsAliasedEnvironmentAndRejectsAuthCollision(t *testing.T) {
 	t.Setenv("WRAITH_PRIVATE_ALIAS", "url=private.example")
 	t.Setenv("WRAITH_PUBLIC_TEST", "retained")

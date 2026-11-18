@@ -117,7 +117,11 @@ func (c *Client) Show(ctx context.Context, model string) (ollama.Info, error) {
 // EnsureServer checks or starts the server for ollama profiles; other providers need no server.
 func (c *Client) EnsureServer(ctx context.Context, auto bool, path string) error {
 	if c.Profile.Kind == "ollama" {
-		return c.Client.EnsureServer(ctx, auto, path)
+		private, _, err := c.privateRequest(ollama.Request{})
+		if err != nil {
+			return err
+		}
+		return private.Client.EnsureServer(ctx, auto, path)
 	}
 	return nil
 }
@@ -125,7 +129,11 @@ func (c *Client) EnsureServer(ctx context.Context, auto bool, path string) error
 // Load warms an ollama model; other providers need no preload.
 func (c *Client) Load(ctx context.Context, model, keepAlive string, options ollama.Options) error {
 	if c.Profile.Kind == "ollama" {
-		return c.Client.Load(ctx, model, keepAlive, options)
+		private, _, err := c.privateRequest(ollama.Request{Model: model})
+		if err != nil {
+			return err
+		}
+		return private.Client.Load(ctx, model, keepAlive, options)
 	}
 	return nil
 }
