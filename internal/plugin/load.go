@@ -70,6 +70,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	api := L.NewTable()
 	api.RawSetString("api_version", lua.LNumber(1))
 	L.SetGlobal("wraith", api)
+	e.installConfig(api)
 
 	fn, err := loadFile(L, root, "init.lua")
 	if err != nil && !errors.Is(err, os.ErrNotExist) {

@@ -115,31 +115,42 @@ func configValue(c config.Config) map[string]any {
 	data, _ := json.Marshal(c)
 	var object map[string]any
 	_ = json.Unmarshal(data, &object)
+	if object["themes"] == nil {
+		object["themes"] = map[string]any{}
+	}
 	return object
 }
 
 // changeConfig validates a complete candidate after replacing one existing setting path.
 func changeConfig(c config.Config, path string, value any) (config.Config, error) {
 	object := configValue(c)
-	parent := object
-	parts := strings.Split(path, ".")
-	for _, key := range parts[:len(parts)-1] {
-		child, ok := parent[key].(map[string]any)
+	if path == "" {
+		var ok bool
+		object, ok = value.(map[string]any)
 		if !ok {
+			return c, errors.New("configuration requires named settings")
+		}
+	} else {
+		parent := object
+		parts := strings.Split(path, ".")
+		for _, key := range parts[:len(parts)-1] {
+			child, ok := parent[key].(map[string]any)
+			if !ok {
+				return c, fmt.Errorf("unknown setting: %s", path)
+			}
+			parent = child
+		}
+		key := parts[len(parts)-1]
+		if _, ok := parent[key]; !ok {
 			return c, fmt.Errorf("unknown setting: %s", path)
 		}
-		parent = child
-	}
-	key := parts[len(parts)-1]
-	if _, ok := parent[key]; !ok {
-		return c, fmt.Errorf("unknown setting: %s", path)
-	}
-	if empty, ok := value.(map[string]any); ok && len(empty) == 0 {
-		if _, array := parent[key].([]any); array {
-			value = []any{}
+		if empty, ok := value.(map[string]any); ok && len(empty) == 0 {
+			if _, array := parent[key].([]any); array {
+				value = []any{}
+			}
 		}
+		parent[key] = value
 	}
-	parent[key] = value
 	data, err := json.Marshal(object)
 	if err != nil || len(data) > 1<<20 {
 		return c, errors.New("configuration exceeds value limits")
