@@ -22,7 +22,8 @@ func TestZshPasteChangesBufferWithoutExecutingAndRetainsStartup(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(home, ".zshenv"), []byte("export ZDOTDIR="+shellQuote(config)+"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(config, ".zshrc"), []byte("PS1='fixture> '\nprint startup-preserved\n"), 0600); err != nil {
+	startup := filepath.Join(home, "startup")
+	if err := os.WriteFile(filepath.Join(config, ".zshrc"), []byte("PS1='fixture> '\nprint startup-preserved > "+shellQuote(startup)+"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	p, err := Start([]string{shell}, home, 80, 20, "HOME="+home, "ZDOTDIR="+home)
@@ -79,7 +80,7 @@ func TestZshPasteChangesBufferWithoutExecutingAndRetainsStartup(t *testing.T) {
 	if err != nil || string(data) != "firstsecond" {
 		t.Fatalf("explicit enter did not execute the complete multiline command: %q, %v", data, err)
 	}
-	if !strings.Contains(output.String(), "startup-preserved") {
+	if data, err := os.ReadFile(startup); err != nil || string(data) != "startup-preserved\n" {
 		t.Fatal("user startup configuration was skipped")
 	}
 }
@@ -108,7 +109,9 @@ func TestZshCancelledPasteCannotReachStartupInput(t *testing.T) {
 		t.Skip("zsh is not installed")
 	}
 	home := t.TempDir()
-	if err := os.WriteFile(filepath.Join(home, ".zshrc"), []byte("PS1='fixture> '\nprint waiting\nIFS= read -r value\nprint -r -- received:$value\n"), 0600); err != nil {
+	received := filepath.Join(home, "received")
+	startup := "PS1='fixture> '\nprint waiting\nIFS= read -r value\nprintf '%s' \"$value\" > " + shellQuote(received) + "\n"
+	if err := os.WriteFile(filepath.Join(home, ".zshrc"), []byte(startup), 0600); err != nil {
 		t.Fatal(err)
 	}
 	p, err := Start([]string{shell}, home, 80, 20, "HOME="+home, "ZDOTDIR="+home)
@@ -140,8 +143,9 @@ func TestZshCancelledPasteCannotReachStartupInput(t *testing.T) {
 			if event.ID != id {
 				continue
 			}
-			if event.Status != "cancelled" || strings.Contains(output.String(), "printf never") || !strings.Contains(output.String(), "received:release") {
-				t.Fatalf("cancelled paste escaped into startup input: %+v %q", event, output.String())
+			data, err := os.ReadFile(received)
+			if event.Status != "cancelled" || err != nil || string(data) != "release" {
+				t.Fatalf("cancelled paste escaped into startup input: %+v %q, %v", event, data, err)
 			}
 			return
 		case <-deadline:
