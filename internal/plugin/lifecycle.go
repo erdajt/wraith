@@ -11,31 +11,36 @@ import (
 )
 
 type cleanupHook struct {
-	id       uint64
-	owner    string
-	function *lua.LFunction
+	id           uint64
+	owner        string
+	function     *lua.LFunction
+	dependencies []string
 }
 
 // addCleanup gives each hook a stable identity so rollback disposes only newly owned resources.
 func (e *engine) addCleanup(function *lua.LFunction) {
 	e.serial++
-	e.cleanup = append(e.cleanup, cleanupHook{id: e.serial, owner: e.owner, function: function})
+	hook := cleanupHook{id: e.serial, owner: e.owner, function: function}
+	hook.dependencies = e.cleanupDependencies(e.owner)
+	e.cleanup = append(e.cleanup, hook)
 }
 
 // disposeHooks releases resources on the VM owner without retaining a cancelled callback deadline.
 func (e *engine) disposeHooks(hooks []cleanupHook) error {
-	previous, closing := e.L.Context(), e.closing
+	previous, closing, owner := e.L.Context(), e.closing, e.owner
 	e.closing = true
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 	e.L.SetContext(ctx)
-	defer func() { e.L.SetContext(previous); e.closing = closing }()
+	defer func() { e.L.SetContext(previous); e.closing = closing; e.owner = owner }()
+	hooks = orderCleanupHooks(hooks)
 	var failures []error
 	for i := len(hooks) - 1; i >= 0; i-- {
 		if err := ctx.Err(); err != nil {
 			failures = append(failures, fmt.Errorf("plugin cleanup %s: %w", hooks[i].owner, err))
 			break
 		}
+		e.owner = hooks[i].owner
 		if err := e.L.CallByParam(lua.P{Fn: hooks[i].function, NRet: 0, Protect: true}); err != nil {
 			failures = append(failures, fmt.Errorf("plugin cleanup %s: %w", hooks[i].owner, err))
 		}

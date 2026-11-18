@@ -185,3 +185,55 @@ func TestPackageChildCannotUnloadInitializingParent(t *testing.T) {
 		t.Fatal("initializing parent lost")
 	}
 }
+
+func TestLateDependenciesDisposeAfterParentAcrossUnloadAndRollback(t *testing.T) {
+	for _, ending := range []string{"close", "unload", "rollback"} {
+		t.Run(ending, func(t *testing.T) {
+			marker := filepath.Join(t.TempDir(), "cleanup")
+			r := openTestRuntime(t, fmt.Sprintf(`
+    local function record(text) local f=assert(io.open(%q,"a")); f:write(text); f:close() end
+    package.preload.child=function() return {setup=function() end,teardown=function() record("child\n") end} end
+    package.preload.parent=function() return {
+     setup=function() wraith.commands.create("attach",function() wraith.plugins.load("child") end) end,
+     teardown=function() record("parent\n") end
+    } end
+    wraith.plugins.load("parent")
+    wraith.commands.create("remove",function()
+     wraith.plugins.unload("parent"); wraith.plugins.unload("child")
+    end)
+   `, marker))
+			m := r.Manifest()
+			ch, err := r.Submit(m.Commands[0].Callback, "", nil, m.Config)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := receiveResult(t, ch)
+			if got.Err != nil || got.Manifest == nil {
+				t.Fatalf("attach: %+v", got)
+			}
+			if err := r.Acknowledge(got.Revision, true); err != nil {
+				t.Fatal(err)
+			}
+			if ending != "close" {
+				m = r.Manifest()
+				ch, err = r.Submit(m.Commands[1].Callback, "", nil, m.Config)
+				if err != nil {
+					t.Fatal(err)
+				}
+				got = receiveResult(t, ch)
+				if got.Err != nil || got.Manifest == nil {
+					t.Fatalf("remove: %+v", got)
+				}
+				if err := r.Acknowledge(got.Revision, ending != "rollback"); err != nil {
+					t.Fatal(err)
+				}
+			}
+			r.Close()
+			<-r.Done()
+			data, err := os.ReadFile(marker)
+			if err != nil || string(data) != "parent\nchild\n" {
+				t.Fatalf("late dependency teardown: %q, %v", data, err)
+			}
+		})
+	}
+}
