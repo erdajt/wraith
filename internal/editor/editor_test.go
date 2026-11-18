@@ -1,7 +1,12 @@
 package editor
 
 import (
+	"errors"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -72,5 +77,85 @@ func TestEditorArgumentsAreLiteral(t *testing.T) {
 
 	if c.Args[2] != "space and $dollar" || c.Args[3] != f.Path {
 		t.Fatalf("arguments changed: %q", c.Args)
+	}
+}
+
+func TestFailedEditorResultsCannotBecomeSavedCommands(t *testing.T) {
+	for _, failure := range []string{"exit", "missing", "oversized"} {
+		t.Run(failure, func(t *testing.T) {
+			f, err := Prepare(t.TempDir(), ".sh", "original")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer f.Remove()
+			var exit error
+			switch failure {
+			case "exit":
+				exit = errors.New("editor failed")
+				err = os.WriteFile(f.Path, []byte("edited but failed"), 0600)
+			case "missing":
+				err = os.Remove(f.Path)
+			case "oversized":
+				err = os.WriteFile(f.Path, []byte(strings.Repeat("x", (4<<20)+1)), 0600)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if text, saved, err := f.Result(exit); err == nil || saved || text != "" {
+				t.Fatal("failed editor result became executable content")
+			}
+		})
+	}
+}
+
+func TestLanguageStagingUsesPrivateFilesAndLiteralPaths(t *testing.T) {
+	for _, tc := range []struct{ language, extension, interpreter string }{
+		{"python", ".py", "python3"}, {"js", ".js", "node"}, {"rb", ".rb", "ruby"}, {"go", ".go", "go run"},
+		{"yaml", ".yaml", ""}, {"json", ".json", ""}, {"unknown", ".txt", ""},
+	} {
+		t.Run(tc.language, func(t *testing.T) {
+			dir := filepath.Join(t.TempDir(), "space 'quote")
+			path, command, err := Stage(dir, tc.language, "inert sample")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.interpreter != "" {
+				output, err := exec.Command("/bin/sh", "-c", "set -- "+command+"; printf '%s\\n' \"$@\"").Output()
+				want := append(strings.Fields(tc.interpreter), path)
+				got := strings.Split(strings.TrimSuffix(string(output), "\n"), "\n")
+				if err != nil || !slices.Equal(got, want) {
+					t.Fatalf("staged invocation changed literal arguments: %q, %v", got, err)
+				}
+			} else if command != "" {
+				t.Fatal("non-executable source produced a shell command")
+			}
+			data, err := os.ReadFile(path)
+			if err != nil || string(data) != "inert sample" || filepath.Ext(path) != tc.extension {
+				t.Fatalf("staging changed file or invocation: %q %q %v", path, command, err)
+			}
+			info, err := os.Stat(path)
+			if err != nil || info.Mode().Perm() != 0600 {
+				t.Fatal("staged source is not private")
+			}
+		})
+	}
+}
+
+func TestStagingRejectsInternalProtocolAndNullBytes(t *testing.T) {
+	for _, tc := range []struct{ language, text string }{{"wraith-run", "{}"}, {"sh", "wraith-run {}"}, {"sh", "echo\x00bad"}} {
+		if _, _, err := Stage(t.TempDir(), tc.language, tc.text); err == nil {
+			t.Fatalf("unsafe staging accepted: %+v", tc)
+		}
+	}
+	f, err := Prepare(t.TempDir(), ".txt", "draft")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.Command(nil); err == nil {
+		t.Fatal("empty editor accepted")
+	}
+	f.Remove()
+	if _, err := os.Stat(f.Path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("temporary edit file remained after removal")
 	}
 }
