@@ -66,6 +66,11 @@ func (a *App) runCommand(line string) tea.Cmd {
 	case "help", "h", "?", "instructions", "memory", "remember", "pin", "unpin", "pins", "blocks", "edit", "edit-response":
 		return a.memoryCommand(name, arg)
 	}
+	for _, command := range a.pluginManifest.Commands {
+		if command.Name == name {
+			return a.runAction("command."+name, arg)
+		}
+	}
 	a.notice = "unknown command · /help"
 	return nil
 }

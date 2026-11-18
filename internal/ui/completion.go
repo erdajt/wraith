@@ -74,7 +74,7 @@ func (a *App) completions() ([]commandSpec, int, bool) {
 	if !active || strings.ContainsAny(query, " \t") {
 		return nil, 0, false
 	}
-	matches := matchingCommands(query)
+	matches := a.pluginCommands(query)
 	index := 0
 	if query == a.completionQuery {
 		index = min(a.completionIndex, max(0, len(matches)-1))

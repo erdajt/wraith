@@ -7,6 +7,10 @@ func (a *App) helpItems() []item {
 		items = append(items, item{Label: "/" + command.Name, Value: command.Name, Detail: command.Description})
 	}
 
+	for _, command := range a.pluginManifest.Commands {
+		items = append(items, item{Label: "/" + command.Name, Value: command.Name, Detail: command.Description})
+	}
+
 	entries := [][3]string{
 		{a.Config.Keys["send"] + " · :w", "send the prompt", "send"},
 		{a.Config.Keys["editor"], "edit the focused prompt or message; user-message edits fork", "edit"},

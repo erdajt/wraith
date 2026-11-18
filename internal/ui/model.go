@@ -15,6 +15,7 @@ import (
 	"github.com/erdajt/wraith/internal/fsutil"
 	"github.com/erdajt/wraith/internal/keymap"
 	"github.com/erdajt/wraith/internal/ollama"
+	"github.com/erdajt/wraith/internal/plugin"
 	"github.com/erdajt/wraith/internal/provider"
 	"github.com/erdajt/wraith/internal/runner"
 	"github.com/erdajt/wraith/internal/session"
@@ -86,6 +87,11 @@ type terminalMsg struct {
 }
 
 type App struct {
+	plugins        *plugin.Runtime
+	pluginManifest plugin.Manifest
+	pluginSerial   uint64
+	pluginDepth    int
+
 	editorKeys      []queuedKeysMsg
 	keyPending      []tea.KeyMsg
 	keyPendingScope string
@@ -170,7 +176,7 @@ type App struct {
 }
 
 // New initializes the workspace, loads private context and recovers command history outside demo mode.
-func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, error) {
+func New(c config.Config, p config.Paths, s session.Session, demo bool, extensions ...*plugin.Runtime) (*App, error) {
 	instructions, err := fsutil.ReadLimit(filepath.Join(p.Config, "instructions.md"), 64<<10)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
@@ -201,6 +207,11 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 	a.windows = map[uint64]*conversationView{1: a.conversationView}
 	a.windowTree = &windowNode{id: 1}
 	a.actions = a.builtinActions()
+	if len(extensions) > 0 && extensions[0] != nil {
+		a.plugins = extensions[0]
+		a.pluginManifest = a.plugins.Manifest()
+		a.actions = a.pluginActions(a.pluginManifest)
+	}
 	if a.keymaps, err = a.buildKeymaps(c); err != nil {
 		return nil, err
 	}
@@ -261,6 +272,9 @@ func (a *App) ticker() tea.Cmd {
 // Close cancels active work and closes owned shell panes once.
 func (a *App) Close() {
 	a.once.Do(func() {
+		if a.plugins != nil {
+			a.plugins.Close()
+		}
 		if a.loadCancel != nil {
 			a.loadCancel()
 		}

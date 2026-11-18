@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -17,6 +18,32 @@ type action struct {
 // builtinActions exposes workspace operations through one named dispatch table.
 func (a *App) builtinActions() map[string]action {
 	actions := map[string]action{
+		"prompt.set": {"replace the shared draft", func(text string) tea.Cmd {
+			a.Prompt.Set(text)
+			return nil
+		}},
+		"window.focus_id": {"focus a conversation window by id", func(arg string) tea.Cmd {
+			id, err := strconv.ParseUint(arg, 10, 64)
+			if err != nil || a.windows[id] == nil {
+				a.notice = "invalid conversation window id"
+				return nil
+			}
+			a.focusWindow(id)
+			return nil
+		}},
+		"window.close_id": {"close a conversation window by id", func(arg string) tea.Cmd {
+			id, err := strconv.ParseUint(arg, 10, 64)
+			if err != nil || id != 0 && a.windows[id] == nil {
+				a.notice = "invalid conversation window id"
+				return nil
+			}
+			if id != 0 {
+				a.focusWindow(id)
+			}
+			a.windowAction("c")
+			return nil
+		}},
+
 		"operation.cancel": {"cancel model work or interrupt the focused shell", func(string) tea.Cmd { return a.cancelInput() }},
 		"noop":             {"consume the binding", func(string) tea.Cmd { return nil }},
 		"app.quit":         {"save and quit", func(string) tea.Cmd { return a.quit() }},
@@ -124,15 +151,24 @@ func (a *App) runAction(name, arg string) tea.Cmd {
 		a.notice = "unknown action: " + name
 		return nil
 	}
-	if name != "noop" && name != "app.quit" && name != "operation.cancel" {
-		if a.editing || a.popup != nil || a.proposal != nil {
-			a.notice = "finish or cancel the current dialog before " + name
-			return nil
-		}
-		if strings.HasPrefix(a.focus, "terminal") && name != "terminal.overlay" && name != "terminal.side" {
-			a.notice = "return to the conversation before " + name
-			return nil
-		}
+	if !a.actionAllowed(name) {
+		return nil
 	}
 	return entry.run(arg)
+}
+
+// actionAllowed preserves input ownership for mapped actions and plugin effects.
+func (a *App) actionAllowed(name string) bool {
+	if name == "noop" || name == "app.quit" || name == "operation.cancel" || name == "notify" || strings.HasPrefix(name, "lua.callback.") {
+		return true
+	}
+	if a.editing || a.popup != nil || a.proposal != nil {
+		a.notice = "finish or cancel the current dialog before " + name
+		return false
+	}
+	if strings.HasPrefix(a.focus, "terminal") && name != "terminal.overlay" && name != "terminal.side" {
+		a.notice = "return to the conversation before " + name
+		return false
+	}
+	return true
 }
