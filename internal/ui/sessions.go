@@ -123,6 +123,7 @@ func (a *App) resetChatNavigation() {
 	for _, view := range a.windows {
 		*view = conversationView{chatCursor: -1, follow: true}
 	}
-	a.commandMode, a.searchMode, a.windowPending = false, false, false
+	a.commandMode, a.searchMode = false, false
+	a.keyPending = nil
 	a.thinkingExpanded = map[string]bool{}
 }

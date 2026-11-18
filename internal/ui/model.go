@@ -86,13 +86,15 @@ type terminalMsg struct {
 }
 
 type App struct {
-	actions map[string]action
-	keymaps *keymap.Registry
+	keyPending      []tea.KeyMsg
+	keyPendingScope string
+	keySerial       uint64
+	actions         map[string]action
+	keymaps         *keymap.Registry
 	*conversationView
 	windows                       map[uint64]*conversationView
 	windowTree                    *windowNode
 	windowID, nextWindowID        uint64
-	windowPending                 bool
 	Variables                     variables.Snapshot
 	variableInventory, envPending string
 	envScope                      variables.Scope

@@ -11,9 +11,10 @@ func TestNotationPreservesSequencesAndTerminalAliases(t *testing.T) {
 		want  []string
 	}{
 		{"<C-w>v", []string{"ctrl+w", "v"}},
-		{"<C-h><C-j><C-k><C-l>", []string{"backspace", "ctrl+j", "ctrl+k", "ctrl+l"}},
+		{"<C-h><C-j><C-k><C-l>", []string{"ctrl+h", "ctrl+j", "ctrl+k", "ctrl+l"}},
 		{"<Space>ca", []string{" ", "c", "a"}},
 		{"<S-Tab><A-e><CR><C-i><C-[>", []string{"shift+tab", "alt+e", "enter", "tab", "esc"}},
+		{"<A-A>", []string{"alt+A"}},
 		{"Y界<lt><F12>", []string{"Y", "界", "<", "f12"}},
 	} {
 		t.Run(test.input, func(t *testing.T) {

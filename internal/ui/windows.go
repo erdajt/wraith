@@ -37,7 +37,8 @@ func (a *App) focusWindow(id uint64) {
 		return
 	}
 	a.chatCount, a.chatMotionPending, a.chatMotionCount = "", "", ""
-	a.chatG, a.chatZ, a.windowPending = false, false, false
+	a.chatG, a.chatZ = false, false
+	a.keyPending = nil
 	a.searchMode, a.commandMode = false, false
 	a.windowID, a.conversationView = id, view
 	a.focus = "chat"

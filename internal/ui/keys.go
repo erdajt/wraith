@@ -6,37 +6,21 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// key routes input by global bindings, popup state and the focused vim or terminal view.
-func (a *App) key(k tea.KeyMsg) tea.Cmd {
-	if k.Type == tea.KeyRunes && len(k.Runes) > 1 && !k.Paste && !k.Alt && (a.focus == "chat" || a.Prompt.Mode == "normal") {
-		for i, r := range k.Runes {
-			if cmd := a.key(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}}); cmd != nil {
-				if i == len(k.Runes)-1 {
-					return cmd
-				}
-				rest := append([]rune(nil), k.Runes[i+1:]...)
-				return tea.Sequence(cmd, func() tea.Msg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: rest} })
-			}
-		}
-		return nil
-	}
-
+// keyDefault routes unmatched input to the focused vim editor, picker or terminal.
+func (a *App) keyDefault(k tea.KeyMsg) tea.Cmd {
 	key := k.String()
 	if key == a.Config.Keys["quit"] || (key == "q" && a.chatMotionPending == "" && a.Prompt.Pending == "" && a.popup == nil && !a.commandMode && !a.searchMode && ((a.focus == "chat" && a.visualMode == "") || (a.focus == "prompt" && a.Prompt.Mode == "normal"))) {
 		return a.quit()
 	}
 
 	if key == a.Config.Keys["terminal_overlay"] {
-		a.windowPending = false
 		return a.toggleTerminal(0)
 	}
 	if key == a.Config.Keys["terminal_split"] {
-		a.windowPending = false
 		return a.toggleTerminal(1)
 	}
 
 	if key == a.Config.Keys["cancel"] && (a.popup != nil || !strings.HasPrefix(a.focus, "terminal")) {
-		a.windowPending = false
 		a.stopAgent()
 		if a.cancel != nil && a.busy {
 			a.cancel()
@@ -55,19 +39,6 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 
 	if strings.HasPrefix(a.focus, "terminal") {
 		return a.terminalKey(k)
-	}
-
-	if a.windowPending {
-		a.windowPending = false
-		if key != "esc" {
-			a.windowAction(key)
-		}
-		return nil
-	}
-	if key == "ctrl+w" && a.focus == "chat" && !a.commandMode && !a.searchMode && a.chatMotionPending == "" {
-		a.windowPending = true
-		a.notice = "windows · s horizontal · v vertical · h/j/k/l focus · w cycle · c close · o only · = equalize"
-		return nil
 	}
 
 	if a.chatMotionPending == "" && a.Prompt.Pending == "" && !a.commandMode && !a.searchMode && (a.focus == "chat" || a.Prompt.Mode == "normal") && (key == a.Config.Leader || a.Config.Leader == "space" && key == " ") {

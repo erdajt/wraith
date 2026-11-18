@@ -53,7 +53,7 @@ func TestSplitsRespectInputAndMinimumGeometry(t *testing.T) {
 	a.Prompt.Set("one two")
 	a.Prompt.Pos = len(a.Prompt.Text)
 	a.key(tea.KeyMsg{Type: tea.KeyCtrlW})
-	if a.windowPending || len(a.windows) != 1 {
+	if len(a.keyPending) > 0 || len(a.windows) != 1 {
 		t.Fatal("insert-mode ctrl+w became a window command")
 	}
 	a.focus, a.width, a.height = "chat", 50, 18

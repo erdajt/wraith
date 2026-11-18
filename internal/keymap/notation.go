@@ -42,8 +42,9 @@ func Parse(sequence string) ([]string, error) {
 
 // namedKey normalizes named keys and the control aliases terminals cannot distinguish.
 func namedKey(name string) (string, error) {
+	original := name
 	name = strings.ToLower(name)
-	aliases := map[string]string{"space": " ", "lt": "<", "cr": "enter", "return": "enter", "esc": "esc", "bs": "backspace", "del": "delete", "c-h": "backspace", "c-i": "tab", "c-m": "enter", "c-[": "esc", "c-@": "ctrl+@", "c-space": "ctrl+@"}
+	aliases := map[string]string{"space": " ", "lt": "<", "cr": "enter", "return": "enter", "esc": "esc", "bs": "backspace", "del": "delete", "c-i": "tab", "c-m": "enter", "c-[": "esc", "c-@": "ctrl+@", "c-space": "ctrl+@"}
 	if key, ok := aliases[name]; ok {
 		return key, nil
 	}
@@ -53,7 +54,7 @@ func namedKey(name string) (string, error) {
 	if strings.HasPrefix(name, "a-") || strings.HasPrefix(name, "m-") {
 		key, err := namedKey(name[2:])
 		if utf8.RuneCountInString(name[2:]) == 1 {
-			key, err = name[2:], nil
+			key, err = original[2:], nil
 		}
 		return "alt+" + key, err
 	}

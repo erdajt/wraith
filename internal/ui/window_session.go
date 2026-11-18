@@ -65,5 +65,5 @@ func (a *App) remapConversation(old, next []session.Message) {
 		view.chatMotionPending, view.chatMotionCount, view.chatCount = "", "", ""
 		view.chatG, view.chatZ = false, false
 	}
-	a.windowPending = false
+	a.keyPending = nil
 }
