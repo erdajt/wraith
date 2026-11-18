@@ -13,26 +13,6 @@ func (a *App) keyDefault(k tea.KeyMsg) tea.Cmd {
 		return a.quit()
 	}
 
-	if key == a.Config.Keys["terminal_overlay"] {
-		return a.toggleTerminal(0)
-	}
-	if key == a.Config.Keys["terminal_split"] {
-		return a.toggleTerminal(1)
-	}
-
-	if key == a.Config.Keys["cancel"] && (a.popup != nil || !strings.HasPrefix(a.focus, "terminal")) {
-		a.stopAgent()
-		if a.cancel != nil && a.busy {
-			a.cancel()
-			a.notice = "cancelling…"
-		} else {
-			a.commandMode = false
-			a.searchMode = false
-			a.Prompt.Key("esc", "")
-		}
-		return nil
-	}
-
 	if a.popup != nil {
 		return a.menuKey(k)
 	}
@@ -88,29 +68,6 @@ func (a *App) keyDefault(k tea.KeyMsg) tea.Cmd {
 	}
 	if a.historyKey(k) {
 		return nil
-	}
-
-	if key == a.Config.Keys["focus"] {
-		a.chatCount = ""
-		a.chatG = false
-		if a.focus == "chat" {
-			a.focus = "prompt"
-		} else {
-			a.focus = "chat"
-			a.ensureChatCursor()
-		}
-		return nil
-	}
-
-	if key == a.Config.Keys["editor"] {
-		if a.focus == "chat" {
-			return a.editResponse()
-		}
-		return a.edit("prompt", "", "", -1)
-	}
-
-	if key == a.Config.Keys["send"] {
-		return a.submit()
 	}
 
 	if (a.focus == "chat" || a.Prompt.Mode == "normal") && a.chatMotionPending == "" && a.Prompt.Pending == "" && key == ":" {

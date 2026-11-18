@@ -80,7 +80,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 	}
 	if key == "ctrl+c" || key == a.Config.Keys["cancel"] {
 		a.keyPending = nil
-		return a.keyDefault(k)
+		return a.cancelInput()
 	}
 	if k.Paste {
 		a.keyPending = nil
@@ -115,6 +115,11 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 	}
 	a.keyPending = nil
 	if match.Exact {
+		if match.Action == "focus.next" && len(keys) == 1 {
+			if cmd, handled := a.slashKey(k); handled {
+				return cmd
+			}
+		}
 		return a.runAction(match.Action, "")
 	}
 	return a.replayKeys(keys, scope)
@@ -157,4 +162,20 @@ func (a *App) keymapTimeout(serial uint64) tea.Cmd {
 		return a.runAction(match.Action, "")
 	}
 	return a.replayKeys(keys, scope)
+}
+
+// cancelInput keeps cancellation available even when the configurable binding changes.
+func (a *App) cancelInput() tea.Cmd {
+	if a.popup == nil && strings.HasPrefix(a.focus, "terminal") {
+		return a.terminalKey(tea.KeyMsg{Type: tea.KeyCtrlC})
+	}
+	a.stopAgent()
+	if a.cancel != nil && a.busy {
+		a.cancel()
+		a.notice = "cancelling…"
+	} else {
+		a.commandMode, a.searchMode = false, false
+		a.Prompt.Key("esc", "")
+	}
+	return nil
 }

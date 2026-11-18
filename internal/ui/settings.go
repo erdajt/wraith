@@ -74,11 +74,16 @@ func (a *App) set(key, value string) tea.Cmd {
 		}
 	}
 
+	registry, err := a.buildKeymaps(c)
+	if err != nil {
+		a.notice = err.Error()
+		return nil
+	}
 	if err := config.Save(config.File(a.Paths.Config), c); err != nil {
 		a.notice = err.Error()
 		return nil
 	}
-	a.Config = c
+	a.Config, a.keymaps, a.keyPending = c, registry, nil
 
 	if key == "appearance.thinking" {
 		a.showThinking = c.Appearance.Thinking

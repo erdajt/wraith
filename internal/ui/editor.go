@@ -166,12 +166,17 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 			a.notice = "config unchanged: " + e.Error()
 			return nil
 		}
+		registry, e := a.buildKeymaps(c)
+		if e != nil {
+			a.notice = "config unchanged: " + e.Error()
+			return nil
+		}
 		if err = config.Save(config.File(a.Paths.Config), c); err != nil {
 			a.notice = err.Error()
 			return nil
 		}
 		applied = true
-		a.Config = c
+		a.Config, a.keymaps, a.keyPending = c, registry, nil
 		a.Client = provider.New(c)
 		a.Session.Model = c.Model
 		a.Session.Provider = c.Provider

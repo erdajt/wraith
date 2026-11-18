@@ -1,8 +1,11 @@
 package ui
 
 import (
+	"encoding/json"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/keymap"
 )
 
@@ -25,6 +28,31 @@ func TestNamedActionsShareCommandsAndWindowOperations(t *testing.T) {
 	a.runAction("window.close", "")
 	if len(a.windows) != 1 {
 		t.Fatal("named close did not remove the focused window")
+	}
+}
+
+func TestSettingsValidateAndActivateMappingsBeforePersistence(t *testing.T) {
+	a := fixture(t)
+	a.width, a.height, a.focus = 120, 40, "chat"
+	bindings := []keymap.Binding{{Mode: "chat.normal", Keys: "<C-w>v", Action: "window.split_horizontal"}}
+	encoded, err := json.Marshal(bindings)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.set("keymaps", string(encoded))
+	a.key(tea.KeyMsg{Type: tea.KeyCtrlW})
+	a.key(key("v"))
+	if len(a.windows) != 2 || a.windowTree.vertical {
+		t.Fatal("setting did not replace the default chord")
+	}
+	before := a.keymaps
+	a.set("keymaps", `[{"mode":"chat.normal","keys":"x","action":"missing"}]`)
+	if a.keymaps != before {
+		t.Fatal("invalid setting replaced active bindings")
+	}
+	saved, err := config.Load(config.File(a.Paths.Config))
+	if err != nil || len(saved.Keymaps) != 1 || saved.Keymaps[0].Action != "window.split_horizontal" {
+		t.Fatalf("invalid setting replaced persisted bindings: %+v, %v", saved.Keymaps, err)
 	}
 }
 

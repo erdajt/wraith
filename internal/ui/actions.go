@@ -17,9 +17,10 @@ type action struct {
 // builtinActions exposes workspace operations through one named dispatch table.
 func (a *App) builtinActions() map[string]action {
 	actions := map[string]action{
-		"noop":        {"consume the binding", func(string) tea.Cmd { return nil }},
-		"app.quit":    {"save and quit", func(string) tea.Cmd { return a.quit() }},
-		"prompt.send": {"send the draft", func(string) tea.Cmd { return a.submit() }},
+		"operation.cancel": {"cancel model work or interrupt the focused shell", func(string) tea.Cmd { return a.cancelInput() }},
+		"noop":             {"consume the binding", func(string) tea.Cmd { return nil }},
+		"app.quit":         {"save and quit", func(string) tea.Cmd { return a.quit() }},
+		"prompt.send":      {"send the draft", func(string) tea.Cmd { return a.submit() }},
 		"editor.open": {"edit the focused message or draft", func(string) tea.Cmd {
 			if a.focus == "chat" {
 				return a.editResponse()
@@ -83,6 +84,14 @@ func (a *App) buildKeymaps(c config.Config) (*keymap.Registry, error) {
 		for _, spec := range windowActions {
 			bindings = append(bindings, keymap.Binding{Mode: mode, Keys: "<C-w>" + spec.key, Action: spec.name, Description: spec.description})
 		}
+	}
+	for setting, name := range map[string]string{"send": "prompt.send", "editor": "editor.open", "focus": "focus.next"} {
+		for _, mode := range []string{"prompt.insert", "prompt.normal", "prompt.visual", "prompt.operator", "chat.normal", "chat.visual", "chat.operator"} {
+			bindings = append(bindings, keymap.Binding{Mode: mode, Keys: keymap.Notation(c.Keys[setting]), Action: name})
+		}
+	}
+	for setting, name := range map[string]string{"terminal_overlay": "terminal.overlay", "terminal_split": "terminal.side", "quit": "app.quit", "cancel": "operation.cancel"} {
+		bindings = append(bindings, keymap.Binding{Mode: "*", Keys: keymap.Notation(c.Keys[setting]), Action: name})
 	}
 	bindings = append(bindings, c.Keymaps...)
 	for i := range bindings {

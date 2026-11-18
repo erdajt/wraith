@@ -7,6 +7,23 @@ import (
 	"unicode/utf8"
 )
 
+// Notation converts a legacy terminal key name into configurable key notation.
+func Notation(key string) string {
+	for prefix, notation := range map[string]string{"ctrl+": "C-", "alt+": "A-", "shift+": "S-"} {
+		if strings.HasPrefix(key, prefix) {
+			inner := strings.TrimSuffix(strings.TrimPrefix(Notation(strings.TrimPrefix(key, prefix)), "<"), ">")
+			return "<" + notation + inner + ">"
+		}
+	}
+	if key == "<" {
+		return "<lt>"
+	}
+	if _, err := namedKey(key); err == nil {
+		return "<" + key + ">"
+	}
+	return key
+}
+
 // Parse translates a bounded neovim-style sequence into terminal key names.
 func Parse(sequence string) ([]string, error) {
 	if len(sequence) == 0 || len(sequence) > 256 || !utf8.ValidString(sequence) {
