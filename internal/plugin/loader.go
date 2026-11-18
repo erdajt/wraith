@@ -17,8 +17,6 @@ func (e *engine) installLoader(directory string) error {
 	}
 	L := e.L
 	pkg := L.GetGlobal("package")
-	patterns := []string{filepath.Join(directory, "lua", "?.lua"), filepath.Join(directory, "lua", "?", "init.lua"), filepath.Join(directory, "?.lua"), filepath.Join(directory, "?", "init.lua")}
-	L.SetField(pkg, "path", lua.LString(strings.Join(patterns, ";")))
 	loaders := L.GetField(pkg, "loaders").(*lua.LTable)
 	loaders.RawSetInt(2, L.NewFunction(func(L *lua.LState) int {
 		name := strings.ReplaceAll(L.CheckString(1), ".", string(filepath.Separator))

@@ -53,6 +53,9 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	e.installPlugins(api)
 	e.installCoroutines()
 	e.installDiagnostics(api)
+	if err := e.installPaths(api, directory); err != nil {
+		return nil, err
+	}
 
 	fn, err := loadFile(L, filepath.Join(directory, "init.lua"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {

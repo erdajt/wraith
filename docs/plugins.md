@@ -143,6 +143,14 @@ end
 
 setup can register APIs and change candidate configuration. runtime workspace actions and snapshot inspection are unavailable during setup. teardown runs with runtime actions and configuration changes disabled. cleanup errors do not prevent VM closure.
 
+## module paths
+
+`wraith.paths.stdpath(name)` returns the effective `config`, `data`, `cache` or `state` directory. data, cache and state follow XDG paths; `config` honors `--config-dir`. paths are not created by this call.
+
+`wraith.runtimepath.prepend(path)`, `append(path)`, `remove(path)` and `list()` manage ordered roots. each root searches `lua/?.lua`, `lua/?/init.lua`, `?.lua` and `?/init.lua`. paths become absolute; symlinks remain usable. empty paths and paths containing `;`, `?` or nul are rejected because those characters have module-path syntax.
+
+changing roots preserves explicitly added `package.path` patterns after the managed roots. `list()` returns a copy. `require` retains Lua's module cache: moving or removing a root does not unload modules already in `package.loaded`. clear the module entry explicitly or reload the configuration to resolve it again.
+
 ## runtime boundaries
 
 modules resolve through `package.path`, initially `config/lua/?.lua`, `config/lua/?/init.lua`, `config/?.lua` and `config/?/init.lua`. trusted code can change these paths and use symlinks or `package.preload`. the working directory and `LUA_PATH` are not added automatically. project files and assistant responses are never loaded as configuration.
