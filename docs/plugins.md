@@ -86,9 +86,9 @@ end, "prepare a review prompt")
 
 `keymap.set(mode, sequence, action_or_function_or_keys, description)` registers an override. descriptions are optional. use `/keymaps` to inspect active mappings. [keybindings](keybindings.md#mode-specific-mappings) lists notation and modes. numeric prefixes retain the current normal/visual mappings. pending operators and literal arguments have separate modes.
 
-`keymap.del(mode, sequence)` removes configured overrides for that sequence; built-in defaults become available again. map to `noop` to consume a default key. registration happens during setup. edit the configuration and reload to replace mappings or commands.
+`keymap.del(mode, sequence)` removes configured overrides for that sequence; built-in defaults become available again. map to `noop` to consume a default key. mappings and commands can be registered during setup or inside callbacks. runtime registrations are validated and installed before their callback effects run. rejected registrations leave the previous host registry active.
 
-`commands.create(name, callback, description)` registers a slash command and a `command.NAME` action. command names use lowercase letters, digits and hyphens, with optional dotted children. built-in names and namespaces are reserved unless an existing command is explicitly replaced with `{replace = true}`. a trailing `!` is accepted. `commands.delete(name)` removes a custom command during setup and restores any builtin it replaced. custom commands appear in slash completion and `/help`. a virtual parent expands to its dotted children when selected.
+`commands.create(name, callback, description)` registers a slash command and a `command.NAME` action. command names use lowercase letters, digits and hyphens, with optional dotted children. built-in names and namespaces are reserved unless an existing command is explicitly replaced with `{replace = true}`. a trailing `!` is accepted. `commands.delete(name)` removes a custom command and restores any builtin it replaced. custom commands appear in slash completion and `/help`. a virtual parent expands to its dotted children when selected.
 
 `wraith.action(name, argument)` queues a named operation from a callback. arguments are optional strings. host actions include `prompt.send`, `editor.open`, `focus.next`, `terminal.overlay`, `terminal.side`, `operation.cancel`, `app.quit`, `noop`, all `command.NAME` actions, and the `window.*` actions listed in [keybindings](keybindings.md). native `input.feed` edits the focused buffer; action calls never synthesize live shell input.
 
@@ -110,7 +110,7 @@ bindings resolve once. an exception consumes the mapping and reports the error. 
 | `wraith.input.set_mode(mode)` | choose normal, insert, visual, visual-line or search |
 | `wraith.notify(text)` | show a notice |
 
-each callback receives `ctx` with `argument`, `event`, `prompt`, `input`, `windows` and `session`. session messages contain role and content, limited to the latest 64 messages and 128 kib of content. `message_count` records the full count. a large message may be truncated. modifying snapshot tables does not change the app.
+each callback receives `ctx` with `argument`, `event`, `data`, `prompt`, `input`, `windows` and `session`. `data` contains a detached payload for custom events. session messages contain role and content, limited to the latest 64 messages and 128 kib of content. `message_count` records the full count. a large message may be truncated. modifying snapshot tables does not change the app.
 
 operations run after the callback returns successfully. snapshot reads within that callback continue to describe its original state. split operations return no new id immediately; inspect a later window event to find it. an exception or timeout discards the callback's effect batch.
 
@@ -137,11 +137,13 @@ end
 | `window_changed` | view focus or visible window geometry changes |
 | `response_finished` | an active model response stops; compaction is excluded |
 
-`events.on(name, function)` registers during setup and returns an id. `events.off(id)` removes the subscription, including from a callback or teardown. queued events of the same type retain the newest snapshot. superseded event callers are released without effects.
+`events.on(name, function)` registers during setup or a callback and returns an id. `events.off(id)` removes the subscription, including from a callback or teardown. only `window_changed` and `session_changed` coalesce to the newest queued snapshot. completion and custom events retain their order. superseded state-event callers are released without effects.
 
-`wraith.plugins.load("plugins.review", options)` uses `require` to load a local module once. it must return a table with `setup(options)`. setup may return a cleanup function; the table may also provide `teardown()`. successful runtimes run cleanup hooks in reverse registration order when replaced or closed. `init.lua` may itself return a cleanup function. failed candidates are closed without running their runtime actions.
+custom events use dotted lowercase names, such as `review.selected`. `wraith.events.emit("review.selected", {id = "task-1"})` queues delivery after the emitting callback succeeds. listeners read the payload from `ctx.data`. a callback can register a listener and emit its event in the same batch; host registration finishes before delivery. emission cannot impersonate built-in lifecycle events.
 
-setup can register APIs and change candidate configuration. runtime workspace actions and snapshot inspection are unavailable during setup. teardown runs with runtime actions and configuration changes disabled. cleanup errors do not prevent VM closure.
+`wraith.plugins.load("plugins.review", options)` uses `require` to load a local module once. it must return a table with `setup(options)`. setup may return a cleanup function; the table may also provide `teardown()`. successful runtimes run cleanup hooks in reverse registration order when replaced or closed. `init.lua` may itself return a cleanup function. failed candidates are closed without running their runtime actions. failed plugin setup restores its staged registrations even if Lua catches the failure with `pcall`; cleanup releases resources registered by that failed setup. arbitrary Lua globals, module-cache changes and external effects are not rolled back.
+
+setup can register APIs and change candidate configuration. runtime workspace actions and snapshot inspection are unavailable during setup. teardown runs with runtime actions and configuration changes disabled. cleanup errors do not prevent VM closure. asynchronous failures appear as notices, including errors from the previous configuration after reload. host registry publication does not wait for arbitrary teardown code.
 
 ## module paths
 
