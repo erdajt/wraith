@@ -51,8 +51,14 @@ func (a *App) pluginCommands(query string) []commandSpec {
 		} else if !strings.HasPrefix(name, parent+".") {
 			continue
 		}
-		if strings.HasPrefix(name, query) && !slices.ContainsFunc(matches, func(spec commandSpec) bool { return spec.Name == name }) {
-			matches = append(matches, commandSpec{name, command.Description, false})
+		if strings.HasPrefix(name, query) {
+			index := slices.IndexFunc(matches, func(spec commandSpec) bool { return spec.Name == name })
+			choice := commandSpec{name, command.Description, command.NeedsArgument}
+			if index < 0 {
+				matches = append(matches, choice)
+			} else if name == command.Name {
+				matches[index] = choice
+			}
 		}
 	}
 	slices.SortStableFunc(matches, func(a, b commandSpec) int {

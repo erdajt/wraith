@@ -9,7 +9,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-var commandName = regexp.MustCompile(`^[a-z][a-z0-9-]*(\.[a-z0-9-]+)*$`)
+var commandName = regexp.MustCompile(`^[a-z][a-z0-9-]*(\.[a-z0-9-]+)*!?$`)
 
 // installRegistration exposes setup-only bindings, commands and event subscriptions.
 func (e *engine) installRegistration(api *lua.LTable) {
@@ -52,13 +52,30 @@ func (e *engine) installRegistration(api *lua.LTable) {
 		"create": func(L *lua.LState) int {
 			e.registration(L)
 			name := L.CheckString(1)
+			replace, arguments := false, false
+			if options := L.OptTable(4, nil); options != nil {
+				options.ForEach(func(key, value lua.LValue) {
+					flag, ok := value.(lua.LBool)
+					if !ok || key.String() != "replace" && key.String() != "arguments" {
+						L.RaiseError("command options require boolean replace or arguments")
+					}
+					if key.String() == "replace" {
+						replace = bool(flag)
+					} else {
+						arguments = bool(flag)
+					}
+				})
+			}
+			existing := slices.ContainsFunc(e.manifest.Commands, func(command Command) bool { return command.Name == name })
 			parent, _, dotted := strings.Cut(name, ".")
-			reservedParent := dotted && e.actions["command."+parent] && !slices.ContainsFunc(e.manifest.Commands, func(command Command) bool { return command.Name == parent })
-			if reservedParent || !commandName.MatchString(name) || len(name) > 80 || e.actions["command."+name] || len(e.manifest.Commands) >= 128 {
+			reservedParent := dotted && e.builtins["command."+parent] && !slices.ContainsFunc(e.manifest.Commands, func(command Command) bool { return command.Name == parent })
+			if reservedParent && !(replace && e.builtins["command."+name]) || !commandName.MatchString(name) || len(name) > 80 || e.actions["command."+name] && !replace || !existing && len(e.manifest.Commands) >= 128 {
 				L.RaiseError("invalid, reserved or duplicate command: %s", name)
 			}
+			callback := e.callback(L, L.Get(2))
+			e.manifest.Commands = slices.DeleteFunc(e.manifest.Commands, func(command Command) bool { return command.Name == name })
 			e.actions["command."+name] = true
-			e.manifest.Commands = append(e.manifest.Commands, Command{name, L.OptString(3, "lua command"), e.callback(L, L.Get(2))})
+			e.manifest.Commands = append(e.manifest.Commands, Command{Name: name, Description: L.OptString(3, "lua command"), Callback: callback, NeedsArgument: arguments})
 			return 0
 		},
 		"delete": func(L *lua.LState) int {
@@ -67,7 +84,9 @@ func (e *engine) installRegistration(api *lua.LTable) {
 			for i, command := range e.manifest.Commands {
 				if command.Name == name {
 					e.manifest.Commands = slices.Delete(e.manifest.Commands, i, i+1)
-					delete(e.actions, "command."+name)
+					if !e.builtins["command."+name] {
+						delete(e.actions, "command."+name)
+					}
 					break
 				}
 			}

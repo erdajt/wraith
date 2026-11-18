@@ -12,6 +12,11 @@ func (a *App) runCommand(line string) tea.Cmd {
 	a.rememberInput("/" + line)
 	name, arg, _ := strings.Cut(line, " ")
 	arg = strings.TrimSpace(arg)
+	for _, command := range a.pluginManifest.Commands {
+		if command.Name == name {
+			return a.runAction("command."+name, arg)
+		}
+	}
 	switch name {
 	case "q", "q!", "qa", "qa!", "wq", "w", "w!":
 		return a.runAction("command."+name, arg)
@@ -70,11 +75,6 @@ func (a *App) runCommand(line string) tea.Cmd {
 		return a.sessionCommand(name, arg)
 	case "help", "h", "?", "instructions", "memory", "remember", "pin", "unpin", "pins", "blocks", "edit", "edit-response":
 		return a.memoryCommand(name, arg)
-	}
-	for _, command := range a.pluginManifest.Commands {
-		if command.Name == name {
-			return a.runAction("command."+name, arg)
-		}
 	}
 	a.notice = "unknown command · /help"
 	return nil

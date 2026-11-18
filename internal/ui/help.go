@@ -1,5 +1,7 @@
 package ui
 
+import "slices"
+
 // helpItems builds the command reference with bindings from the active configuration.
 func (a *App) helpItems() []item {
 	items := make([]item, 0, len(commandSpecs)+16)
@@ -8,7 +10,12 @@ func (a *App) helpItems() []item {
 	}
 
 	for _, command := range a.pluginManifest.Commands {
-		items = append(items, item{Label: "/" + command.Name, Value: command.Name, Detail: command.Description})
+		entry := item{Label: "/" + command.Name, Value: command.Name, Detail: command.Description}
+		if index := slices.IndexFunc(items, func(entry item) bool { return entry.Value == command.Name }); index >= 0 {
+			items[index] = entry
+		} else {
+			items = append(items, entry)
+		}
 	}
 
 	entries := [][3]string{
@@ -26,7 +33,7 @@ func (a *App) helpItems() []item {
 		{a.Config.Keys["terminal_overlay"] + " · " + a.Config.Keys["terminal_split"], "scratch shell and side shell", "shell"},
 		{"terminal: esc esc esc", "vim copy mode; i returns to live input", "copy"},
 		{a.Config.Keys["output_share"], "share output explicitly when automatic sharing is off", "share"},
-		{"normal: q · " + a.Config.Keys["quit"], "save and exit; closes child shells", "quit"},
+		{"normal: q · " + a.Config.Keys["quit"], "close a window; quit key exits all; unsent drafts require a decision", "quit"},
 	}
 	for _, entry := range entries {
 		items = append(items, item{Label: entry[0], Value: entry[2], Detail: entry[1]})

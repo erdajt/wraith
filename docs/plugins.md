@@ -88,7 +88,7 @@ end, "prepare a review prompt")
 
 `keymap.del(mode, sequence)` removes configured overrides for that sequence; built-in defaults become available again. map to `noop` to consume a default key. registration happens during setup. edit the configuration and reload to replace mappings or commands.
 
-`commands.create(name, callback, description)` registers a slash command and a `command.NAME` action. command names use lowercase letters, digits and hyphens, with optional dotted children. built-in names, aliases and namespaces are reserved. `commands.delete(name)` removes a custom command during setup. custom commands appear in slash completion and `/help`. a virtual parent expands to its dotted children when selected.
+`commands.create(name, callback, description)` registers a slash command and a `command.NAME` action. command names use lowercase letters, digits and hyphens, with optional dotted children. built-in names and namespaces are reserved unless an existing command is explicitly replaced with `{replace = true}`. a trailing `!` is accepted. `commands.delete(name)` removes a custom command during setup and restores any builtin it replaced. custom commands appear in slash completion and `/help`. a virtual parent expands to its dotted children when selected.
 
 `wraith.action(name, argument)` queues a named operation from a callback. arguments are optional strings. host actions include `prompt.send`, `editor.open`, `focus.next`, `terminal.overlay`, `terminal.side`, `operation.cancel`, `app.quit`, `noop`, all `command.NAME` actions, and the `window.*` actions listed in [keybindings](keybindings.md). action calls do not synthesize terminal input.
 
@@ -158,3 +158,21 @@ the VM includes base, string, table, math, coroutine and a controlled package lo
 | retained callbacks / commands / loaded plugins | 512 / 128 / 128 |
 
 queue overflow is reported. cancellation releases waiting callers. one worker owns the VM; rendering does not wait for Lua execution. source files must be regular files. these limits protect lifecycle and message handling, but in-process Lua allocation is not a hard memory sandbox. install only local code you trust.
+
+## command overrides
+
+```lua
+wraith.commands.create("q", function()
+  wraith.action("app.quit")
+end, "quit all windows", { replace = true })
+
+wraith.commands.create("note", function(ctx)
+  wraith.action("command.pin", ctx.argument)
+end, "pin a fact", { arguments = true })
+```
+
+`replace` and `arguments` are optional booleans. `arguments = true` makes completion wait for input. replacement applies to both `:name` and `/name`, including `q!`, `qa!`, `w!` and existing dotted commands. completion and help use the replacement description. deletion restores the original command.
+
+physical keys remain separate mappings. `q` in normal mode uses `window.close`; the quit key uses `app.quit`. bind them explicitly to `command.q` if they should follow your override. stable actions `window.close`, `window.close_force`, `app.quit`, `app.quit_force`, `app.save_quit` and `prompt.send` invoke the original operations. calling `command.q` from its own replacement recurses and hits the callback depth limit.
+
+callbacks keep dialog, input ownership and persistence guards. configuration does not grant command execution approval. `:w` and `:w!` send by default; `:wq` saves the draft and quits. invalid reloads retain the previous command definitions.

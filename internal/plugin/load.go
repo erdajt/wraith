@@ -26,9 +26,10 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 		return nil, nil, err
 	}
 	L := lua.NewState(lua.Options{SkipOpenLibs: true})
-	e := &engine{L: L, manifest: Manifest{Config: c}, functions: map[string]*lua.LFunction{}, events: map[string][]string{}, actions: map[string]bool{}, setup: true}
+	e := &engine{L: L, manifest: Manifest{Config: c}, functions: map[string]*lua.LFunction{}, events: map[string][]string{}, actions: map[string]bool{}, builtins: map[string]bool{}, setup: true}
 	for _, name := range actions {
 		e.actions[name] = true
+		e.builtins[name] = true
 	}
 	ok := false
 	defer func() {

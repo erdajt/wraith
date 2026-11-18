@@ -85,3 +85,43 @@ func TestLuaSlashCompletionRunsCommandsAndOpensTheirChildren(t *testing.T) {
 		t.Fatalf("slash callback failed: %q", a.Prompt.String())
 	}
 }
+
+func TestLuaOverridesExAndSlashCommandsExplicitly(t *testing.T) {
+	for _, name := range []string{"q", "q!", "qa", "qa!", "w", "w!", "wq", "settings.appearance"} {
+		t.Run(name, func(t *testing.T) {
+			a := pluginFixture(t, `wraith.commands.create("`+name+`", function(ctx) wraith.prompt.set(ctx.argument) end, "custom behavior", {replace=true, arguments=true})`)
+			choices := a.pluginCommands(name)
+			if len(choices) == 0 || choices[0].Name != name || choices[0].Description != "custom behavior" || !choices[0].NeedsArgument {
+				t.Fatal("override lost completion metadata")
+			}
+			a.Prompt.Set("/" + name)
+			a.key(tea.KeyMsg{Type: tea.KeyEnter})
+			if a.Prompt.String() != "/"+name+" " {
+				t.Fatal("argument command ran before receiving input")
+			}
+			for _, prefix := range []string{":", "/"} {
+				cmd := a.runCommand(prefix + name + " preserve spaces here")
+				if cmd == nil {
+					t.Fatalf("override rejected: %s", a.notice)
+				}
+				a.Update(cmd())
+				if a.Prompt.String() != "preserve spaces here" {
+					t.Fatal("override lost arguments")
+				}
+			}
+		})
+	}
+}
+
+func TestLuaDeletingCommandOverrideRestoresBuiltin(t *testing.T) {
+	a := pluginFixture(t, `
+wraith.commands.create("q", function() error("deleted") end, "override", {replace=true})
+wraith.commands.delete("q")
+wraith.keymap.set("chat.normal", "Q", "command.q")
+`)
+	a.width, a.height = 120, 40
+	a.windowAction("v")
+	if cmd := a.runCommand("q"); cmd != nil || len(a.windows) != 1 {
+		t.Fatal("deleted q override did not restore window close")
+	}
+}

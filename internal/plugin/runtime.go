@@ -13,6 +13,7 @@ import (
 
 type Command struct {
 	Name, Description, Callback string
+	NeedsArgument               bool
 }
 
 type Manifest struct {
@@ -57,6 +58,7 @@ type engine struct {
 	events    map[string][]string
 	cleanup   []*lua.LFunction
 	actions   map[string]bool
+	builtins  map[string]bool
 	effects   []Effect
 	snapshot  any
 	setup     bool

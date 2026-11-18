@@ -41,3 +41,39 @@ wraith.events.off(event)
 		}
 	}
 }
+
+func TestLuaCommandReplacementRequiresExplicitValidOptions(t *testing.T) {
+	for _, options := range []string{"", ", {replace=false}", ", {replace=1}", ", {replace=true, typo=true}", ", {replace=true, arguments=1}"} {
+		t.Run(options, func(t *testing.T) {
+			dir := t.TempDir()
+			source := `wraith.commands.create("q", function() end, "replacement"` + options + `)`
+			if err := os.WriteFile(filepath.Join(dir, "init.lua"), []byte(source), 0600); err != nil {
+				t.Fatal(err)
+			}
+			r, err := Open(t.Context(), dir, config.Default(), []string{"command.q"})
+			if err == nil {
+				r.Close()
+				t.Fatal("invalid replacement accepted")
+			}
+		})
+	}
+}
+
+func TestLuaCanReplaceAtCommandLimit(t *testing.T) {
+	dir := t.TempDir()
+	source := `
+for i = 1, 128 do wraith.commands.create("command-" .. i, function() end) end
+wraith.commands.create("command-1", function() end, "updated", {replace=true})
+`
+	if err := os.WriteFile(filepath.Join(dir, "init.lua"), []byte(source), 0600); err != nil {
+		t.Fatal(err)
+	}
+	r, err := Open(t.Context(), dir, config.Default(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	if len(r.Manifest().Commands) != 128 {
+		t.Fatal("replacement changed retained command count")
+	}
+}
