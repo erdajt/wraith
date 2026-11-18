@@ -13,19 +13,32 @@ import (
 )
 
 type rendered struct {
-	Block    int
-	Thinking bool
-	Text     string
-	Message  int
+	Block        int
+	Thinking     bool
+	Text         string
+	Message      int
+	Section      string
+	Source, Cell int
 }
 
 // transcript renders conversation rows with message, thinking and code-block metadata.
 func (a *App) transcript(w int) []rendered {
+	return a.windowTranscript(a.conversationView, w, a.focus == "chat")
+}
+
+// windowTranscript renders one view without borrowing another window's navigation state.
+func (a *App) windowTranscript(view *conversationView, w int, focused bool) []rendered {
 	p := a.Config.Palette()
 	var out []rendered
+	section, sourceLine, sourceCell := "summary", 0, 0
 	add := func(text string, index int) {
+		cell := sourceCell
 		for _, line := range strings.Split(ansi.Hardwrap(text, w, true), "\n") {
-			out = append(out, rendered{Text: line, Message: index, Block: -1})
+			if section == "thinking" {
+				line = ink(p.Muted, line)
+			}
+			out = append(out, rendered{Text: line, Message: index, Block: -1, Section: section, Source: sourceLine, Cell: cell})
+			cell += ansi.StringWidth(line)
 		}
 	}
 
@@ -50,7 +63,7 @@ func (a *App) transcript(w int) []rendered {
 		}
 
 		marker := "◇"
-		if a.focus == "chat" && a.selected == i {
+		if focused && view.selected == i {
 			marker = "◆"
 		}
 
@@ -61,6 +74,7 @@ func (a *App) transcript(w int) []rendered {
 		if m.Interrupted {
 			meta += " · interrupted"
 		}
+		section, sourceLine, sourceCell = "header", 0, 0
 		add(bold(c, marker+" "+label)+ink(p.Muted, fmt.Sprintf("  %02d%s", i+1, meta)), i)
 
 		if m.Thinking != "" {
@@ -69,6 +83,7 @@ func (a *App) transcript(w int) []rendered {
 			if expanded {
 				arrow = "▾"
 			}
+			section = "thinking-header"
 			start := len(out)
 			for _, line := range strings.Split(ansi.Hardwrap(ink(p.Muted, arrow+" thinking · ")+keyHints(a.Config.Keys["thinking_toggle"]+" or click to toggle", p), w, true), "\n") {
 				add(ink(p.Accent, line), i)
@@ -78,7 +93,9 @@ func (a *App) transcript(w int) []rendered {
 			}
 
 			if expanded {
-				for _, line := range strings.Split(ansi.Hardwrap(a.expandStyled(clean(m.Thinking)), w, true), "\n") {
+				section = "thinking"
+				for n, line := range strings.Split(a.expandStyled(clean(m.Thinking)), "\n") {
+					sourceLine = n
 					add(ink(p.Muted, line), i)
 				}
 			}
@@ -87,14 +104,17 @@ func (a *App) transcript(w int) []rendered {
 		lines, nextBlock := markdown.Render(clean(contextual.DisplayContent(m.Content)), w, p, block, a.expandStyled)
 		block = nextBlock
 		for _, line := range lines {
+			section, sourceLine, sourceCell = "body", line.Source, line.Cell
 			start := len(out)
 			add(line.Text, i)
 			for j := start; j < len(out); j++ {
 				out[j].Block = line.Block
 			}
 		}
+		section, sourceLine, sourceCell = "gap", 0, 0
 		add("", i)
 	}
+	view.reflow(out)
 	return out
 }
 

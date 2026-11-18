@@ -85,6 +85,11 @@ type terminalMsg struct {
 }
 
 type App struct {
+	*conversationView
+	windows                       map[uint64]*conversationView
+	windowTree                    *windowNode
+	windowID, nextWindowID        uint64
+	windowPending                 bool
 	Variables                     variables.Snapshot
 	variableInventory, envPending string
 	envScope                      variables.Scope
@@ -109,62 +114,53 @@ type App struct {
 	lastPoll    map[string]time.Time
 	pollNext    map[string]int64
 
-	inputHistory                       []string
-	inputIndex, inputDraftPosition     int
-	inputDraft                         string
-	Directory                          string
-	forkIndex                          int
-	chatMotionPending, chatMotionCount string
-	chatZ                              bool
-	chatCursor, chatColumn             int
-	visualMode                         string
-	visualRow, visualColumn            int
-	helpReturn                         *menu
-	thinkingExpanded                   map[string]bool
-	agentSteps                         int
-	pendingAgent                       bool
-	selectedBlock                      editor.Block
-	proposal                           *proposal
-	executing                          bool
-	activeRun                          runner.Record
-	workers                            sync.WaitGroup
-	Config                             config.Config
-	Paths                              config.Paths
-	Store                              store.Store
-	Session                            session.Session
-	Client                             *provider.Client
-	Info                               ollama.Info
-	Instructions                       string
-	Prompt                             *vim.Buffer
-	width, height                      int
-	focus                              string
-	offset, selected                   int
-	follow                             bool
-	popup                              *menu
-	command, search                    string
-	chatCount                          string
-	chatG                              bool
-	completionQuery                    string
-	completionIndex                    int
-	commandMode, searchMode            bool
-	panes                              [2]*pane
-	busy, compacting                   bool
-	partial                            session.Message
-	cancel                             context.CancelFunc
-	events                             chan tea.Msg
-	done                               chan struct{}
-	once                               sync.Once
-	notice                             string
-	frame                              int
-	phase                              string
-	loadCancel                         context.CancelFunc
-	loadSerial                         uint64
-	catalogSerial                      uint64
-	loading                            bool
-	connected                          bool
-	demo                               bool
-	showThinking                       bool
-	pendingPrompt                      string
+	inputHistory                   []string
+	inputIndex, inputDraftPosition int
+	inputDraft                     string
+	Directory                      string
+	forkIndex                      int
+	helpReturn                     *menu
+	thinkingExpanded               map[string]bool
+	agentSteps                     int
+	pendingAgent                   bool
+	selectedBlock                  editor.Block
+	proposal                       *proposal
+	executing                      bool
+	activeRun                      runner.Record
+	workers                        sync.WaitGroup
+	Config                         config.Config
+	Paths                          config.Paths
+	Store                          store.Store
+	Session                        session.Session
+	Client                         *provider.Client
+	Info                           ollama.Info
+	Instructions                   string
+	Prompt                         *vim.Buffer
+	width, height                  int
+	focus                          string
+	popup                          *menu
+	command                        string
+	completionQuery                string
+	completionIndex                int
+	commandMode, searchMode        bool
+	panes                          [2]*pane
+	busy, compacting               bool
+	partial                        session.Message
+	cancel                         context.CancelFunc
+	events                         chan tea.Msg
+	done                           chan struct{}
+	once                           sync.Once
+	notice                         string
+	frame                          int
+	phase                          string
+	loadCancel                     context.CancelFunc
+	loadSerial                     uint64
+	catalogSerial                  uint64
+	loading                        bool
+	connected                      bool
+	demo                           bool
+	showThinking                   bool
+	pendingPrompt                  string
 }
 
 // New initializes the workspace, loads private context and recovers command history outside demo mode.
@@ -193,7 +189,11 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 		dir = real
 	}
 
-	a := &App{inputIndex: -1, Directory: dir, Config: c, Paths: p, Store: store.Store{Root: p.Data}, Session: s, Client: provider.New(c), Instructions: string(instructions), Prompt: vim.New(), width: 100, height: 30, chatCursor: -1, focus: "prompt", follow: true, events: make(chan tea.Msg, 128), done: make(chan struct{}), demo: demo, notice: "/help commands · " + c.Keys["send"] + " send · " + c.Keys["editor"] + " editor"}
+	a := &App{inputIndex: -1, Directory: dir, Config: c, Paths: p, Store: store.Store{Root: p.Data}, Session: s, Client: provider.New(c), Instructions: string(instructions), Prompt: vim.New(), width: 100, height: 30, conversationView: &conversationView{chatCursor: -1, follow: true}, focus: "prompt", events: make(chan tea.Msg, 128), done: make(chan struct{}), demo: demo, notice: "/help commands · " + c.Keys["send"] + " send · " + c.Keys["editor"] + " editor"}
+
+	a.windowID, a.nextWindowID = 1, 1
+	a.windows = map[uint64]*conversationView{1: a.conversationView}
+	a.windowTree = &windowNode{id: 1}
 
 	if !demo {
 		if err := a.refreshVariables(); err != nil {

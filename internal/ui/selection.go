@@ -15,7 +15,7 @@ import (
 type copiedMsg struct{ Err error }
 
 // selectionBounds orders visual selection endpoints by row and column.
-func (a *App) selectionBounds() (int, int, int, int) {
+func (a *conversationView) selectionBounds() (int, int, int, int) {
 	first, left, last, right := a.visualRow, a.visualColumn, a.chatCursor, a.chatColumn
 	if first > last || first == last && left > right {
 		first, last = last, first
@@ -106,7 +106,7 @@ func (a *App) copyText(text string, linewise bool) tea.Cmd {
 }
 
 // selectionLine highlights selected display columns or the entirety of a touched code block.
-func (a *App) selectionLine(text string, row int, p palette, lines []rendered) string {
+func (a *conversationView) selectionLine(text string, row int, p palette, lines []rendered) string {
 	if a.visualMode == "" {
 		return text
 	}
