@@ -12,7 +12,7 @@ func TestMappingsConsumeChordsAndPreserveVimCounts(t *testing.T) {
 	a := fixture(t)
 	a.width, a.height, a.focus = 120, 40, "chat"
 	a.Session.Messages = []session.Message{{Role: "assistant", Content: "one\ntwo\nthree\nfour\nfive"}}
-	a.Config.Keymaps = []keymap.Binding{{Mode: "chat.normal", Keys: "j", Action: "window.split_vertical"}, {Mode: "chat.normal", Keys: "<C-h>", Action: "window.left"}}
+	a.Config.Keymaps = []keymap.Binding{{Mode: "chat.normal", Keys: "j", Input: "j"}, {Mode: "chat.normal", Keys: "s", Action: "window.split_vertical"}, {Mode: "chat.normal", Keys: "<C-h>", Action: "window.left"}}
 	var err error
 	a.keymaps, err = a.buildKeymaps(a.Config)
 	if err != nil {
@@ -24,7 +24,7 @@ func TestMappingsConsumeChordsAndPreserveVimCounts(t *testing.T) {
 	if len(a.windows) != 1 || a.chatCursor != 2 {
 		t.Fatal("normal mapping intercepted a counted vim motion")
 	}
-	a.key(key("j"))
+	a.key(key("s"))
 	if len(a.windows) != 2 {
 		t.Fatal("normal mapping did not run")
 	}

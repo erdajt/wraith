@@ -64,7 +64,7 @@ func (a *App) callPlugin(callback, event, argument string) tea.Cmd {
 		messages = append(messages, map[string]string{"role": message.Role, "content": strings.ToValidUTF8(content, "")})
 	}
 	slices.Reverse(messages)
-	snapshot := map[string]any{"argument": argument, "event": event, "prompt": a.Prompt.String(), "windows": windows, "session": map[string]any{"id": a.Session.ID, "model": a.Session.Model, "provider": a.Config.Provider, "directory": a.Directory, "messages": messages, "message_count": len(a.Session.Messages)}}
+	snapshot := map[string]any{"argument": argument, "event": event, "prompt": a.Prompt.String(), "input": a.inputSnapshot(), "windows": windows, "session": map[string]any{"id": a.Session.ID, "model": a.Session.Model, "provider": a.Config.Provider, "directory": a.Directory, "messages": messages, "message_count": len(a.Session.Messages)}}
 	m := pluginResultMsg{Runtime: a.plugins, Owner: a.keyOwner(), Draft: a.Prompt.String(), Digest: configDigest(a.Config), Target: a.pluginTarget(), Depth: a.pluginDepth + 1}
 	result, err := a.plugins.Submit(callback, event, snapshot, a.Config)
 	if err != nil {
@@ -172,6 +172,10 @@ func (a *App) pluginTarget() [32]byte {
 	if a.selected >= 0 && a.selected < len(a.Session.Messages) {
 		message = a.Session.Messages[a.selected]
 	}
-	data, _ := json.Marshal([]any{a.selected, a.chatCursor, a.chatColumn, a.visualMode, a.inputMode(), message})
+	var readerDigest [32]byte
+	if reader := a.inputReader(); reader != nil {
+		readerDigest = sha256.Sum256([]byte(reader.Buffer.String()))
+	}
+	data, _ := json.Marshal([]any{fmt.Sprintf("%p", a.inputReader()), readerDigest, a.selected, a.chatCursor, a.chatColumn, a.visualMode, a.inputMode(), a.inputSnapshot(), message})
 	return sha256.Sum256(data)
 }

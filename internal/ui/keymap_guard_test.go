@@ -31,7 +31,7 @@ func TestPromptSearchModeCanBeMapped(t *testing.T) {
 	}
 	a.Prompt.Key("esc", "")
 	a.Prompt.Key("/", "")
-	if mode := a.inputMode(); mode != "search" {
+	if mode := a.inputMode(); mode != "prompt.search" {
 		t.Fatalf("search input has unregistrable mode %q", mode)
 	}
 }

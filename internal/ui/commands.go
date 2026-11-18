@@ -54,7 +54,11 @@ func (a *App) runCommand(line string) tea.Cmd {
 	case "keymaps":
 		var lines []string
 		for _, binding := range a.keymaps.Bindings() {
-			lines = append(lines, binding.Mode+"  "+binding.Keys+"  "+binding.Action+"\n  "+binding.Description)
+			target := binding.Action
+			if binding.Input != "" {
+				target = "keys: " + binding.Input
+			}
+			lines = append(lines, binding.Mode+"  "+binding.Keys+"  "+target+"\n  "+binding.Description)
 		}
 		a.showText("help", "active keymaps", strings.Join(lines, "\n\n"))
 		return nil

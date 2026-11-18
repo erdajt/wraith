@@ -80,6 +80,12 @@ func (a *App) keyDefault(k tea.KeyMsg) tea.Cmd {
 		return a.chatKey(k)
 	}
 
+	return a.promptInput(k)
+}
+
+// promptInput applies native editing and clipboard changes without submitting the draft.
+func (a *App) promptInput(k tea.KeyMsg) tea.Cmd {
+	key := k.String()
 	text := ""
 	if k.Type == tea.KeyRunes || k.Type == tea.KeySpace {
 		text = string(k.Runes)

@@ -60,6 +60,32 @@ func (a *App) chatKey(k tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 
+	if a.chatMotionPending == "" {
+		switch key {
+		case "enter":
+			a.ensureChatCursor()
+			lines := a.transcript(a.chatWidth())
+			if len(lines) > 0 && lines[a.chatCursor].Block >= 0 {
+				return a.editCursorBlock(lines[a.chatCursor])
+			}
+			return a.selectedBlocks()
+		case "i":
+			a.focus, a.Prompt.Mode = "prompt", "insert"
+			return nil
+		case "?":
+			return a.runCommand("help")
+		}
+	}
+	return a.chatInput(k)
+}
+
+// chatInput navigates transcript text without opening editors or running workspace commands.
+func (a *App) chatInput(k tea.KeyMsg) tea.Cmd {
+	key := k.String()
+	if a.chatMotionPending != "" {
+		return a.moveChatText(key, 1)
+	}
+
 	if len(key) == 1 && key[0] >= '0' && key[0] <= '9' && (key != "0" || a.chatCount != "") {
 		if len(a.chatCount) < 6 {
 			a.chatCount += key
@@ -145,16 +171,6 @@ func (a *App) chatKey(k tea.KeyMsg) tea.Cmd {
 		return nil
 	case "^", "{", "}", "w", "W", "b", "B", "e", "E", "f", "F", "t", "T", "%":
 		return a.moveChatText(key, count)
-	case "enter":
-		if len(lines) > 0 && lines[a.chatCursor].Block >= 0 {
-			return a.editCursorBlock(lines[a.chatCursor])
-		}
-		return a.selectedBlocks()
-	case "i":
-		a.focus = "prompt"
-		a.Prompt.Mode = "insert"
-	case "?":
-		return a.runCommand("help")
 	}
 
 	a.chatCursor = max(0, min(a.chatCursor, len(lines)-1))

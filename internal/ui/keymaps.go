@@ -14,7 +14,7 @@ type keymapTimeoutMsg uint64
 func (a *App) inputMode() string {
 	if a.popup != nil {
 		if a.popup.Reader != nil {
-			return "output"
+			return "output." + editorMode(a.popup.Reader.Buffer.Mode, a.popup.Reader.Buffer.Pending)
 		}
 		return "picker"
 	}
@@ -24,7 +24,7 @@ func (a *App) inputMode() string {
 			index = 1
 		}
 		if p := a.panes[index]; p != nil && p.Reader != nil {
-			return "terminal.copy"
+			return "terminal.copy." + editorMode(p.Reader.Buffer.Mode, p.Reader.Buffer.Pending)
 		}
 		return "terminal"
 	}
@@ -32,27 +32,19 @@ func (a *App) inputMode() string {
 		return "command"
 	}
 	if a.searchMode {
-		return "search"
+		return "chat.search"
 	}
 	if a.focus == "chat" {
-		if a.chatMotionPending != "" || a.chatCount != "" || a.chatG || a.chatZ {
+		mode := "normal"
+		if a.visualMode != "" {
+			mode = a.visualMode
+		}
+		if a.chatG || a.chatZ {
 			return "chat.operator"
 		}
-		if a.visualMode != "" {
-			return "chat.visual"
-		}
-		return "chat.normal"
+		return "chat." + editorMode(mode, a.chatMotionPending)
 	}
-	if a.Prompt.Mode == "search" {
-		return "search"
-	}
-	if a.Prompt.Pending != "" || a.Prompt.Count != "" {
-		return "prompt.operator"
-	}
-	if strings.HasPrefix(a.Prompt.Mode, "visual") {
-		return "prompt.visual"
-	}
-	return "prompt." + a.Prompt.Mode
+	return "prompt." + editorMode(a.Prompt.Mode, a.Prompt.Pending)
 }
 
 // keyOwner identifies the session, window and input surface that owns a sequence.
@@ -137,6 +129,9 @@ func (a *App) mapKey(k tea.KeyMsg, defaults, expired bool) tea.Cmd {
 				return cmd
 			}
 		}
+		if match.Input != "" {
+			return a.feedInput(match.Input)
+		}
 		return a.runAction(match.Action, "")
 	}
 	if defaults {
@@ -177,6 +172,9 @@ func (a *App) keymapTimeout(serial uint64) tea.Cmd {
 			if cmd, handled := a.slashKey(keys[0]); handled {
 				return cmd
 			}
+		}
+		if match.Input != "" {
+			return a.feedInput(match.Input)
 		}
 		return a.runAction(match.Action, "")
 	}

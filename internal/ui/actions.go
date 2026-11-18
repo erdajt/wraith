@@ -18,6 +18,8 @@ type action struct {
 // builtinActions exposes workspace operations through one named dispatch table.
 func (a *App) builtinActions() map[string]action {
 	actions := map[string]action{
+		"input.feed":     {"apply native editor keys", a.feedInput},
+		"input.set_mode": {"change focused editor mode", a.setInputMode},
 		"prompt.set": {"replace the shared draft", func(text string) tea.Cmd {
 			a.Prompt.Set(text)
 			return nil
@@ -148,6 +150,9 @@ func (a *App) buildKeymaps(c config.Config) (*keymap.Registry, error) {
 	bindings = append(bindings, c.Keymaps...)
 	for i := range bindings {
 		binding := &bindings[i]
+		if binding.Input != "" {
+			continue
+		}
 		entry, ok := a.actions[binding.Action]
 		if !ok {
 			return nil, fmt.Errorf("keymap %q: unknown action %q", binding.Keys, binding.Action)
@@ -174,6 +179,9 @@ func (a *App) runAction(name, arg string) tea.Cmd {
 
 // actionAllowed preserves input ownership for mapped actions and plugin effects.
 func (a *App) actionAllowed(name string) bool {
+	if name == "input.feed" || name == "input.set_mode" {
+		return a.inputAvailable()
+	}
 	if name == "noop" || (name == "app.quit" || name == "app.quit_force" || name == "app.save_quit") || name == "operation.cancel" || name == "notify" || strings.HasPrefix(name, "lua.callback.") {
 		return true
 	}
