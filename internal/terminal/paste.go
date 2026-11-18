@@ -46,24 +46,18 @@ func preparePaste(argv, environment []string) (*pasteBridge, []string, error) {
 	}
 	p.reply, p.children = read, append(p.children, write)
 
-	home, original, configured := "", "", false
+	original, configured := "", false
 	for _, entry := range environment {
 		name, value, _ := strings.Cut(entry, "=")
-		if name == "HOME" {
-			home = value
-		}
 		if name == "ZDOTDIR" {
 			original, configured = value, true
 		}
-	}
-	if !configured {
-		original = home
 	}
 	script := "unset ZDOTDIR\n"
 	if configured {
 		script = "export ZDOTDIR=" + shellQuote(original) + "\n"
 	}
-	script += "[[ -r " + shellQuote(filepath.Join(original, ".zshenv")) + " ]] && source " + shellQuote(filepath.Join(original, ".zshenv")) + "\n"
+	script += `[[ -r "${ZDOTDIR-$HOME}/.zshenv" ]] && source "${ZDOTDIR-$HOME}/.zshenv"` + "\n"
 	script += "typeset -g _wraith_paste_root=" + shellQuote(root) + "\n" + zshPaste
 	if err = os.WriteFile(filepath.Join(root, ".zshenv"), []byte(script), 0600); err != nil {
 		p.close()
