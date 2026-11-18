@@ -44,6 +44,7 @@ func (a *App) forkPrompt() tea.Cmd {
 		a.notice = err.Error()
 		return nil
 	}
+	a.remapConversation(a.Session.Messages, branch.Messages)
 	a.Session = branch
 	a.Prompt.Set(original.Messages[index].Content)
 	a.Prompt.Mode = "normal"

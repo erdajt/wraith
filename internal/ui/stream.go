@@ -128,7 +128,9 @@ func (a *App) startChat() tea.Cmd {
 	a.cancel = cancel
 	a.busy = true
 	a.compacting = false
-	a.follow = true
+	if len(a.windows) == 1 {
+		a.follow = true
+	}
 	a.partial = session.Message{Role: "assistant"}
 	a.phase = "connecting"
 
@@ -214,7 +216,11 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 	a.partial.Thinking = a.Variables.Redact(a.partial.Thinking)
 	if a.partial.Content != "" || a.partial.Thinking != "" {
 		a.Session.Messages = append(a.Session.Messages, a.partial)
-		a.selected = len(a.Session.Messages) - 1
+		for _, view := range a.windows {
+			if view.follow {
+				view.selected = len(a.Session.Messages) - 1
+			}
+		}
 	}
 	a.Session.Usage = m.Chunk.Usage(contextual.Estimate(contextual.ForChat(a.SessionWithoutLastAssistant(), a.Config, a.chatInstructions())))
 	a.partial = session.Message{}

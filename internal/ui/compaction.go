@@ -87,11 +87,9 @@ func (a *App) finishCompact(m compactMsg) tea.Cmd {
 		a.notice = "could not commit compacted context: " + err.Error()
 		return nil
 	}
+	a.remapConversation(a.Session.Messages, m.Session.Messages)
 	a.Session = m.Session
-	a.resetChatNavigation()
 	a.thinkingExpanded = map[string]bool{}
-	a.follow = true
-	a.selected = max(0, len(a.Session.Messages)-1)
 	a.notice = "compacted · original context archived · pins and prior facts retained"
 
 	if a.pendingPrompt != "" {

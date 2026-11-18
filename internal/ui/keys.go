@@ -27,13 +27,16 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 	}
 
 	if key == a.Config.Keys["terminal_overlay"] {
+		a.windowPending = false
 		return a.toggleTerminal(0)
 	}
 	if key == a.Config.Keys["terminal_split"] {
+		a.windowPending = false
 		return a.toggleTerminal(1)
 	}
 
 	if key == a.Config.Keys["cancel"] && (a.popup != nil || !strings.HasPrefix(a.focus, "terminal")) {
+		a.windowPending = false
 		a.stopAgent()
 		if a.cancel != nil && a.busy {
 			a.cancel()

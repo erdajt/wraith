@@ -51,16 +51,26 @@ func (a *App) mouse(m tea.MouseMsg) tea.Cmd {
 		return nil
 	}
 
-	lines := a.transcript(a.chatWidth())
-	start := min(a.offset, max(0, len(lines)-a.bodyHeight()))
-	if a.follow {
-		start = max(0, len(lines)-a.bodyHeight())
-	}
-	index := start + m.Y - 3
-	if index >= 0 && index < len(lines) && lines[index].Thinking {
-		a.selected = lines[index].Message
-		a.focus = "chat"
-		a.toggleThinking(a.selected)
+	for _, place := range a.windowPlaces() {
+		if m.X < place.x || m.X >= place.x+place.width || m.Y < place.y || m.Y >= place.y+place.height {
+			continue
+		}
+		a.focusWindow(place.id)
+		lines := a.transcript(a.chatWidth())
+		start := max(0, min(a.offset, len(lines)-place.height))
+		if a.follow {
+			start = max(0, len(lines)-place.height)
+		}
+		index := start + m.Y - place.y
+		if index < len(lines) {
+			a.chatCursor, a.chatColumn = index, max(0, m.X-place.x-2)
+			a.selected = lines[index].Message
+			a.revealCursor(len(lines))
+			if lines[index].Thinking {
+				a.toggleThinking(a.selected)
+			}
+		}
+		break
 	}
 	return nil
 }
