@@ -37,7 +37,7 @@ func (a *App) dispatchKeys(m queuedKeysMsg) tea.Cmd {
 			cmd = a.keyDefault(key)
 		}
 		if cmd == nil {
-			if m.Mapped && a.popup != nil && a.popup.Kind == "leader" {
+			if a.popup != nil && a.popup.Kind == "leader" {
 				m.Owner = a.keyOwner()
 			}
 			continue

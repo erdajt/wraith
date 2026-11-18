@@ -85,3 +85,18 @@ func TestLegacyBindingCollisionIsDeterministic(t *testing.T) {
 		t.Fatalf("same configured chord selects different actions across reloads: %v", seen)
 	}
 }
+
+func TestUnmatchedLeaderPrefixRetainsDefaultBinding(t *testing.T) {
+	a := fixture(t)
+	a.Prompt.Mode = "normal"
+	a.Config.Keymaps = []keymap.Binding{{Mode: "prompt.normal", Keys: "<Space>sa", Action: "command.settings.appearance"}}
+	var err error
+	a.keymaps, err = a.buildKeymaps(a.Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.key(key(" ca"))
+	if a.popup == nil || a.popup.Kind != "archives" {
+		t.Fatalf("default leader binding lost after custom prefix: %+v", a.popup)
+	}
+}
