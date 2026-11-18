@@ -19,7 +19,7 @@ type cleanupHook struct {
 // addCleanup gives each hook a stable identity so rollback disposes only newly owned resources.
 func (e *engine) addCleanup(function *lua.LFunction) {
 	e.serial++
-	e.cleanup = append(e.cleanup, cleanupHook{id: e.serial, function: function})
+	e.cleanup = append(e.cleanup, cleanupHook{id: e.serial, owner: e.owner, function: function})
 }
 
 // disposeHooks releases resources on the VM owner without retaining a cancelled callback deadline.
@@ -33,11 +33,11 @@ func (e *engine) disposeHooks(hooks []cleanupHook) error {
 	var failures []error
 	for i := len(hooks) - 1; i >= 0; i-- {
 		if err := ctx.Err(); err != nil {
-			failures = append(failures, fmt.Errorf("plugin cleanup: %w", err))
+			failures = append(failures, fmt.Errorf("plugin cleanup %s: %w", hooks[i].owner, err))
 			break
 		}
 		if err := e.L.CallByParam(lua.P{Fn: hooks[i].function, NRet: 0, Protect: true}); err != nil {
-			failures = append(failures, fmt.Errorf("plugin cleanup: %w", err))
+			failures = append(failures, fmt.Errorf("plugin cleanup %s: %w", hooks[i].owner, err))
 		}
 	}
 	return errors.Join(failures...)
@@ -48,15 +48,6 @@ func (e *engine) teardown(start int) error {
 	e.closing = true
 	hooks := append(slices.Clone(e.cleanup[start:]), e.disposing...)
 	e.cleanup, e.disposing = e.cleanup[:start], nil
-	slices.SortFunc(hooks, func(a, b cleanupHook) int {
-		if a.id < b.id {
-			return -1
-		}
-		if a.id > b.id {
-			return 1
-		}
-		return 0
-	})
 	return e.disposeHooks(hooks)
 }
 

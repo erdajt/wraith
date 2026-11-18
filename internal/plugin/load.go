@@ -86,6 +86,11 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 		}
 	}
 	slices.Sort(e.manifest.Events)
+	hooks := e.disposing
+	e.disposing = nil
+	if err := e.disposeHooks(hooks); err != nil {
+		return nil, err
+	}
 	e.setup, ok = false, true
 	return e, nil
 }

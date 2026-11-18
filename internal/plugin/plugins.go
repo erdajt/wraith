@@ -3,6 +3,8 @@ package plugin
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -11,7 +13,23 @@ import (
 func (e *engine) installPlugins(api *lua.LTable) {
 	L := e.L
 	e.loaded = map[string]bool{}
+	e.packages = map[string]packageRecord{}
 	api.RawSetString("plugins", L.SetFuncs(L.NewTable(), map[string]lua.LGFunction{
+		"list": func(L *lua.LState) int {
+			names := L.NewTable()
+			for _, name := range slices.Sorted(maps.Keys(e.loaded)) {
+				names.Append(lua.LString(name))
+			}
+			L.Push(names)
+			return 1
+		},
+		"unload": func(L *lua.LState) int {
+			e.registration(L)
+			if err := e.unloadPlugin(L.CheckString(1)); err != nil {
+				L.RaiseError("%v", err)
+			}
+			return 0
+		},
 		"load": func(L *lua.LState) int {
 			e.registration(L)
 			name := L.CheckString(1)
@@ -29,6 +47,13 @@ func (e *engine) installPlugins(api *lua.LTable) {
 // loadPlugin restores partial registrations and releases new resources even when Lua catches failure.
 func (e *engine) loadPlugin(name string, options *lua.LTable) (err error) {
 	before := e.captureRegistry()
+	parentOwner := e.owner
+	e.serial++
+	owner := fmt.Sprintf("plugin:%s:%d", name, e.serial)
+	e.owner = owner
+	e.loaded[name] = true
+	e.packages[name] = packageRecord{owner: owner}
+	defer func() { e.owner = parentOwner }()
 	defer func() {
 		if err != nil {
 			hooks := e.restoreRegistry(before)
@@ -62,6 +87,21 @@ func (e *engine) loadPlugin(name string, options *lua.LTable) (err error) {
 		e.addCleanup(cleanup)
 	}
 	L.Pop(1)
-	e.loaded[name] = true
+	for parent, record := range e.packages {
+		if record.owner == parentOwner {
+			record.dependencies = append(record.dependencies, owner)
+			e.packages[parent] = record
+		}
+	}
+	var owned []cleanupHook
+	e.cleanup = slices.DeleteFunc(e.cleanup, func(hook cleanupHook) bool {
+		if hook.owner != owner {
+			return false
+		}
+		owned = append(owned, hook)
+		return true
+	})
+	e.cleanup = append(e.cleanup, owned...)
+	e.dirty = !e.setup
 	return nil
 }

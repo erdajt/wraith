@@ -90,6 +90,7 @@ type engine struct {
 	dirty     bool
 	rollback  *registryState
 	loaded    map[string]bool
+	packages  map[string]packageRecord
 }
 
 // Open loads one candidate on its VM owner; callers install it only after validating its manifest.
@@ -170,7 +171,7 @@ func (r *Runtime) Submit(callback, event string, snapshot any, c config.Config) 
 	}
 }
 
-// Close cancels queued and running callbacks; bounded teardown continues on the VM owner.
+// Close cancels queued and running callbacks; teardown continues on the VM owner.
 func (r *Runtime) Close() {
 	r.cancel()
 	r.cancelWaiters()

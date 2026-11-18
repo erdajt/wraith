@@ -25,6 +25,7 @@ type registryState struct {
 	disposing       []cleanupHook
 	effects         []Effect
 	dirty           bool
+	packages        map[string]packageRecord
 }
 
 // cloneManifest detaches nested configuration and registration values across runtime ownership.
@@ -41,7 +42,7 @@ func (e *engine) captureRegistry() registryState {
 	for name, ids := range e.events {
 		events[name] = slices.Clone(ids)
 	}
-	return registryState{e.cloneOwnership(), cloneManifest(e.manifest), maps.Clone(e.functions), events, maps.Clone(e.actions), maps.Clone(e.loaded), slices.Clone(e.cleanup), slices.Clone(e.disposing), slices.Clone(e.effects), e.dirty}
+	return registryState{e.cloneOwnership(), cloneManifest(e.manifest), maps.Clone(e.functions), events, maps.Clone(e.actions), maps.Clone(e.loaded), slices.Clone(e.cleanup), slices.Clone(e.disposing), slices.Clone(e.effects), e.dirty, e.clonePackages()}
 }
 
 // restoreRegistry drops staged registrations without pretending to roll back arbitrary Lua state.
@@ -56,6 +57,7 @@ func (e *engine) restoreRegistry(s registryState) []cleanupHook {
 			discarded = append(discarded, hook)
 		}
 	}
+	e.packages = s.packages
 	e.ownershipLayers = s.ownershipLayers
 	e.manifest, e.functions, e.events = s.manifest, s.functions, s.events
 	e.actions, e.loaded, e.cleanup = s.actions, s.loaded, s.cleanup
