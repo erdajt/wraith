@@ -21,6 +21,8 @@ type PTY struct {
 	file   *os.File
 	cmd    *exec.Cmd
 	Events chan Event
+	Pastes <-chan PasteEvent
+	paste  *pasteBridge
 	done   chan struct{}
 	waited chan struct{}
 	once   sync.Once
@@ -61,6 +63,21 @@ func Start(argv []string, dir string, w, h int, environment ...string) (*PTY, er
 	cmd.Stderr = slave
 	cmd.Env = append(os.Environ(), environment...)
 	cmd.Env = append(cmd.Env, "TERM=xterm-256color", "COLORTERM=truecolor", "WRAITH_TERMINAL=1")
+	bridge, environment, err := preparePaste(argv, cmd.Env)
+	if err != nil {
+		f.Close()
+		return nil, err
+	}
+	cmd.Env = environment
+	started := false
+	if bridge != nil {
+		cmd.ExtraFiles = bridge.children
+		defer func() {
+			if !started {
+				bridge.close()
+			}
+		}()
+	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true, Setctty: true, Ctty: 0}
 	p := &PTY{file: f, cmd: cmd, Events: make(chan Event, 128), done: make(chan struct{}), waited: make(chan struct{})}
 	if err = p.Resize(w, h); err != nil {
@@ -70,6 +87,14 @@ func Start(argv []string, dir string, w, h int, environment ...string) (*PTY, er
 	if err = cmd.Start(); err != nil {
 		f.Close()
 		return nil, err
+	}
+	started = true
+	if bridge != nil {
+		p.paste, p.Pastes = bridge, bridge.events
+		for _, child := range bridge.children {
+			_ = child.Close()
+		}
+		go bridge.read()
 	}
 	go func() {
 		_ = cmd.Wait()
@@ -110,7 +135,10 @@ func (p *PTY) read() {
 
 // Write writes input bytes to the pseudo-terminal.
 func (p *PTY) Write(data []byte) error {
-	_, err := p.file.Write(data)
+	n, err := p.file.Write(data)
+	if err == nil && n != len(data) {
+		return io.ErrShortWrite
+	}
 	return err
 }
 
@@ -124,6 +152,9 @@ func (p *PTY) Close() {
 	p.once.Do(func() {
 		close(p.done)
 		_ = p.file.Close()
+		if p.paste != nil {
+			p.paste.close()
+		}
 		_ = syscall.Kill(-p.cmd.Process.Pid, syscall.SIGHUP)
 		go func() {
 			select {
