@@ -58,19 +58,23 @@ type Model struct {
 	Size int64  `json:"size"`
 }
 
+// Models lists models installed on the configured server.
 func (c *Client) Models(ctx context.Context) ([]Model, error) {
 	r, err := http.NewRequestWithContext(ctx, http.MethodGet, c.Base+"/api/tags", nil)
 	if err != nil {
 		return nil, err
 	}
+
 	resp, err := c.HTTP.Do(r)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("ollama model list: http %d", resp.StatusCode)
 	}
+
 	var data struct {
 		Models []Model `json:"models"`
 	}
@@ -85,15 +89,18 @@ type Client struct {
 	HTTP *http.Client
 }
 
+// New creates a client whose requests use their supplied context for cancellation.
 func New(base string) *Client {
 	return &Client{Base: strings.TrimRight(base, "/"), HTTP: &http.Client{Timeout: 0}}
 }
 
+// do posts json and reports server errors with a bounded response excerpt.
 func (c *Client) do(ctx context.Context, path string, payload any) (*http.Response, error) {
 	b, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
 	}
+
 	r, err := http.NewRequestWithContext(ctx, http.MethodPost, c.Base+path, bytes.NewReader(b))
 	if err != nil {
 		return nil, err
@@ -103,14 +110,18 @@ func (c *Client) do(ctx context.Context, path string, payload any) (*http.Respon
 	if err != nil {
 		return nil, fmt.Errorf("ollama: %w", err)
 	}
+
 	if resp.StatusCode != http.StatusOK {
 		defer resp.Body.Close()
+
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 8192))
 		return nil, fmt.Errorf("ollama %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
+
 	return resp, nil
 }
 
+// Show loads model metadata and derives its advertised context window.
 func (c *Client) Show(ctx context.Context, model string) (Info, error) {
 	var info Info
 	resp, err := c.do(ctx, "/api/show", map[string]string{"model": model})
@@ -118,12 +129,14 @@ func (c *Client) Show(ctx context.Context, model string) (Info, error) {
 		return info, err
 	}
 	defer resp.Body.Close()
+
 	var data struct {
 		Info
 		ModelInfo map[string]json.RawMessage `json:"model_info"`
 	}
 	err = json.NewDecoder(io.LimitReader(resp.Body, 4<<20)).Decode(&data)
 	info = data.Info
+
 	for key, raw := range data.ModelInfo {
 		if strings.HasSuffix(key, ".context_length") {
 			var capacity int
@@ -134,9 +147,11 @@ func (c *Client) Show(ctx context.Context, model string) (Info, error) {
 			}
 		}
 	}
+
 	return info, err
 }
 
+// Chat streams response chunks and returns the accumulated answer and usage.
 func (c *Client) Chat(ctx context.Context, req Request, emit func(Response)) (Response, error) {
 	req.Stream = true
 	resp, err := c.do(ctx, "/api/chat", req)
@@ -144,14 +159,17 @@ func (c *Client) Chat(ctx context.Context, req Request, emit func(Response)) (Re
 		return Response{}, err
 	}
 	defer resp.Body.Close()
+
 	s := bufio.NewScanner(resp.Body)
 	s.Buffer(make([]byte, 64<<10), 4<<20)
 	var result Response
 	var content, thinking strings.Builder
+
 	for s.Scan() {
 		if len(bytes.TrimSpace(s.Bytes())) == 0 {
 			continue
 		}
+
 		var chunk Response
 		if err = json.Unmarshal(s.Bytes(), &chunk); err != nil {
 			return result, fmt.Errorf("invalid ollama stream: %w", err)
@@ -159,20 +177,24 @@ func (c *Client) Chat(ctx context.Context, req Request, emit func(Response)) (Re
 		if chunk.Error != "" {
 			return result, errors.New(chunk.Error)
 		}
+
 		content.WriteString(chunk.Message.Content)
 		thinking.WriteString(chunk.Message.Thinking)
 		if content.Len()+thinking.Len() > 16<<20 {
 			return result, errors.New("response exceeds 16 mib")
 		}
+
 		if emit != nil {
 			emit(chunk)
 		}
+
 		if chunk.Done {
 			result = chunk
 			result.Message = session.Message{Role: "assistant", Content: content.String(), Thinking: thinking.String()}
 			return result, nil
 		}
 	}
+
 	result.Message = session.Message{Role: "assistant", Content: content.String(), Thinking: thinking.String()}
 	if err = s.Err(); err != nil {
 		return result, err
@@ -180,10 +202,12 @@ func (c *Client) Chat(ctx context.Context, req Request, emit func(Response)) (Re
 	return result, errors.New("ollama stream ended without a completion marker")
 }
 
+// Think maps a thinking setting to an advertised value or reports an unsupported mode.
 func (i Info) Think(mode string) (any, error) {
 	if mode == "auto" {
 		return nil, nil
 	}
+
 	var wanted any = mode
 	if mode == "on" {
 		wanted = true
@@ -191,24 +215,29 @@ func (i Info) Think(mode string) (any, error) {
 	if mode == "off" {
 		wanted = false
 	}
+
 	for _, v := range i.Thinking.Values {
 		if v == wanted {
 			return wanted, nil
 		}
 	}
+
 	if len(i.Thinking.Values) == 0 {
 		for _, cap := range i.Capabilities {
 			if cap == "thinking" && (mode == "on" || mode == "off") {
 				return wanted, nil
 			}
 		}
+
 		if mode == "off" {
 			return false, nil
 		}
 	}
+
 	return nil, fmt.Errorf("model does not advertise thinking=%s; use auto or a supported /think value", mode)
 }
 
+// Usage converts response counters and timing into session usage.
 func (r Response) Usage(estimate int) session.Usage {
 	u := session.Usage{Prompt: r.PromptCount, Output: r.EvalCount, InputEstimate: estimate}
 	if r.EvalDuration > 0 {

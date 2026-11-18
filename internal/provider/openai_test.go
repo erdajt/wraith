@@ -26,13 +26,16 @@ func TestCompatibleStreamPreservesReasoningUsageAndRequest(t *testing.T) {
 		if r.URL.Path != "/v1/chat/completions" || r.Header.Get("Authorization") != "Bearer private" {
 			t.Error("request routing or authentication missing")
 		}
+
 		var body map[string]any
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Fatal(err)
 		}
+
 		if body["max_completion_tokens"] != float64(1234) || body["num_ctx"] != nil {
 			t.Error("wrong generation options")
 		}
+
 		return response("data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"check\"}}]}\n\ndata: {\"choices\":[{\"delta\":{\"content\":\"answer\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":3}}\n\ndata: [DONE]\n\n"), nil
 	})
 	var streamed string
@@ -51,6 +54,7 @@ func TestCompatibleStreamRejectsTruncationAndDoesNotExposeErrorBodies(t *testing
 	if err == nil || result.Message.Content != "partial" {
 		t.Fatal("truncated response accepted or lost")
 	}
+
 	a.HTTP.Transport = transport(func(*http.Request) (*http.Response, error) {
 		r := response("secret echoed token")
 		r.StatusCode = 401
@@ -73,11 +77,14 @@ func TestCompatibleThinkingUsesStringEffort(t *testing.T) {
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 				t.Fatal(err)
 			}
+
 			if body["reasoning_effort"] != test.want {
 				t.Fatalf("effort: %v", body["reasoning_effort"])
 			}
+
 			return response("data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"), nil
 		})
+
 		if _, err := a.OpenAI(context.Background(), ollama.Request{Think: test.input}, nil); err != nil {
 			t.Fatal(err)
 		}
@@ -88,6 +95,7 @@ func TestCompatibleEndMarkerRequiresFinishedChoice(t *testing.T) {
 	a := API{Config: config.Provider{BaseURL: "https://provider.invalid"}, HTTP: &http.Client{Transport: transport(func(*http.Request) (*http.Response, error) {
 		return response("data: [DONE]\n\n"), nil
 	})}}
+
 	if _, err := a.OpenAI(context.Background(), ollama.Request{}, nil); err == nil {
 		t.Fatal("empty incomplete stream accepted")
 	}
@@ -103,8 +111,10 @@ func TestThinkingModeKeepsSelectedEffort(t *testing.T) {
 		if mode["type"] != "enabled" || body["reasoning_effort"] != "high" {
 			t.Fatal("thinking dropped selected effort")
 		}
+
 		return response("data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"), nil
 	})}}
+
 	if _, err := a.OpenAI(context.Background(), ollama.Request{Think: "high"}, nil); err != nil {
 		t.Fatal(err)
 	}

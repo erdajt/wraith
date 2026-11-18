@@ -28,6 +28,7 @@ func TestStreamingKeepsThinkingAndMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if count != 3 || r.Message.Content != "hello world" || r.Message.Thinking != "plan" || r.Usage(20).TokensPerSecond != 2 {
 		t.Fatalf("bad stream: %+v", r)
 	}
@@ -39,6 +40,7 @@ func TestStreamFailures(t *testing.T) {
 			t.Fatalf("accepted broken stream: %s", body)
 		}
 	}
+
 	if _, err := fixture("missing model", 404).Chat(context.Background(), Request{}, nil); err == nil || !strings.Contains(err.Error(), "404") {
 		t.Fatalf("bad http error: %v", err)
 	}
@@ -47,14 +49,18 @@ func TestStreamFailures(t *testing.T) {
 func TestThinkingCapabilities(t *testing.T) {
 	var info Info
 	info.Thinking.Values = []any{true, false}
+
 	if _, err := info.Think("high"); err == nil {
 		t.Fatal("invented a native effort level")
 	}
+
 	v, err := info.Think("off")
 	if err != nil || v != false {
 		t.Fatal("boolean thinking failed")
 	}
+
 	info.Thinking.Values = []any{"low", "medium", "high"}
+
 	if v, err = info.Think("high"); err != nil || v != "high" {
 		t.Fatal("native effort rejected")
 	}

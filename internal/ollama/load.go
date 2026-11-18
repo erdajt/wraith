@@ -7,6 +7,7 @@ import (
 	"io"
 )
 
+// Load warms a model with the requested options and keep-alive duration.
 func (c *Client) Load(ctx context.Context, model, keepAlive string, options Options) error {
 	resp, err := c.do(ctx, "/api/generate", struct {
 		Model     string  `json:"model"`
@@ -19,6 +20,7 @@ func (c *Client) Load(ctx context.Context, model, keepAlive string, options Opti
 		return err
 	}
 	defer resp.Body.Close()
+
 	var result Response
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&result); err != nil {
 		return err
@@ -29,5 +31,6 @@ func (c *Client) Load(ctx context.Context, model, keepAlive string, options Opti
 	if !result.Done {
 		return errors.New("model load ended without a completion marker")
 	}
+
 	return nil
 }

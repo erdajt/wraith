@@ -12,20 +12,24 @@ import (
 	"github.com/erdajt/wraith/internal/session"
 )
 
+// OpenAI streams a chat-completions response and accumulates content, thinking and usage.
 func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.Response)) (ollama.Response, error) {
 	messages := make([]map[string]string, 0, len(req.Messages))
 	for _, m := range req.Messages {
 		messages = append(messages, map[string]string{"role": m.Role, "content": m.Content})
 	}
+
 	body := map[string]any{"model": req.Model, "messages": messages, "stream": true}
 	tokens := a.Config.TokenField
 	if tokens == "" {
 		tokens = "max_tokens"
 	}
 	body[tokens] = req.Options.Predict
+
 	if req.Format != nil {
 		body["response_format"] = map[string]string{"type": "json_object"}
 	}
+
 	if a.Config.ThinkingMode == "reasoning_effort" && req.Think != nil {
 		effort := req.Think
 		if enabled, ok := effort.(bool); ok {
@@ -36,6 +40,7 @@ func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.R
 		}
 		body["reasoning_effort"] = effort
 	}
+
 	if a.Config.ThinkingMode == "thinking" && req.Think != nil {
 		mode := "enabled"
 		if req.Think == false {
@@ -46,9 +51,11 @@ func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.R
 			body["reasoning_effort"] = effort
 		}
 	}
+
 	for key, value := range a.Config.Extra {
 		body[key] = value
 	}
+
 	start := time.Now()
 	response, err := a.request(ctx, http.MethodPost, "/chat/completions", body)
 	result := ollama.Response{Message: session.Message{Role: "assistant"}}
@@ -56,12 +63,14 @@ func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.R
 		return result, err
 	}
 	defer response.Body.Close()
+
 	var content, thinking strings.Builder
 	err = readSSE(response.Body, func(_ string, data []byte) error {
 		if string(data) == "[DONE]" {
 			result.Done = result.Reason != ""
 			return nil
 		}
+
 		var chunk struct {
 			Choices []struct {
 				Delta struct {
@@ -83,24 +92,29 @@ func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.R
 		if len(chunk.Error) > 0 && string(chunk.Error) != "null" {
 			return errors.New("provider reported a stream error")
 		}
+
 		if chunk.Usage.Input > 0 {
 			result.PromptCount = chunk.Usage.Input
 		}
 		if chunk.Usage.Output > 0 {
 			result.EvalCount = chunk.Usage.Output
 		}
+
 		for _, choice := range chunk.Choices {
 			if len(choice.Delta.Tools) > 0 {
 				return errors.New("provider returned an unsupported native tool call")
 			}
+
 			content.WriteString(choice.Delta.Content)
 			thinking.WriteString(choice.Delta.Reasoning)
 			if content.Len()+thinking.Len() > 16<<20 {
 				return errors.New("provider response exceeds 16 mib")
 			}
+
 			if emit != nil {
 				emit(ollama.Response{Message: session.Message{Role: "assistant", Content: choice.Delta.Content, Thinking: choice.Delta.Reasoning}})
 			}
+
 			if choice.Finish != "" {
 				result.Reason = choice.Finish
 			}

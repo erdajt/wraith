@@ -11,40 +11,48 @@ import (
 	"github.com/erdajt/wraith/internal/variables"
 )
 
+// privateRequest copies and redacts outbound context while rejecting private routing and credential collisions.
 func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request, error) {
 	copy := *c
+
 	for _, value := range []string{c.Base, c.Profile.BaseURL, request.Model, c.Profile.APIKey, os.Getenv(c.Profile.KeyEnv)} {
 		if c.Variables.Contains(value) {
 			return nil, request, errors.New("private variable collides with provider routing or credentials")
 		}
 	}
+
 	for name, value := range c.Profile.Headers {
 		if c.Variables.Contains(name) || c.Variables.Contains(value) {
 			return nil, request, errors.New("private variable collides with a provider header")
 		}
 	}
+
 	for _, argument := range c.Profile.Command {
 		if c.Variables.Contains(argument) {
 			return nil, request, errors.New("private variable collides with provider command arguments")
 		}
 	}
+
 	copy.Profile.Extra = map[string]any{}
 	for name, value := range c.Profile.Extra {
 		if c.Variables.Contains(name) {
 			return nil, request, errors.New("private variable collides with a provider option name")
 		}
+
 		sanitized, err := redactOption(value, c.Variables)
 		if err != nil {
 			return nil, request, err
 		}
 		copy.Profile.Extra[name] = sanitized
 	}
+
 	copy.Profile.Environment = []string{}
 	privateNames := map[string]bool{}
 	for _, entry := range c.Variables.Environment() {
 		name, _, _ := strings.Cut(entry, "=")
 		privateNames[name] = true
 	}
+
 	for _, entry := range os.Environ() {
 		name, value, _ := strings.Cut(entry, "=")
 		if privateNames[name] || c.Variables.Contains(value) {
@@ -53,8 +61,10 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 			}
 			continue
 		}
+
 		copy.Profile.Environment = append(copy.Profile.Environment, entry)
 	}
+
 	request.Messages = append([]session.Message(nil), request.Messages...)
 	policy := ""
 	switch request.ExecutionMode {
@@ -66,6 +76,7 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 	if policy != "" && len(request.Messages) > 0 && request.Messages[0].Role == "system" {
 		request.Messages[0].Content = strings.Replace(request.Messages[0].Content, "\n\n"+policy, "", 1)
 	}
+
 	compactPolicy := ""
 	switch request.CompactionTask {
 	case "extract":
@@ -76,12 +87,14 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 	if compactPolicy != "" && len(request.Messages) > 0 && request.Messages[0].Role == "system" {
 		request.Messages[0].Content = strings.TrimPrefix(request.Messages[0].Content, compactPolicy)
 	}
+
 	ids := session.EvidenceIDs(request.Messages)
 	for id, known := range request.RunIDs {
 		if known {
 			ids[id] = true
 		}
 	}
+
 	for i := range request.Messages {
 		if evidence := request.Messages[i].Evidence; evidence != nil {
 			request.Messages[i].Content = evidence.Render(c.Variables.Redact)
@@ -111,6 +124,7 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 			request.Messages = append([]session.Message{{Role: "system", Content: compactPolicy}}, request.Messages...)
 		}
 	}
+
 	if request.PrivateInventory {
 		instructions, err := c.Variables.Instructions()
 		if err != nil {
@@ -124,9 +138,11 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 			}
 		}
 	}
+
 	return &copy, request, nil
 }
 
+// redactOption redacts strings in nested provider options and rejects private map keys.
 func redactOption(value any, snapshot variables.Snapshot) (any, error) {
 	switch v := value.(type) {
 	case string:
@@ -147,6 +163,7 @@ func redactOption(value any, snapshot variables.Snapshot) (any, error) {
 			if snapshot.Contains(key) {
 				return nil, errors.New("private variable collides with a provider option name")
 			}
+
 			sanitized, err := redactOption(entry, snapshot)
 			if err != nil {
 				return nil, err

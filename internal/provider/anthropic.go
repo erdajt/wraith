@@ -12,6 +12,7 @@ import (
 	"github.com/erdajt/wraith/internal/session"
 )
 
+// Anthropic streams a messages response and accumulates content, thinking and usage.
 func (a *API) Anthropic(ctx context.Context, req ollama.Request, emit func(ollama.Response)) (ollama.Response, error) {
 	var system []string
 	var messages []map[string]string
@@ -22,9 +23,11 @@ func (a *API) Anthropic(ctx context.Context, req ollama.Request, emit func(ollam
 			messages = append(messages, map[string]string{"role": m.Role, "content": m.Content})
 		}
 	}
+
 	if req.Format != nil {
 		system = append(system, "Return a single valid JSON object without markdown fences.")
 	}
+
 	body := map[string]any{"model": req.Model, "system": strings.Join(system, "\n\n"), "messages": messages, "max_tokens": req.Options.Predict, "stream": true}
 	if req.Think == false {
 		body["thinking"] = map[string]string{"type": "disabled"}
@@ -41,9 +44,11 @@ func (a *API) Anthropic(ctx context.Context, req ollama.Request, emit func(ollam
 			body["thinking"] = map[string]any{"type": "enabled", "budget_tokens": max(1024, req.Options.Predict/2)}
 		}
 	}
+
 	for key, value := range a.Config.Extra {
 		body[key] = value
 	}
+
 	start := time.Now()
 	response, err := a.request(ctx, http.MethodPost, "/messages", body)
 	result := ollama.Response{Message: session.Message{Role: "assistant"}}
@@ -51,6 +56,7 @@ func (a *API) Anthropic(ctx context.Context, req ollama.Request, emit func(ollam
 		return result, err
 	}
 	defer response.Body.Close()
+
 	err = readSSE(response.Body, func(_ string, data []byte) error {
 		var event struct {
 			Type    string `json:"type"`
@@ -77,6 +83,7 @@ func (a *API) Anthropic(ctx context.Context, req ollama.Request, emit func(ollam
 		if err := json.Unmarshal(data, &event); err != nil {
 			return err
 		}
+
 		text, thinking := "", ""
 		switch event.Type {
 		case "error":
@@ -96,11 +103,13 @@ func (a *API) Anthropic(ctx context.Context, req ollama.Request, emit func(ollam
 		case "message_stop":
 			result.Done = true
 		}
+
 		result.Message.Content += text
 		result.Message.Thinking += thinking
 		if len(result.Message.Content)+len(result.Message.Thinking) > 16<<20 {
 			return errors.New("provider response exceeds 16 mib")
 		}
+
 		if emit != nil && (text != "" || thinking != "") {
 			emit(ollama.Response{Message: session.Message{Role: "assistant", Content: text, Thinking: thinking}})
 		}

@@ -25,15 +25,19 @@ func TestEveryProviderRequestRedactsConversationAndPreservesCaller(t *testing.T)
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		if strings.Contains(string(body), "private.example") || !strings.Contains(string(body), "wraith::TARGET") {
 			t.Fatalf("outbound privacy boundary failed")
 		}
+
 		return response("data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"), nil
 	})
 	request := ollama.Request{Model: "model", Messages: []session.Message{{Role: "system", Content: "archive private.example"}, {Role: "user", Content: "check private.example"}}}
+
 	if _, err := client.Chat(t.Context(), request, nil); err != nil {
 		t.Fatal(err)
 	}
+
 	if request.Messages[0].Content != "archive private.example" {
 		t.Fatal("caller request was mutated")
 	}
@@ -52,23 +56,30 @@ func TestPrivateRequestScrubsAliasedEnvironmentAndRejectsAuthCollision(t *testin
 	if err := os.WriteFile(script, []byte(source), 0700); err != nil {
 		t.Fatal(err)
 	}
+
 	client.Profile.Command = []string{script, dir}
+
 	if _, err := client.Chat(t.Context(), ollama.Request{Messages: []session.Message{{Role: "user", Content: "private.example"}}}, nil); err != nil {
 		t.Fatal(err)
 	}
+
 	for _, file := range []string{"env", "input"} {
 		data, err := os.ReadFile(filepath.Join(dir, file))
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		if strings.Contains(string(data), "private.example") {
 			t.Fatalf("private value reached child %s", file)
 		}
+
 		if file == "env" && !strings.Contains(string(data), "WRAITH_PUBLIC_TEST=retained") {
 			t.Fatal("ordinary environment lost")
 		}
 	}
+
 	t.Setenv("OPENAI_API_KEY", "private.example")
+
 	if _, err := client.Chat(t.Context(), ollama.Request{}, nil); err == nil {
 		t.Fatal("auth collision was transmitted")
 	}
@@ -86,13 +97,16 @@ func TestInventoryNamesRemainStructuralAtProviderBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	content := got.Messages[0].Content
 	if !strings.Contains(content, `"name":"PRIMARY_TARGET_VARIABLE"`) || strings.Contains(content, "private.example") || !strings.HasPrefix(content, "check wraith::ALIAS") {
 		t.Fatalf("incorrect inventory boundary: %s", content)
 	}
+
 	if request.Messages[0].Content != "check PRIMARY_TARGET_VARIABLE" {
 		t.Fatal("caller changed")
 	}
+
 	request.PrivateInventory = false
 	_, compact, err := client.privateRequest(request)
 	if err != nil || strings.Contains(compact.Messages[0].Content, "Private local variables") {
@@ -123,10 +137,12 @@ func TestStructuredEvidenceSurvivesProviderRedaction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	message := prepared.Messages[0]
 	if message.Evidence != nil || !strings.Contains(message.Content, evidence.ID) || !strings.Contains(message.Content, `"line":1`) || strings.Contains(message.Content, "ab line") {
 		t.Fatalf("evidence boundary: %+v", message)
 	}
+
 	if request.Messages[0].Evidence == nil {
 		t.Fatal("request was mutated")
 	}
@@ -141,6 +157,7 @@ func TestPrivateValueCannotCorruptStaticExecutionSchema(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	content := prepared.Messages[0].Content
 	if !strings.Contains(content, `{"command":"the exact shell command"`) || !strings.Contains(content, "private value is wraith::FIELD") {
 		t.Fatalf("policy schema corrupted: %s", content)
@@ -157,6 +174,7 @@ func TestCompactionSchemaSurvivesPrivateWordCollisions(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			if got.Messages[0].Content != tc.policy+"\nfeedback: wraith::FIELD wraith::OTHER" || got.Messages[1].Content != "wraith::FIELD wraith::OTHER" {
 				t.Fatalf("schema or source boundary: %+v", got.Messages)
 			}
@@ -171,6 +189,7 @@ func TestExecutionModeSwitchRebuildsOneSelfContainedPolicy(t *testing.T) {
 	client.Variables = variables.NewSnapshot([]variables.Entry{{Name: "TARGET_DOMAIN", Value: "private.example"}}, nil)
 	s := session.New("test")
 	s.Messages = []session.Message{{Role: "user", Content: "inspect private.example"}}
+
 	for _, mode := range []string{"agent", "blocks", "agent"} {
 		c.Execution.Mode = mode
 		request := ollama.Request{ExecutionMode: mode, PrivateInventory: true, Messages: contextual.ForChat(s, c, "")}
@@ -178,23 +197,29 @@ func TestExecutionModeSwitchRebuildsOneSelfContainedPolicy(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		policy, other := contextual.AgentPrompt, contextual.BlocksPrompt
 		if mode == "blocks" {
 			policy, other = other, policy
 		}
+
 		system := prepared.Messages[0].Content
 		if strings.Count(system, policy) != 1 || strings.Contains(system, other) {
 			t.Fatalf("%s policy missing, duplicated or mixed", mode)
 		}
+
 		if !strings.Contains(system, `{"command":"the exact shell command","reason":`) {
 			t.Fatalf("%s request schema missing", mode)
 		}
+
 		if mode == "blocks" && strings.Contains(system, `"tool":"poll"`) {
 			t.Fatal("agent polling schema leaked into blocks policy")
 		}
+
 		if !strings.Contains(system, "wraith::TARGET_DOMAIN") || strings.Contains(system, "private.example") || strings.Contains(prepared.Messages[1].Content, "private.example") {
 			t.Fatal("private reference instructions or redaction lost")
 		}
+
 		if s.Messages[0].Content != "inspect private.example" {
 			t.Fatal("preparation mutated the conversation")
 		}

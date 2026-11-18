@@ -17,6 +17,7 @@ type codexModel struct {
 	Efforts []string
 }
 
+// codexCache reads visible models and their capabilities from the local codex cache.
 func codexCache() ([]codexModel, error) {
 	home := os.Getenv("CODEX_HOME")
 	if home == "" {
@@ -26,10 +27,12 @@ func codexCache() ([]codexModel, error) {
 		}
 		home = filepath.Join(user, ".codex")
 	}
+
 	data, err := fsutil.ReadLimit(filepath.Join(home, "models_cache.json"), 8<<20)
 	if err != nil {
 		return nil, err
 	}
+
 	var cache struct {
 		Models []struct {
 			Slug       string `json:"slug"`
@@ -44,6 +47,7 @@ func codexCache() ([]codexModel, error) {
 	if err := json.Unmarshal(data, &cache); err != nil {
 		return nil, err
 	}
+
 	var models []codexModel
 	seen := map[string]bool{}
 	for _, entry := range cache.Models {
@@ -59,12 +63,14 @@ func codexCache() ([]codexModel, error) {
 		}
 		models = append(models, model)
 	}
+
 	if len(models) == 0 {
 		return nil, errors.New("codex catalog has no visible models")
 	}
 	return models, nil
 }
 
+// codexInfo merges catalog capabilities into model information, preserving explicit thinking options.
 func codexInfo(models []codexModel, model string, info ollama.Info) ollama.Info {
 	for _, entry := range models {
 		if entry.Name != model {
@@ -79,5 +85,6 @@ func codexInfo(models []codexModel, model string, info ollama.Info) ollama.Info 
 		}
 		break
 	}
+
 	return info
 }

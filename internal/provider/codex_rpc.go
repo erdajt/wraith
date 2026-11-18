@@ -14,10 +14,12 @@ import (
 	"github.com/erdajt/wraith/internal/config"
 )
 
+// codexCatalog uses the cached catalog or queries the codex app server.
 func codexCatalog(ctx context.Context, profile config.Provider) ([]codexModel, error) {
 	if models, err := codexCache(); err == nil {
 		return models, nil
 	}
+
 	models, err := codexRPC(ctx, profile.Command, profile.Environment)
 	if err != nil {
 		return nil, fmt.Errorf("codex model discovery: %w; run codex to refresh its catalog or configure the provider models list", err)
@@ -25,12 +27,15 @@ func codexCatalog(ctx context.Context, profile config.Provider) ([]codexModel, e
 	return models, nil
 }
 
+// codexRPC retrieves visible models from a temporary codex app-server process.
 func codexRPC(ctx context.Context, command, environment []string) ([]codexModel, error) {
 	if len(command) == 0 {
 		return nil, errors.New("cli command is empty")
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
+
 	argv := append(append([]string(nil), command[1:]...), "app-server", "--listen", "stdio://")
 	cmd := exec.CommandContext(ctx, command[0], argv...)
 	cmd.Env = environment
@@ -43,6 +48,7 @@ func codexRPC(ctx context.Context, command, environment []string) ([]codexModel,
 		return nil, err
 	}
 	defer stdin.Close()
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
@@ -51,6 +57,7 @@ func codexRPC(ctx context.Context, command, environment []string) ([]codexModel,
 		return nil, err
 	}
 	defer func() { cancel(); _ = cmd.Wait() }()
+
 	scanner := bufio.NewScanner(stdout)
 	scanner.Buffer(make([]byte, 64<<10), 4<<20)
 	encoder := json.NewEncoder(stdin)
@@ -58,6 +65,7 @@ func codexRPC(ctx context.Context, command, environment []string) ([]codexModel,
 		if err := encoder.Encode(map[string]any{"id": id, "method": method, "params": params}); err != nil {
 			return err
 		}
+
 		for scanner.Scan() {
 			var reply struct {
 				ID     int             `json:"id"`
@@ -77,6 +85,7 @@ func codexRPC(ctx context.Context, command, environment []string) ([]codexModel,
 			}
 			return json.Unmarshal(reply.Result, result)
 		}
+
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -92,14 +101,17 @@ func codexRPC(ctx context.Context, command, environment []string) ([]codexModel,
 	if err := encoder.Encode(map[string]string{"method": "initialized"}); err != nil {
 		return nil, err
 	}
+
 	var models []codexModel
 	cursor := ""
 	seen := map[string]bool{}
+
 	for page := 0; page < 32; page++ {
 		params := map[string]any{"includeHidden": false, "limit": 100}
 		if cursor != "" {
 			params["cursor"] = cursor
 		}
+
 		var result struct {
 			Data []struct {
 				Model   string `json:"model"`
@@ -114,6 +126,7 @@ func codexRPC(ctx context.Context, command, environment []string) ([]codexModel,
 		if err := call(page+2, "model/list", params, &result); err != nil {
 			return nil, err
 		}
+
 		for _, entry := range result.Data {
 			if entry.Hidden || entry.Model == "" || seen[entry.Model] {
 				continue
@@ -125,16 +138,19 @@ func codexRPC(ctx context.Context, command, environment []string) ([]codexModel,
 			}
 			models = append(models, model)
 		}
+
 		if result.Next == "" {
 			if len(models) == 0 {
 				return nil, errors.New("codex catalog has no visible models")
 			}
 			return models, nil
 		}
+
 		if result.Next == cursor {
 			return nil, errors.New("codex model cursor did not advance")
 		}
 		cursor = result.Next
 	}
+
 	return nil, errors.New("codex model catalog exceeds 32 pages")
 }

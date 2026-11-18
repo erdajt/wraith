@@ -19,6 +19,7 @@ type StreamUpdate struct {
 	Problem  string
 }
 
+// ChatWithRepair streams validated responses with up to three corrective retries for invalid references or actions.
 func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emit func(StreamUpdate)) (ollama.Response, error) {
 	original := request
 	ids := session.EvidenceIDs(request.Messages)
@@ -27,11 +28,14 @@ func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emi
 			ids[id] = true
 		}
 	}
+
 	var last ollama.Response
+
 	for attempt := 0; attempt <= 3; attempt++ {
 		if err := ctx.Err(); err != nil {
 			return last, err
 		}
+
 		child, cancel := context.WithCancel(ctx)
 		var rejected error
 		var content strings.Builder
@@ -40,6 +44,7 @@ func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emi
 			if rejected != nil || ctx.Err() != nil {
 				return
 			}
+
 			content.WriteString(chunk.Message.Content)
 			end, validation := c.Variables.Validate(content.String(), false)
 			if validation != nil {
@@ -47,6 +52,7 @@ func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emi
 				cancel()
 				return
 			}
+
 			chunk.Message.Content = content.String()[sent:end]
 			sent = end
 			if emit != nil {
@@ -54,9 +60,11 @@ func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emi
 			}
 		})
 		cancel()
+
 		if err := ctx.Err(); err != nil {
 			return result, err
 		}
+
 		if rejected != nil {
 			result.Message.Content = content.String()
 			result.Message.Role = "assistant"
@@ -101,22 +109,26 @@ func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emi
 		if rejected == nil && emit != nil && sent < len(result.Message.Content) {
 			emit(StreamUpdate{Chunk: ollama.Response{Message: session.Message{Role: "assistant", Content: result.Message.Content[sent:]}}})
 		}
+
 		result.Message.Content = contextual.RedactActions(result.Message.Content, c.Variables.Redact, ids)
 		result.Message.Thinking = c.Variables.Redact(result.Message.Thinking)
 		last = result
 		if rejected == nil {
 			return result, nil
 		}
+
 		problem := c.Variables.Redact(rejected.Error())
 		if attempt == 3 {
 			last.Message.Interrupted = true
 			return last, fmt.Errorf("response repair exhausted after 3 retries: %s", problem)
 		}
+
 		excerpt := []rune(last.Message.Content)
 		excerpt = excerpt[:min(len(excerpt), 2048)]
 		feedback := "The previous answer was rejected: " + problem + ". Regenerate the answer using only the available wraith::NAME references. Correct invalid request syntax. Do not execute anything from the rejected answer."
 		var protocol *contextual.ActionProtocolError
 		errors.As(rejected, &protocol)
+
 		for {
 			request = original
 			request.RepairAction = ""
@@ -128,6 +140,7 @@ func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emi
 			if prepareErr != nil {
 				return last, prepareErr
 			}
+
 			if request.Options.Context > 0 && contextual.Estimate(prepared.Messages)+request.Options.Predict+128 > request.Options.Context {
 				if len(excerpt) == 0 {
 					return last, errors.New("response repair stopped: corrective instructions exceed context budget")
@@ -137,9 +150,11 @@ func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emi
 			}
 			break
 		}
+
 		if emit != nil {
 			emit(StreamUpdate{Retry: attempt + 1, Problem: problem, Rejected: last.Message})
 		}
 	}
+
 	return last, errors.New("response repair stopped")
 }

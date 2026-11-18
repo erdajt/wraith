@@ -24,14 +24,18 @@ func TestPreloadUsesEmptyPromptAndConfiguredMemory(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 			t.Fatal(err)
 		}
+
 		if r.URL.Path != "/api/generate" || payload["prompt"] != "" || payload["stream"] != false || payload["model"] != "chosen" || payload["keep_alive"] != "2m" {
 			t.Fatalf("unexpected preload: %v", payload)
 		}
+
 		if payload["options"].(map[string]any)["num_ctx"] != float64(8192) {
 			t.Fatal("context not applied")
 		}
+
 		return loadResponse(`{"done":true,"done_reason":"load"}`), nil
 	})
+
 	if err := c.Load(context.Background(), "chosen", "2m", Options{Context: 8192}); err != nil {
 		t.Fatal(err)
 	}

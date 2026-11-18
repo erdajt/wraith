@@ -7,6 +7,7 @@ import (
 	"github.com/erdajt/wraith/internal/ollama"
 )
 
+// cliEvent accumulates cli response events and rejects native tool execution events.
 func cliEvent(kind string, data []byte, result *ollama.Response, emit func(ollama.Response)) error {
 	var event struct {
 		Type   string `json:"type"`
@@ -33,12 +34,14 @@ func cliEvent(kind string, data []byte, result *ollama.Response, emit func(ollam
 	if err := json.Unmarshal(data, &event); err != nil {
 		return err
 	}
+
 	chunk := ollama.Response{}
 	if kind == "codex-cli" {
 		switch event.Item.Type {
 		case "command_execution", "file_change", "mcp_tool_call", "web_search":
 			return errors.New("cli attempted native tools; use wraith command requests instead")
 		}
+
 		switch event.Type {
 		case "error", "turn.failed":
 			return errors.New("codex reported a failed turn; check cli authentication and configuration")
@@ -76,11 +79,13 @@ func cliEvent(kind string, data []byte, result *ollama.Response, emit func(ollam
 			result.EvalCount = event.Usage.Output
 		}
 	}
+
 	result.Message.Content += chunk.Message.Content
 	result.Message.Thinking += chunk.Message.Thinking
 	if len(result.Message.Content)+len(result.Message.Thinking) > 16<<20 {
 		return errors.New("cli response exceeds 16 mib")
 	}
+
 	if emit != nil && (chunk.Message.Content != "" || chunk.Message.Thinking != "") {
 		emit(chunk)
 	}

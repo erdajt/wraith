@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// readSSE dispatches complete server-sent events and rejects oversized events.
 func readSSE(source io.Reader, handle func(string, []byte) error) error {
 	scanner := bufio.NewScanner(source)
 	scanner.Buffer(make([]byte, 64<<10), 4<<20)
@@ -16,11 +17,13 @@ func readSSE(source io.Reader, handle func(string, []byte) error) error {
 		if data.Len() == 0 {
 			return nil
 		}
+
 		err := handle(event, []byte(strings.TrimSuffix(data.String(), "\n")))
 		event = ""
 		data.Reset()
 		return err
 	}
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "" {
@@ -29,6 +32,7 @@ func readSSE(source io.Reader, handle func(string, []byte) error) error {
 			}
 			continue
 		}
+
 		field, value, _ := strings.Cut(line, ":")
 		value = strings.TrimPrefix(value, " ")
 		switch field {
@@ -42,6 +46,7 @@ func readSSE(source io.Reader, handle func(string, []byte) error) error {
 			return errors.New("provider event exceeds 4 mib")
 		}
 	}
+
 	if err := scanner.Err(); err != nil {
 		return err
 	}
