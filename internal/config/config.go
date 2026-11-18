@@ -345,7 +345,25 @@ func validColor(s string) bool {
 // Encode encodes configuration in the format selected by path.
 func Encode(c Config, path string) ([]byte, error) {
 	if strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml") {
-		return yaml.Marshal(c)
+		encoded, err := json.Marshal(c)
+		if err != nil {
+			return nil, err
+		}
+		var node yaml.Node
+		if err := yaml.Unmarshal(encoded, &node); err != nil {
+			return nil, err
+		}
+		pending := []*yaml.Node{&node}
+		for len(pending) > 0 {
+			current := pending[len(pending)-1]
+			pending = pending[:len(pending)-1]
+			current.Style = 0
+			if current.Tag == "!!str" && strings.ContainsAny(current.Value, "\r\n") {
+				current.Style = yaml.DoubleQuotedStyle
+			}
+			pending = append(pending, current.Content...)
+		}
+		return yaml.Marshal(&node)
 	}
 	return json.MarshalIndent(c, "", "  ")
 }

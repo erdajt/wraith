@@ -36,6 +36,38 @@ func TestYAMLMigrationPreservesLegacyPreferences(t *testing.T) {
 	}
 }
 
+func TestYAMLRoundTripPreservesMultilineArgumentsAndProviderText(t *testing.T) {
+	for _, value := range []string{"\ncount=0\nexec /bin/sh -i\n", "\n\n", "first\r\nsecond\r\n", "  first\n    second\n\n", "first\nsecond"} {
+		t.Run(value, func(t *testing.T) {
+			c := Default()
+			c.Shell = []string{"/bin/sh", "-c", value}
+			c.Editor = []string{"nvim", "-c", value}
+			profile := c.Providers["ollama"]
+			profile.SystemPrompt = value
+			profile.Extra = map[string]any{"notes": value}
+			c.Providers["ollama"] = profile
+			path := File(t.TempDir())
+			if err := Save(path, c); err != nil {
+				t.Fatal(err)
+			}
+
+			loaded, err := Load(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for name, got := range map[string]string{
+				"shell": loaded.Shell[2], "editor": loaded.Editor[2],
+				"system": loaded.Providers["ollama"].SystemPrompt,
+				"extra":  loaded.Providers["ollama"].Extra["notes"].(string),
+			} {
+				if got != value {
+					t.Fatalf("%s changed: %q != %q", name, got, value)
+				}
+			}
+		})
+	}
+}
+
 func TestYAMLRejectsUnknownAndDuplicateFields(t *testing.T) {
 	for _, source := range []string{"unknown: yes\n", "theme: ice\ntheme: ember\n", "theme: ice\n---\ntheme: ember\n"} {
 		path := filepath.Join(t.TempDir(), "config.yaml")
