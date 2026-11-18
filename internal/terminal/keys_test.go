@@ -18,6 +18,7 @@ func TestTerminalKeysPreserveSpacesAndBracketedPaste(t *testing.T) {
 		{tea.KeyMsg{Type: tea.KeyEnter}, false, "\r"},
 		{tea.KeyMsg{Type: tea.KeyEsc, Alt: true}, false, "\x1b\x1b"},
 	}
+
 	for _, tt := range tests {
 		if got := string(Key(tt.key, false, tt.bracketed)); got != tt.want {
 			t.Fatalf("key %s: got %q, want %q", tt.key, got, tt.want)

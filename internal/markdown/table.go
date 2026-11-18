@@ -7,6 +7,7 @@ import (
 	"github.com/erdajt/wraith/internal/config"
 )
 
+// cells splits a pipe-delimited table row and trims its cells.
 func cells(line string) []string {
 	parts := strings.Split(strings.Trim(strings.TrimSpace(line), "|"), "|")
 	for i := range parts {
@@ -15,6 +16,7 @@ func cells(line string) []string {
 	return parts
 }
 
+// renderTable renders a table or narrow-screen field list and returns the consumed source lines.
 func renderTable(lines []string, width int, p config.Palette, transform func(string) string) ([]string, int) {
 	rows := [][]string{cells(lines[0])}
 	consumed := 2
@@ -26,16 +28,19 @@ func renderTable(lines []string, width int, p config.Palette, transform func(str
 		rows = append(rows, row)
 		consumed++
 	}
+
 	widths := make([]int, len(rows[0]))
 	for _, row := range rows {
 		for i, cell := range row {
 			widths[i] = max(widths[i], ansi.StringWidth(transform(inline(cell, p, "", 0))))
 		}
 	}
+
 	total := 1
 	for _, w := range widths {
 		total += w + 3
 	}
+
 	var out []string
 	if total > width {
 		for _, row := range rows[1:] {
@@ -44,11 +49,13 @@ func renderTable(lines []string, width int, p config.Palette, transform func(str
 			}
 			out = append(out, "")
 		}
+
 		if len(rows) == 1 {
 			out = append(out, inline(strings.Join(rows[0], " · "), p, ";1", 0))
 		}
 		return out, consumed
 	}
+
 	border := func(left, middle, right string) string {
 		parts := make([]string, len(widths))
 		for i, w := range widths {
@@ -57,6 +64,7 @@ func renderTable(lines []string, width int, p config.Palette, transform func(str
 		return paint(p.Border, left+strings.Join(parts, middle)+right)
 	}
 	out = append(out, border("┌", "┬", "┐"))
+
 	for n, row := range rows {
 		var line strings.Builder
 		line.WriteString(paint(p.Border, "│"))
@@ -68,11 +76,13 @@ func renderTable(lines []string, width int, p config.Palette, transform func(str
 			rendered := transform(inline(cell, p, flag, 0))
 			line.WriteString(" " + rendered + strings.Repeat(" ", widths[i]-ansi.StringWidth(rendered)+1) + paint(p.Border, "│"))
 		}
+
 		out = append(out, line.String())
 		if n == 0 {
 			out = append(out, border("├", "┼", "┤"))
 		}
 	}
+
 	out = append(out, border("└", "┴", "┘"))
 	return out, consumed
 }

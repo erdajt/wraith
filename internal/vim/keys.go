@@ -7,8 +7,10 @@ import (
 	"unicode/utf8"
 )
 
+// Key dispatches a key according to the current mode, count and pending operator.
 func (b *Buffer) Key(key, text string) {
 	b.Yanked = false
+
 	if key == "esc" {
 		if b.Mode == "insert" && b.Pos > b.lineStart(b.Pos) {
 			b.Pos--
@@ -19,6 +21,7 @@ func (b *Buffer) Key(key, text string) {
 		b.clamp()
 		return
 	}
+
 	if b.Mode == "search" {
 		switch key {
 		case "enter":
@@ -35,6 +38,7 @@ func (b *Buffer) Key(key, text string) {
 		}
 		return
 	}
+
 	if b.Mode == "insert" {
 		switch key {
 		case "backspace":
@@ -68,35 +72,43 @@ func (b *Buffer) Key(key, text string) {
 		}
 		return
 	}
+
 	if utf8.RuneCountInString(text) > 1 {
 		b.Insert(text)
 		b.clamp()
 		return
 	}
+
 	if key == "ctrl+r" {
 		b.restore(true)
 		return
 	}
+
 	if b.Pending == "r" || b.findPending() {
 		n, _ := strconv.Atoi(b.Count)
 		b.pendingKey(key, text, max(1, n))
 		return
 	}
+
 	if key >= "0" && key <= "9" && (key != "0" || b.Count != "") {
 		if len(b.Count) < 4 {
 			b.Count += key
 		}
 		return
 	}
+
 	n := 1
 	if b.Count != "" {
 		n, _ = strconv.Atoi(b.Count)
 		n = max(1, min(n, 9999))
 	}
+
 	if b.pendingKey(key, text, n) {
 		return
 	}
+
 	b.Count = ""
+
 	if b.Mode == "visual" || b.Mode == "visual-line" {
 		if key == "d" || key == "c" || key == "y" {
 			a, z := min(b.Anchor, b.Pos), max(b.Anchor, b.Pos)+1
@@ -109,6 +121,7 @@ func (b *Buffer) Key(key, text string) {
 			return
 		}
 	}
+
 	switch key {
 	case "i":
 		b.Mode = "insert"
@@ -172,6 +185,7 @@ func (b *Buffer) Key(key, text string) {
 	case "p", "P":
 		if len(b.Register) > 0 {
 			r := append([]rune(nil), b.Register...)
+
 			if b.Linewise {
 				if key == "p" {
 					b.Pos = b.lineEnd(b.Pos)
@@ -186,6 +200,7 @@ func (b *Buffer) Key(key, text string) {
 			} else if key == "p" {
 				b.Pos = min(len(b.Text), b.Pos+1)
 			}
+
 			b.Insert(strings.Repeat(string(r), n))
 			b.clamp()
 		}
@@ -208,6 +223,7 @@ func (b *Buffer) Key(key, text string) {
 			} else {
 				b.Text[b.Pos] = unicode.ToUpper(r)
 			}
+
 			b.Pos++
 			b.clamp()
 		}
@@ -223,8 +239,10 @@ func (b *Buffer) Key(key, text string) {
 	}
 }
 
+// apply applies a yank, delete or change to a rune range and updates mode and register state.
 func (b *Buffer) apply(op string, a, z int, line bool) {
 	b.Linewise = line
+
 	if op == "y" {
 		b.Yanked = true
 		b.YankStart, b.YankEnd = max(0, a), min(z, len(b.Text))
@@ -234,10 +252,12 @@ func (b *Buffer) apply(op string, a, z int, line bool) {
 		b.clamp()
 		return
 	}
+
 	b.remove(a, z)
 	b.Mode = "normal"
 	if op == "c" {
 		b.Mode = "insert"
 	}
+
 	b.clamp()
 }

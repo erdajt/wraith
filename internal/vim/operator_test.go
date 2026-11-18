@@ -20,9 +20,11 @@ func TestOperatorCharacterFindsAndLineYank(t *testing.T) {
 			b := New()
 			b.Text = []rune("call(a, bee) end\nnext")
 			b.Mode = "normal"
+
 			for _, r := range tt.keys {
 				b.Key(string(r), string(r))
 			}
+
 			if b.String() != tt.text || string(b.Register) != tt.register {
 				t.Fatalf("text %q register %q", b.String(), string(b.Register))
 			}

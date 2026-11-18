@@ -18,6 +18,7 @@ type Row struct {
 	Block int
 }
 
+// Render renders markdown into terminal rows with code-block indices and an updated block count.
 func Render(source string, width int, p config.Palette, block int, transforms ...func(string) string) ([]Row, int) {
 	width = max(4, width)
 	var out []Row
@@ -36,10 +37,12 @@ func Render(source string, width int, p config.Palette, block int, transforms ..
 	}
 	lines := strings.Split(source, "\n")
 	fence := ""
+
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
 		trim := strings.TrimSpace(line)
 		indent := len(line) - len(strings.TrimLeft(line, " "))
+
 		if fence != "" {
 			if indent <= 3 && strings.HasPrefix(trim, fence) && strings.Trim(trim, string(fence[0])+" \t") == "" {
 				add(paint(p.Border, "╰"+strings.Repeat("─", min(width-1, 40))))
@@ -50,6 +53,7 @@ func Render(source string, width int, p config.Palette, block int, transforms ..
 			}
 			continue
 		}
+
 		if indent <= 3 && (strings.HasPrefix(trim, "```") || strings.HasPrefix(trim, "~~~")) {
 			n := 0
 			for n < len(trim) && trim[n] == trim[0] {
@@ -71,23 +75,28 @@ func Render(source string, width int, p config.Palette, block int, transforms ..
 			i += consumed - 1
 			continue
 		}
+
 		if m := heading.FindStringSubmatch(line); m != nil {
 			add(inline(m[1], p, ";1", 0))
 			continue
 		}
+
 		if rule.MatchString(line) {
 			add(paint(p.Border, strings.Repeat("─", min(width, 40))))
 			continue
 		}
+
 		if strings.HasPrefix(trim, ">") {
 			add(paint(p.Border, "│ ") + inline(strings.TrimSpace(strings.TrimPrefix(trim, ">")), p, "", 0))
 			continue
 		}
+
 		if m := list.FindStringSubmatch(line); m != nil {
 			marker := "• "
 			if m[2] != "" {
 				marker = m[2] + ". "
 			}
+
 			text := m[3]
 			if strings.HasPrefix(text, "[ ] ") {
 				marker = "☐ "
@@ -100,16 +109,20 @@ func Render(source string, width int, p config.Palette, block int, transforms ..
 			add(m[1] + paint(p.Second, marker) + inline(text, p, "", 0))
 			continue
 		}
+
 		add(inline(line, p, "", 0))
 	}
+
 	return out, block
 }
 
+// tableSeparator recognizes a table separator with at least two columns.
 func tableSeparator(line string) bool {
 	cells := strings.Split(strings.Trim(strings.TrimSpace(line), "|"), "|")
 	if len(cells) < 2 {
 		return false
 	}
+
 	for _, cell := range cells {
 		cell = strings.Trim(strings.TrimSpace(cell), ":")
 		if len(cell) < 3 || strings.Trim(cell, "-") != "" {

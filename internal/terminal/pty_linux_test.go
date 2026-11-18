@@ -12,6 +12,7 @@ func TestPTYRoundTrip(t *testing.T) {
 		t.Skipf("pty unavailable in this environment: %v", err)
 	}
 	defer p.Close()
+
 	deadline := time.After(3 * time.Second)
 	var output strings.Builder
 	sent := false
@@ -22,11 +23,15 @@ func TestPTYRoundTrip(t *testing.T) {
 				if !strings.Contains(output.String(), "received:hello") {
 					t.Fatalf("missing shell response: %q", output.String())
 				}
+
 				return
 			}
+
 			output.Write(e.Data)
+
 			if !sent && strings.Contains(output.String(), "ready") {
 				sent = true
+
 				if err = p.Write([]byte("hello\n")); err != nil {
 					t.Fatal(err)
 				}
@@ -43,6 +48,7 @@ func TestPTYDrainsOutputAfterShellExit(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer p.Close()
+
 	deadline := time.After(3 * time.Second)
 	var output strings.Builder
 	for {
@@ -52,8 +58,10 @@ func TestPTYDrainsOutputAfterShellExit(t *testing.T) {
 				if output.String() != strings.Repeat("x", 2000)+"finished" {
 					t.Fatalf("lost trailing output: received %d bytes", output.Len())
 				}
+
 				return
 			}
+
 			output.Write(e.Data)
 		case <-deadline:
 			t.Fatal("shell output did not close")
@@ -67,6 +75,7 @@ func TestPTYReceivesExplicitLocalBindings(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer p.Close()
+
 	var output strings.Builder
 	deadline := time.After(3 * time.Second)
 	for {
@@ -76,8 +85,10 @@ func TestPTYReceivesExplicitLocalBindings(t *testing.T) {
 				if output.String() != "private.example" {
 					t.Fatalf("binding missing: %q", output.String())
 				}
+
 				return
 			}
+
 			output.Write(event.Data)
 		case <-deadline:
 			t.Fatal("shell did not finish")

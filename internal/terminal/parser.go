@@ -2,9 +2,11 @@ package terminal
 
 import "unicode/utf8"
 
+// Feed consumes terminal output, retaining partial sequences and returning protocol replies.
 func (s *Screen) Feed(data []byte) []byte {
 	s.input = append(s.input, data...)
 	var reply []byte
+
 	for len(s.input) > 0 {
 		b := s.input[0]
 		if s.state == 0 && b >= 0x80 {
@@ -16,6 +18,7 @@ func (s *Screen) Feed(data []byte) []byte {
 			s.put(r)
 			continue
 		}
+
 		s.input = s.input[1:]
 		switch s.state {
 		case 0:
@@ -99,5 +102,6 @@ func (s *Screen) Feed(data []byte) []byte {
 			s.state = 0
 		}
 	}
+
 	return reply
 }

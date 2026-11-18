@@ -5,6 +5,7 @@ import (
 	"strconv"
 )
 
+// sgr applies graphic rendition parameters to the active cell style.
 func (s *Screen) sgr(p []int) {
 	for i := 0; i < len(p); i++ {
 		n := p[i]
@@ -44,6 +45,7 @@ func (s *Screen) sgr(p []int) {
 				color = fmt.Sprintf("%d;2;%d;%d;%d", n, min(255, max(0, p[i+2])), min(255, max(0, p[i+3])), min(255, max(0, p[i+4])))
 				i += 4
 			}
+
 			if n == 38 {
 				s.style.FG = color
 			} else {

@@ -29,14 +29,17 @@ type Screen struct {
 	mainX, mainY                   int
 }
 
+// NewScreen creates a screen with the requested dimensions and scrollback limit.
 func NewScreen(w, h, limit int) *Screen {
 	s := &Screen{Limit: limit, Cursor: true}
 	s.Resize(w, h)
 	return s
 }
 
+// row allocates a blank row of terminal cells.
 func row(w int) []Cell { return make([]Cell, w) }
 
+// Resize resizes both screen buffers while clamping the cursor and resetting margins.
 func (s *Screen) Resize(w, h int) {
 	w = max(1, w)
 	h = max(1, h)
@@ -57,6 +60,7 @@ func (s *Screen) Resize(w, h int) {
 	if s.main != nil {
 		s.main = resize(s.main)
 	}
+
 	s.Width = w
 	s.Height = h
 	s.X = min(s.X, w-1)
@@ -66,6 +70,7 @@ func (s *Screen) Resize(w, h int) {
 	s.wrap = false
 }
 
+// put writes a rune at the cursor, handling combining characters, wide cells and wrapping.
 func (s *Screen) put(r rune) {
 	w := runewidth.RuneWidth(r)
 	if w == 0 {
@@ -73,6 +78,7 @@ func (s *Screen) put(r rune) {
 		if s.wrap {
 			x = s.X
 		}
+
 		if x >= 0 {
 			if s.Cells[s.Y][x].Width == -1 && x > 0 {
 				x--
@@ -81,24 +87,29 @@ func (s *Screen) put(r rune) {
 		}
 		return
 	}
+
 	if s.wrap || s.X+w > s.Width {
 		s.X = 0
 		s.linefeed()
 		s.wrap = false
 	}
+
 	if w > s.Width {
 		return
 	}
+
 	if s.X > 0 && s.Cells[s.Y][s.X].Width == -1 {
 		s.Cells[s.Y][s.X-1] = Cell{}
 	}
 	if s.Cells[s.Y][s.X].Width == 2 && s.X+1 < s.Width {
 		s.Cells[s.Y][s.X+1] = Cell{}
 	}
+
 	s.Cells[s.Y][s.X] = Cell{Text: string(r), Width: w, Style: s.style}
 	if w == 2 {
 		s.Cells[s.Y][s.X+1] = Cell{Width: -1, Style: s.style}
 	}
+
 	if s.X+w >= s.Width {
 		s.X = s.Width - 1
 		s.wrap = true
@@ -107,6 +118,7 @@ func (s *Screen) put(r rune) {
 	}
 }
 
+// linefeed advances one row or scrolls the active region at its bottom margin.
 func (s *Screen) linefeed() {
 	s.wrap = false
 	if s.Y == s.bottom {
@@ -115,13 +127,18 @@ func (s *Screen) linefeed() {
 		s.Y = min(s.Height-1, s.Y+1)
 	}
 }
+
+// blank returns an empty cell carrying the active style.
 func (s *Screen) blank() Cell { return Cell{Style: s.style} }
+
+// clearRow replaces a bounded cell range with blanks in the active style.
 func (s *Screen) clearRow(y, from, to int) {
 	for x := max(0, from); x < min(to, s.Width); x++ {
 		s.Cells[y][x] = s.blank()
 	}
 }
 
+// scrollUp shifts the scrolling region upward, retaining full-screen rows when eligible.
 func (s *Screen) scrollUp(n int) {
 	for range min(n, s.bottom-s.top+1) {
 		if s.top == 0 && s.bottom == s.Height-1 && s.main == nil && s.Limit > 0 {
@@ -130,10 +147,13 @@ func (s *Screen) scrollUp(n int) {
 				s.History = s.History[len(s.History)-s.Limit:]
 			}
 		}
+
 		copy(s.Cells[s.top:s.bottom], s.Cells[s.top+1:s.bottom+1])
 		s.Cells[s.bottom] = row(s.Width)
 	}
 }
+
+// scrollDown shifts the scrolling region downward and inserts blank rows at its top.
 func (s *Screen) scrollDown(n int) {
 	for range min(n, s.bottom-s.top+1) {
 		copy(s.Cells[s.top+1:s.bottom+1], s.Cells[s.top:s.bottom])

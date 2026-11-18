@@ -26,10 +26,12 @@ type PTY struct {
 	once   sync.Once
 }
 
+// Start starts a shell on a sized pseudo-terminal and streams its output as events.
 func Start(argv []string, dir string, w, h int, environment ...string) (*PTY, error) {
 	if len(argv) == 0 {
 		return nil, errors.New("empty shell command")
 	}
+
 	f, err := os.OpenFile("/dev/ptmx", os.O_RDWR|unix.O_NOCTTY, 0)
 	if err != nil {
 		return nil, fmt.Errorf("open pty: %w", err)
@@ -38,17 +40,20 @@ func Start(argv []string, dir string, w, h int, environment ...string) (*PTY, er
 		f.Close()
 		return nil, err
 	}
+
 	n, err := unix.IoctlGetInt(int(f.Fd()), unix.TIOCGPTN)
 	if err != nil {
 		f.Close()
 		return nil, err
 	}
+
 	slave, err := os.OpenFile(fmt.Sprintf("/dev/pts/%d", n), os.O_RDWR|unix.O_NOCTTY, 0)
 	if err != nil {
 		f.Close()
 		return nil, err
 	}
 	defer slave.Close()
+
 	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Dir = dir
 	cmd.Stdin = slave
@@ -66,14 +71,19 @@ func Start(argv []string, dir string, w, h int, environment ...string) (*PTY, er
 		f.Close()
 		return nil, err
 	}
-	go func() { _ = cmd.Wait(); close(p.waited) }()
+	go func() {
+		_ = cmd.Wait()
+		close(p.waited)
+	}()
 	go p.read()
 	return p, nil
 }
 
+// read forwards terminal bytes until closure, normalizing terminal shutdown errors to eof.
 func (p *PTY) read() {
 	defer close(p.Events)
 	defer p.file.Close()
+
 	buf := make([]byte, 8192)
 	for {
 		n, err := p.file.Read(buf)
@@ -84,6 +94,7 @@ func (p *PTY) read() {
 				return
 			}
 		}
+
 		if err != nil {
 			if errors.Is(err, unix.EIO) || errors.Is(err, os.ErrClosed) {
 				err = io.EOF
@@ -96,10 +107,19 @@ func (p *PTY) read() {
 		}
 	}
 }
-func (p *PTY) Write(data []byte) error { _, err := p.file.Write(data); return err }
+
+// Write writes input bytes to the pseudo-terminal.
+func (p *PTY) Write(data []byte) error {
+	_, err := p.file.Write(data)
+	return err
+}
+
+// Resize sets the pseudo-terminal dimensions within the kernel's supported range.
 func (p *PTY) Resize(w, h int) error {
 	return unix.IoctlSetWinsize(int(p.file.Fd()), unix.TIOCSWINSZ, &unix.Winsize{Col: uint16(max(1, min(w, 65535))), Row: uint16(max(1, min(h, 65535)))})
 }
+
+// Close closes the terminal once and signals its process group, escalating if needed.
 func (p *PTY) Close() {
 	p.once.Do(func() {
 		close(p.done)

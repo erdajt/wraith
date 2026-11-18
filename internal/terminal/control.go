@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// csi applies a control sequence and returns any requested terminal response.
 func (s *Screen) csi(raw string, final byte) []byte {
 	private := strings.HasPrefix(raw, "?")
 	raw = strings.TrimLeft(raw, "?>!")
@@ -14,6 +15,7 @@ func (s *Screen) csi(raw string, final byte) []byte {
 	for i, v := range parts {
 		p[i], _ = strconv.Atoi(v)
 	}
+
 	arg := func(i, def int) int {
 		if i >= len(p) || p[i] <= 0 {
 			return def
@@ -21,9 +23,11 @@ func (s *Screen) csi(raw string, final byte) []byte {
 		return min(p[i], 100000)
 	}
 	n := arg(0, 1)
+
 	if !strings.ContainsRune("mnchl", rune(final)) {
 		s.wrap = false
 	}
+
 	switch final {
 	case 'A':
 		s.Y = max(0, s.Y-n)
@@ -132,6 +136,7 @@ func (s *Screen) csi(raw string, final byte) []byte {
 		if private {
 			for _, mode := range p {
 				on := final == 'h'
+
 				switch mode {
 				case 25:
 					s.Cursor = on
@@ -159,5 +164,6 @@ func (s *Screen) csi(raw string, final byte) []byte {
 			}
 		}
 	}
+
 	return nil
 }

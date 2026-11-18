@@ -7,13 +7,17 @@ func TestBufferUndoRestoresUnicode(t *testing.T) {
 	b.Set("界a")
 	b.Insert("b")
 	b.restore(false)
+
 	if b.String() != "界a" || b.Pos != 2 {
 		t.Fatalf("undo: %q at %d", b.String(), b.Pos)
 	}
+
 	b.restore(true)
+
 	if b.String() != "界ab" {
 		t.Fatal("redo lost inserted text")
 	}
+
 	b.Mode = "visual"
 	b.Anchor = 0
 	b.Pos = 1
@@ -32,20 +36,27 @@ func normal(s string) *Buffer { b := New(); b.Set(s); b.Mode = "normal"; b.Pos =
 func TestMotionsOperatorsUndoAndPaste(t *testing.T) {
 	b := normal("alpha beta\ngamma delta")
 	keys(b, "d", "w")
+
 	if b.String() != "beta\ngamma delta" {
 		t.Fatalf("dw: %q", b.String())
 	}
+
 	keys(b, "u")
+
 	if b.String() != "alpha beta\ngamma delta" {
 		t.Fatal("undo failed")
 	}
+
 	keys(b, "w", "c", "i", "w")
 	b.Key("runes", "new")
 	b.Key("esc", "")
+
 	if b.String() != "alpha new\ngamma delta" {
 		t.Fatalf("ciw: %q", b.String())
 	}
+
 	keys(b, "g", "g", "y", "y", "G", "p")
+
 	if b.String() != "alpha new\ngamma delta\nalpha new\n" {
 		t.Fatalf("line paste: %q", b.String())
 	}
@@ -54,15 +65,20 @@ func TestMotionsOperatorsUndoAndPaste(t *testing.T) {
 func TestVisualUnicodeAndSearch(t *testing.T) {
 	b := normal("界 alpha beta alpha")
 	keys(b, "v", "l", "d")
+
 	if b.String() != "alpha beta alpha" {
 		t.Fatalf("visual delete: %q", b.String())
 	}
+
 	keys(b, "/", "a", "l", "p", "h", "a")
 	b.Key("enter", "")
+
 	if b.Pos != 11 {
 		t.Fatalf("search position: %d", b.Pos)
 	}
+
 	keys(b, "n")
+
 	if b.Pos != 0 {
 		t.Fatal("search did not wrap")
 	}
@@ -75,10 +91,13 @@ func TestMultilineInsertAndCounts(t *testing.T) {
 	b.Key("runes", "world")
 	b.Key("esc", "")
 	keys(b, "g", "g", "2", "d", "d")
+
 	if b.String() != "" {
 		t.Fatalf("2dd: %q", b.String())
 	}
+
 	keys(b, "u")
+
 	if b.String() != "hello\nworld" {
 		t.Fatal("undo multiline failed")
 	}
@@ -90,9 +109,12 @@ func FuzzEditing(f *testing.F) {
 		if len(text)+len(seq) > 4096 {
 			t.Skip()
 		}
+
 		b := normal(text)
+
 		for _, r := range seq {
 			b.Key(string(r), string(r))
+
 			if b.Pos < 0 || b.Pos > len(b.Text) {
 				t.Fatal("cursor out of bounds")
 			}
@@ -103,21 +125,28 @@ func FuzzEditing(f *testing.F) {
 func TestLiteralReplaceAndBigWordMotions(t *testing.T) {
 	b := normal("abc")
 	keys(b, "r", "界")
+
 	if b.String() != "界bc" {
 		t.Fatalf("unicode replacement: %q", b.String())
 	}
+
 	keys(b, "r", "1")
+
 	if b.String() != "1bc" {
 		t.Fatal("numeric replacement became a count")
 	}
+
 	b = normal("host.name next")
 	keys(b, "W")
+
 	if b.Pos != 10 {
 		t.Fatalf("big word split at punctuation: %d", b.Pos)
 	}
+
 	b = normal("first next")
 	keys(b, "c", "w")
 	keys(b, "x", "esc")
+
 	if b.String() != "x next" {
 		t.Fatalf("cw consumed trailing space: %q", b.String())
 	}

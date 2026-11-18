@@ -10,6 +10,7 @@ import (
 
 func TestInlineMarkdownPreservesTextAndAppliesAttributes(t *testing.T) {
 	p := config.Default().Palette()
+
 	for _, tt := range []struct{ input, plain, attribute string }{
 		{"**bold**", "bold", ";1m"},
 		{"*italic*", "italic", ";3m"},
@@ -32,6 +33,7 @@ func TestInlineMarkdownPreservesTextAndAppliesAttributes(t *testing.T) {
 
 func TestIncompleteMarkupRemainsReadable(t *testing.T) {
 	p := config.Default().Palette()
+
 	for _, text := range []string{"**pending", "`pending", "[pending", strings.Repeat("*", 100)} {
 		if ansi.Strip(inline(text, p, "", 0)) == "" {
 			t.Fatalf("lost streaming text %q", text)

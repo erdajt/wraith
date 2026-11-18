@@ -5,19 +5,25 @@ import (
 	"unicode"
 )
 
+// category classifies a rune as whitespace, a word character or punctuation.
 func category(r rune) int {
 	if unicode.IsSpace(r) {
 		return 0
 	}
+
 	if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' {
 		return 1
 	}
+
 	return 2
 }
+
+// wordBounds returns the half-open range of the character category under the cursor.
 func (b *Buffer) wordBounds() (int, int) {
 	if len(b.Text) == 0 {
 		return 0, 0
 	}
+
 	a, z := min(b.Pos, len(b.Text)-1), min(b.Pos, len(b.Text)-1)
 	kind := category(b.Text[a])
 	for a > 0 && category(b.Text[a-1]) == kind {
@@ -29,6 +35,7 @@ func (b *Buffer) wordBounds() (int, int) {
 	return a, z
 }
 
+// motion applies a counted movement and clamps the resulting cursor position.
 func (b *Buffer) motion(key string, n int) {
 	classify := category
 	if key == "W" || key == "B" || key == "E" {
@@ -71,6 +78,7 @@ func (b *Buffer) motion(key string, n int) {
 				for b.Pos < len(b.Text) && classify(b.Text[b.Pos]) == kind {
 					b.Pos++
 				}
+
 				for b.Pos < len(b.Text) && unicode.IsSpace(b.Text[b.Pos]) {
 					b.Pos++
 				}
@@ -80,6 +88,7 @@ func (b *Buffer) motion(key string, n int) {
 			for b.Pos > 0 && unicode.IsSpace(b.Text[b.Pos]) {
 				b.Pos--
 			}
+
 			if b.Pos < len(b.Text) {
 				kind := classify(b.Text[b.Pos])
 				for b.Pos > 0 && classify(b.Text[b.Pos-1]) == kind {
@@ -91,6 +100,7 @@ func (b *Buffer) motion(key string, n int) {
 			for b.Pos < len(b.Text) && unicode.IsSpace(b.Text[b.Pos]) {
 				b.Pos++
 			}
+
 			if b.Pos < len(b.Text) {
 				kind := classify(b.Text[b.Pos])
 				for b.Pos+1 < len(b.Text) && classify(b.Text[b.Pos+1]) == kind {
@@ -101,12 +111,15 @@ func (b *Buffer) motion(key string, n int) {
 			b.matchPair()
 		}
 	}
+
 	b.clamp()
 }
 
+// moveVertical moves one line while retaining the column when the destination permits it.
 func (b *Buffer) moveVertical(delta int) {
 	start := b.lineStart(b.Pos)
 	col := b.Pos - start
+
 	if delta > 0 {
 		e := b.lineEnd(b.Pos)
 		if e < len(b.Text) {
@@ -116,18 +129,22 @@ func (b *Buffer) moveVertical(delta int) {
 		s := b.lineStart(start - 1)
 		b.Pos = min(start-1, s+col)
 	}
+
 	b.clamp()
 }
 
+// find moves to the next case-insensitive search match, wrapping around the buffer.
 func (b *Buffer) find(reverse bool) {
 	needle := []rune(b.Search)
 	if len(needle) == 0 {
 		return
 	}
+
 	step := 1
 	if reverse {
 		step = -1
 	}
+
 	for n := 1; n <= len(b.Text); n++ {
 		p := (b.Pos + step*n + len(b.Text)) % len(b.Text)
 		if p+len(needle) <= len(b.Text) && strings.EqualFold(string(b.Text[p:p+len(needle)]), b.Search) {
@@ -136,10 +153,13 @@ func (b *Buffer) find(reverse bool) {
 		}
 	}
 }
+
+// matchPair moves to the matching bracket while accounting for nested pairs.
 func (b *Buffer) matchPair() {
 	if b.Pos >= len(b.Text) {
 		return
 	}
+
 	opens, closes := "([{", ")]}"
 	r := b.Text[b.Pos]
 	i := strings.IndexRune(opens, r)
@@ -155,11 +175,13 @@ func (b *Buffer) matchPair() {
 		step = -1
 		other = []rune(opens)[i]
 	}
+
 	depth := 1
 	for p := b.Pos + step; p >= 0 && p < len(b.Text); p += step {
 		if b.Text[p] == r {
 			depth++
 		}
+
 		if b.Text[p] == other {
 			depth--
 			if depth == 0 {
