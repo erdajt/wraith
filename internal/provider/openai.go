@@ -121,6 +121,9 @@ func (a *API) OpenAI(ctx context.Context, req ollama.Request, emit func(ollama.R
 		}
 
 		for _, choice := range chunk.Choices {
+			if result.Reason != "" && (choice.Finish != "" || choice.Delta.Content != "" || choice.Delta.Reasoning != "" || len(choice.Delta.Tools) > 0) {
+				return &ollama.ActionError{Problem: "provider choice continued after its finish reason"}
+			}
 			for _, delta := range choice.Delta.Tools {
 				if len(req.Tools) == 0 || choice.Index != 0 || delta.Index != 0 || result.Reason != "" || result.Done || delta.Type != "" && delta.Type != "function" {
 					return &ollama.ActionError{Problem: "native request is unavailable, duplicated or out of order"}

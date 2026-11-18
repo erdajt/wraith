@@ -103,6 +103,10 @@ func (a *API) Anthropic(ctx context.Context, req ollama.Request, emit func(ollam
 			return errors.New("anthropic stream continued after completion")
 		}
 
+		if result.Reason != "" && (event.Type == "message_start" || strings.HasPrefix(event.Type, "content_block_") || event.Delta.Stop != "") {
+			return &ollama.ActionError{Problem: "anthropic message continued after its stop reason"}
+		}
+
 		text, thinking := "", ""
 		switch event.Type {
 		case "error":
@@ -139,8 +143,12 @@ func (a *API) Anthropic(ctx context.Context, req ollama.Request, emit func(ollam
 				callClosed = true
 			}
 		case "message_delta":
-			result.Reason = event.Delta.Stop
-			result.EvalCount = event.Usage.Output
+			if event.Delta.Stop != "" {
+				result.Reason = event.Delta.Stop
+			}
+			if event.Usage.Output > 0 {
+				result.EvalCount = event.Usage.Output
+			}
 		case "message_stop":
 			result.Done = true
 		}
