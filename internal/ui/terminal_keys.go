@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 	"strings"
+	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/terminal"
@@ -99,8 +100,10 @@ func (a *App) terminalKey(k tea.KeyMsg) tea.Cmd {
 
 // stagedInput encodes a reviewable paste, rejecting control bytes and unsafe multiline staging.
 func stagedInput(command string, bracketed bool) ([]byte, error) {
-	if strings.ContainsAny(command, "\x00\x1b\r") {
-		return nil, errors.New("command contains terminal control bytes; edit before staging")
+	for _, char := range command {
+		if unicode.IsControl(char) && char != '\n' && char != '\t' {
+			return nil, errors.New("command contains terminal control bytes; edit before staging")
+		}
 	}
 
 	if bracketed {

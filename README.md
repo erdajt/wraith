@@ -104,7 +104,7 @@ approved agent commands run in the background. the chat stays available. `/jobs`
 
 [background jobs](docs/assets/screenshots/jobs.png) · [inline command revision](docs/assets/screenshots/modify.png) · [suggested blocks](docs/assets/screenshots/blocks.png)
 
-ordinary markdown blocks never execute just by appearing. `/blocks` or enter on a command opens editing/run actions. saving a shell suggestion stages its actual text; enter inserts it into the shell input, and the next enter executes it. tracked jobs use a fresh noninteractive shell. use a pane for tty programs or persistent shell state.
+ordinary markdown blocks never execute just by appearing. `/blocks` or enter on a command opens editing/run actions. saving a shell suggestion inserts its actual text into an empty integrated zsh input buffer; enter executes it. other shells keep explicit staging. tracked jobs use a fresh noninteractive shell. use a pane for tty programs or persistent shell state. [insertion and recovery](docs/terminals.md#saved-command-insertion)
 
 output readers support vim motions, search, selection, copying, refresh and cancellation. large output retains a bounded prefix and recent tail; the agent gets bounded excerpts and queries. rejecting stops the requesting turn. quitting ends owned jobs and shells. [execution and recovery](docs/execution.md)
 

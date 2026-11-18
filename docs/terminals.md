@@ -2,7 +2,7 @@
 
 `alt+e` toggles the centered scratch shell. `alt+s` toggles the independent shell on the right. opening a pane focuses it; hiding it preserves its process, current directory, environment and running jobs. `ctrl+\` returns input focus to the prompt while leaving the pane visible. toggle a visible pane off and on to focus it again.
 
-inside a terminal, ordinary keys and `ctrl+c` go to the shell. wraith reserves its configured quit, pane toggle and unfocus bindings. `shift+pageup` and `shift+pagedown` browse the pane's bounded scrollback. editing a suggested block places it in the scratch pane's staging area; it does not write or execute it until you explicitly insert it.
+inside a terminal, ordinary keys and `ctrl+c` go to the shell. wraith reserves its configured quit, pane toggle and unfocus bindings. `shift+pageup` and `shift+pagedown` browse the pane's bounded scrollback. saving an edited suggestion inserts it for review when shell integration is available; it never executes on save.
 
 ## copy mode
 
@@ -34,4 +34,14 @@ exiting wraith closes both ptys and terminates their shell process groups.
 
 these are linux ptys with a built-in vt screen renderer. cursor movement, alternate screens, scroll regions, bracketed paste, ansi/256/truecolor text, unicode and device reports are supported. scrollback is bounded; resizing preserves cells without paragraph reflow. image protocols, terminal multiplexing protocols and full emulator equivalence are outside the renderer's scope. use the external editor for your complete neovim setup.
 
-staged commands are inserted at the current shell input position. clear unfinished input first and insert only when the shell is ready; the app cannot infer whether an arbitrary foreground program is accepting a shell command.
+## saved-command insertion
+
+`shell: ["zsh"]` and `shell: ["zsh", "-i"]` support automatic insertion. a temporary startup proxy loads your existing `.zshenv`, honors its `ZDOTDIR` changes and leaves subsequent startup files in their normal order. it registers a zsh line-editor widget through `precmd_functions`; a startup configuration that replaces that hook can disable integration. no persistent shell files are edited.
+
+the widget receives a saved command through dedicated pipes and a private temporary file. it inserts only when the line editor is active and both the current buffer and continuation buffer are empty. it assigns text without evaluating it or accepting the line. multiline text is preserved. foreground programs never receive the command through terminal input. the snippet remains on disk under the app's snippets directory.
+
+if input is occupied, the snippet stays staged. `ctrl+c` interrupts shell input; enter retries insertion through the same empty-buffer check. a second save retains its new snippet separately and reports its path instead of overwriting the pending command.
+
+escape requests cancellation while waiting for acknowledgement. after three seconds without acknowledgement, wraith requests cancellation and retains the snippet. cancellation can race with insertion, so a late acknowledgement may report that the text was already inserted. wraith blocks reinsertion while the outcome is unknown. `ctrl+c` can interrupt a foreground program. `/terminal-restart 1` or `2` resets the shell and preserves the snippet for explicit insertion; failed restarts retain its path too.
+
+bash, other shells, wrappers and custom zsh arguments currently use manual staging. enter inserts at the current input position without executing; the next enter executes. clear unfinished input first and insert only at a shell prompt. manual multiline insertion requires bracketed paste. terminal output alone cannot prove that an arbitrary foreground program is ready for a shell command.

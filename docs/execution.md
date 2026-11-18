@@ -25,7 +25,9 @@ approval freezes the session, turn, directory, shell, timeout, private bindings 
 
 `<leader>b` or `/blocks` lists code blocks. enter on a command under the conversation cursor opens it in your editor; enter on an assistant message offers its blocks. selecting run authorizes a tracked run directly.
 
-saving a shell block stages its actual text in the scratch shell. enter inserts it into shell input without a newline; the next enter executes it. multiline insertion requires bracketed paste support. `r` offers a tracked run, `e` edits again, and escape dismisses staging. source languages such as python and go use a saved file and interpreter. private references in non-shell source require editor review before running; wraith does not infer language-specific quoting.
+saving a shell block inserts its text automatically into an empty integrated zsh edit buffer. enter then executes it; saving alone never does. an occupied input buffer keeps the snippet staged. `ctrl+c` clears shell input, and enter retries the empty-buffer check. other shells keep manual staging: enter inserts and the next enter executes. manual multiline insertion requires bracketed paste support.
+
+while insertion is pending, escape requests cancellation and `ctrl+c` also interrupts the shell. an uncertain acknowledgement blocks reinsertion until the shell replies or is restarted. after confirmed staging, `r` offers a tracked run, `e` edits again, and escape dismisses staging. source languages such as python and go use a saved file and interpreter. private references in non-shell source require editor review before running; wraith does not infer language-specific quoting. see [terminal recovery](terminals.md#saved-command-insertion).
 
 ## background jobs and history
 

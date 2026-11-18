@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -121,7 +120,11 @@ func (p *PTY) QueuePaste(command string) (string, error) {
 			return "", errors.New("saved command contains terminal controls")
 		}
 	}
-	id := fmt.Sprintf("%x", rand.Text())
+	var token [16]byte
+	if _, err := rand.Read(token[:]); err != nil {
+		return "", err
+	}
+	id := hex.EncodeToString(token[:])
 	path := filepath.Join(p.paste.root, id)
 	if err := os.WriteFile(path, []byte(command), 0600); err != nil {
 		_ = os.Remove(path)
@@ -143,7 +146,7 @@ func (p *PTY) CancelPaste(id string) {
 
 // remove discards a payload only when its id has the generated format.
 func (p *pasteBridge) remove(id string) {
-	if _, err := hex.DecodeString(id); err == nil && len(id) == 52 {
+	if _, err := hex.DecodeString(id); err == nil && len(id) == 32 {
 		_ = os.Remove(filepath.Join(p.root, id))
 	}
 }
