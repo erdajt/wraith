@@ -51,6 +51,11 @@ func TestAmbiguousMappingTimeoutAndFailedPrefixReplayOnce(t *testing.T) {
 	if a.Prompt.String() != "ac" {
 		t.Fatal("stale timer replayed keys twice")
 	}
+	a.key(key("a"))
+	a.key(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("pasted"), Paste: true})
+	if a.Prompt.String() != "acapasted" {
+		t.Fatalf("paste lost a pending prefix: %q", a.Prompt.String())
+	}
 	a.key(key("x"))
 	if a.popup != nil {
 		t.Fatal("ambiguous exact match ran before timeout")
@@ -66,8 +71,9 @@ func TestPendingMappingCannotCrossFocusOrInterceptTerminalInput(t *testing.T) {
 	a.focus = "chat"
 	a.key(tea.KeyMsg{Type: tea.KeyCtrlW})
 	a.focus = "prompt"
+	a.key(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("draft"), Paste: true})
 	a.keymapTimeout(a.keySerial)
-	if a.Prompt.String() != "" || len(a.keyPending) != 0 {
+	if a.Prompt.String() != "draft" || len(a.keyPending) != 0 {
 		t.Fatal("pending chord entered another buffer")
 	}
 	a.focus = "terminal0"

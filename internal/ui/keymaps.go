@@ -43,6 +43,9 @@ func (a *App) inputMode() string {
 		}
 		return "chat.normal"
 	}
+	if a.Prompt.Mode == "search" {
+		return "search"
+	}
 	if a.Prompt.Pending != "" || a.Prompt.Count != "" {
 		return "prompt.operator"
 	}
@@ -67,11 +70,11 @@ func (a *App) keyScope() string { return a.keyOwner() + ":" + a.inputMode() }
 // key resolves user mappings before forwarding unmatched input to its original editor.
 func (a *App) key(k tea.KeyMsg) tea.Cmd {
 	if k.Type == tea.KeyRunes && len(k.Runes) > 1 && !k.Paste && !k.Alt {
-		var cmds []tea.Cmd
+		keys := make([]tea.KeyMsg, 0, len(k.Runes))
 		for _, r := range k.Runes {
-			cmds = append(cmds, a.key(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}}))
+			keys = append(keys, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
 		}
-		return tea.Batch(cmds...)
+		return a.dispatchKeys(queuedKeysMsg{Keys: keys, Owner: a.keyOwner(), Mapped: true})
 	}
 	key := k.String()
 	if key == "ctrl+q" || key == a.Config.Keys["quit"] {
@@ -83,8 +86,13 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		return a.cancelInput()
 	}
 	if k.Paste {
+		if len(a.keyPending) > 0 && a.keyPendingScope != a.keyScope() {
+			a.keyPending = nil
+			a.notice = "key sequence cancelled after focus changed"
+		}
+		keys := append(append([]tea.KeyMsg(nil), a.keyPending...), k)
 		a.keyPending = nil
-		return a.keyDefault(k)
+		return a.replayKeys(keys, a.keyScope())
 	}
 	scope := a.keyScope()
 	if len(a.keyPending) > 0 && scope != a.keyPendingScope {
@@ -127,19 +135,10 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 
 // replayKeys forwards a failed sequence once without remapping or crossing focus boundaries.
 func (a *App) replayKeys(keys []tea.KeyMsg, scope string) tea.Cmd {
-	var cmds []tea.Cmd
 	if a.keyScope() != scope {
 		return nil
 	}
-	owner := a.keyOwner()
-	for _, key := range keys {
-		if a.keyOwner() != owner {
-			a.notice = "remaining key sequence cancelled after focus changed"
-			break
-		}
-		cmds = append(cmds, a.keyDefault(key))
-	}
-	return tea.Batch(cmds...)
+	return a.dispatchKeys(queuedKeysMsg{Keys: keys, Owner: a.keyOwner()})
 }
 
 // keymapTimeout resolves an ambiguous exact match or replays an incomplete prefix once.

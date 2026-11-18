@@ -86,6 +86,7 @@ type terminalMsg struct {
 }
 
 type App struct {
+	editorKeys      []queuedKeysMsg
 	keyPending      []tea.KeyMsg
 	keyPendingScope string
 	keySerial       uint64

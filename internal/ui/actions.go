@@ -55,10 +55,6 @@ func (a *App) builtinActions() map[string]action {
 	}
 	for _, spec := range windowActions {
 		actions[spec.name] = action{spec.description, func(string) tea.Cmd {
-			if a.popup != nil || strings.HasPrefix(a.focus, "terminal") {
-				a.notice = "return to the conversation before changing windows"
-				return nil
-			}
 			a.windowAction(strings.ReplaceAll(spec.key, "<lt>", "<"))
 			return nil
 		}}
@@ -85,13 +81,27 @@ func (a *App) buildKeymaps(c config.Config) (*keymap.Registry, error) {
 			bindings = append(bindings, keymap.Binding{Mode: mode, Keys: "<C-w>" + spec.key, Action: spec.name, Description: spec.description})
 		}
 	}
-	for setting, name := range map[string]string{"send": "prompt.send", "editor": "editor.open", "focus": "focus.next"} {
+	for _, spec := range [][2]string{{"send", "prompt.send"}, {"editor", "editor.open"}, {"focus", "focus.next"}} {
+		setting, name := spec[0], spec[1]
 		for _, mode := range []string{"prompt.insert", "prompt.normal", "prompt.visual", "prompt.operator", "chat.normal", "chat.visual", "chat.operator"} {
 			bindings = append(bindings, keymap.Binding{Mode: mode, Keys: keymap.Notation(c.Keys[setting]), Action: name})
 		}
 	}
-	for setting, name := range map[string]string{"terminal_overlay": "terminal.overlay", "terminal_split": "terminal.side", "quit": "app.quit", "cancel": "operation.cancel"} {
+	for _, spec := range [][2]string{{"terminal_overlay", "terminal.overlay"}, {"terminal_split", "terminal.side"}, {"quit", "app.quit"}, {"cancel", "operation.cancel"}} {
+		setting, name := spec[0], spec[1]
 		bindings = append(bindings, keymap.Binding{Mode: "*", Keys: keymap.Notation(c.Keys[setting]), Action: name})
+	}
+	for i, binding := range bindings {
+		keys, err := keymap.Parse(binding.Keys)
+		if err != nil {
+			return nil, err
+		}
+		for _, other := range bindings[:i] {
+			prior, _ := keymap.Parse(other.Keys)
+			if (other.Mode == binding.Mode || other.Mode == "*" || binding.Mode == "*") && strings.Join(keys, "\x00") == strings.Join(prior, "\x00") {
+				return nil, fmt.Errorf("conflicting default key %q: %s and %s", binding.Keys, other.Action, binding.Action)
+			}
+		}
 	}
 	bindings = append(bindings, c.Keymaps...)
 	for i := range bindings {
@@ -113,6 +123,16 @@ func (a *App) runAction(name, arg string) tea.Cmd {
 	if !ok {
 		a.notice = "unknown action: " + name
 		return nil
+	}
+	if name != "noop" && name != "app.quit" && name != "operation.cancel" {
+		if a.editing || a.popup != nil || a.proposal != nil {
+			a.notice = "finish or cancel the current dialog before " + name
+			return nil
+		}
+		if strings.HasPrefix(a.focus, "terminal") && name != "terminal.overlay" && name != "terminal.side" {
+			a.notice = "return to the conversation before " + name
+			return nil
+		}
 	}
 	return entry.run(arg)
 }

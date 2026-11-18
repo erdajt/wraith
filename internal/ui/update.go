@@ -10,6 +10,8 @@ import (
 // Update dispatches ui, provider and terminal events to their state handlers.
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m := msg.(type) {
+	case queuedKeysMsg:
+		return a, a.dispatchKeys(m)
 	case keymapTimeoutMsg:
 		return a, a.keymapTimeout(uint64(m))
 	case tea.WindowSizeMsg:
@@ -78,7 +80,14 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case compactMsg:
 		return a, a.finishCompact(m)
 	case editedMsg:
-		return a, a.finishEdit(m)
+		cmd := a.finishEdit(m)
+		pending := a.editorKeys
+		a.editorKeys = nil
+		cmds := []tea.Cmd{cmd}
+		for _, keys := range pending {
+			cmds = append(cmds, func() tea.Msg { return keys })
+		}
+		return a, tea.Sequence(cmds...)
 	case providerModelsMsg:
 		a.providerModels(m)
 	case modelsMsg:
