@@ -12,6 +12,9 @@ func (a *App) runCommand(line string) tea.Cmd {
 	a.rememberInput("/" + line)
 	name, arg, _ := strings.Cut(line, " ")
 	arg = strings.TrimSpace(arg)
+	if name == "q" || name == "qa" || name == "quit" {
+		return a.quit()
+	}
 
 	if a.busy && name != "help" && name != "context" && name != "cancel" && name != "jobs" && name != "history" {
 		a.notice = "wait for the current operation or use /cancel"

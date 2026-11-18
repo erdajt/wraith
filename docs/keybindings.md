@@ -1,5 +1,7 @@
 # keybindings
 
+normal-mode `:q`, `:qa` and `:quit` close the app. each preserves a partial streamed reply first; if saving fails, the session stays open. `q` in normal mode and the configured quit key use the same behavior.
+
 bindings depend on focus and mode. the header shows both. the footer uses your configured keys. quit and close hints are red, refresh hints blue, and cancel or reject hints yellow. custom palettes can change those colors.
 
 ## prompt

@@ -23,18 +23,7 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 
 	key := k.String()
 	if key == a.Config.Keys["quit"] || (key == "q" && a.chatMotionPending == "" && a.Prompt.Pending == "" && a.popup == nil && !a.commandMode && !a.searchMode && ((a.focus == "chat" && a.visualMode == "") || (a.focus == "prompt" && a.Prompt.Mode == "normal"))) {
-		if a.busy && !a.compacting && (a.partial.Content != "" || a.partial.Thinking != "") {
-			a.partial.Interrupted = true
-			a.Session.Messages = append(a.Session.Messages, a.partial)
-			if err := a.Store.Save(a.Session); err != nil {
-				a.Session.Messages = a.Session.Messages[:len(a.Session.Messages)-1]
-				a.notice = "save failed; session remains open: " + err.Error()
-				return nil
-			}
-		}
-
-		a.Close()
-		return tea.Quit
+		return a.quit()
 	}
 
 	if key == a.Config.Keys["terminal_overlay"] {
