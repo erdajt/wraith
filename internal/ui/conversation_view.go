@@ -17,6 +17,7 @@ type conversationView struct {
 type textAnchor struct {
 	message, source, cell int
 	section               string
+	field, part           int
 }
 
 // anchorAt identifies a display position by message, source line and unwrapped cell.
@@ -25,14 +26,45 @@ func anchorAt(rows []rendered, row, column int) textAnchor {
 		return textAnchor{message: -1}
 	}
 	line := rows[max(0, min(row, len(rows)-1))]
-	return textAnchor{line.Message, line.Source, line.Cell + column, line.Section}
+	anchor := textAnchor{line.Message, line.Source, line.Cell + column, line.Section, -1, line.Part}
+	for _, span := range line.Spans {
+		if column >= span.Column && column < span.Column+span.Width {
+			anchor.field, anchor.cell, anchor.part = span.Field, span.Cell+column-span.Column, 0
+			break
+		}
+	}
+	return anchor
 }
 
 // locate resolves a source anchor, falling back to the nearest retained message or section.
 func (anchor textAnchor) locate(rows []rendered) (int, int, bool) {
+	if anchor.field >= 0 {
+		best, column, distance := -1, 0, int(^uint(0)>>1)
+		for i, row := range rows {
+			if row.Message != anchor.message || row.Source != anchor.source || row.Section != anchor.section {
+				continue
+			}
+			for _, span := range row.Spans {
+				if span.Field != anchor.field {
+					continue
+				}
+				cell := max(span.Cell, min(anchor.cell, span.Cell+span.Width-1))
+				d := cell - anchor.cell
+				if d < 0 {
+					d = -d
+				}
+				if d < distance {
+					best, column, distance = i, span.Column+cell-span.Cell, d
+				}
+			}
+		}
+		if best >= 0 {
+			return best, column, true
+		}
+	}
 	best, distance, found := 0, int(^uint(0)>>1), false
 	for i, row := range rows {
-		if row.Message == anchor.message && row.Section == anchor.section && row.Source == anchor.source {
+		if row.Message == anchor.message && row.Section == anchor.section && row.Source == anchor.source && row.Part == anchor.part {
 			if !found || row.Cell <= anchor.cell {
 				best = i
 			}

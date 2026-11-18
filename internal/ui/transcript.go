@@ -13,6 +13,8 @@ import (
 )
 
 type rendered struct {
+	Part         int
+	Spans        []markdown.Span
 	Block        int
 	Thinking     bool
 	Text         string
@@ -108,10 +110,15 @@ func (a *App) windowTranscript(view *conversationView, w int, focused bool) []re
 		block = nextBlock
 		for _, line := range lines {
 			section, sourceLine, sourceCell = "body", line.Source, line.Cell
+			if line.Region != "" {
+				section += ":" + line.Region
+			}
 			start := len(out)
 			add(line.Text, i)
 			for j := start; j < len(out); j++ {
 				out[j].Block = line.Block
+				out[j].Spans = line.Spans
+				out[j].Part = line.Part
 			}
 		}
 		section, sourceLine, sourceCell = "gap", 0, 0

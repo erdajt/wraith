@@ -81,7 +81,7 @@ these windows show the same conversation. each keeps its own cursor, scroll, sea
 
 splits need at least 24 columns and 4 rows per window. resizing can temporarily hide siblings while keeping the focused window visible; expanding restores their layout. there can be at most 32 windows. clicking conversation text focuses that window and positions its cursor.
 
-streaming leaves frozen views in place. wrapping and thinking expansion retain source positions. forks and compaction move removed positions to the nearest retained message and clear selections that include removed content. clearing or resuming a session resets every window's navigation. table reflow retains the source row; a cell position can shift when a table becomes a narrow field list.
+streaming leaves frozen views in place. wrapping and thinking expansion retain source positions. forks and compaction move removed positions to the nearest retained message and clear selections that include removed content. clearing or resuming a session resets every window's navigation. table values retain their cell positions when a table becomes a narrow field list.
 
 ## menus, output and terminals
 

@@ -13,7 +13,14 @@ var heading = regexp.MustCompile(`^ {0,3}#{1,6}\s+(.+?)\s*#*\s*$`)
 var list = regexp.MustCompile(`^(\s*)(?:[-+*]|([0-9]+)[.)])\s+(.*)$`)
 var rule = regexp.MustCompile(`^ {0,3}(?:\*\s*){3,}$|^ {0,3}(?:-\s*){3,}$|^ {0,3}(?:_\s*){3,}$`)
 
+type Span struct {
+	Column, Width, Field, Cell int
+}
+
 type Row struct {
+	Part         int
+	Region       string
+	Spans        []Span
 	Text         string
 	Block        int
 	Source, Cell int
