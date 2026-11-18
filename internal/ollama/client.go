@@ -167,18 +167,38 @@ func (c *Client) Chat(ctx context.Context, req Request, emit func(Response)) (Re
 	s.Buffer(make([]byte, 64<<10), 4<<20)
 	var result Response
 	var content, thinking strings.Builder
+	var calls []Call
 
 	for s.Scan() {
 		if len(bytes.TrimSpace(s.Bytes())) == 0 {
 			continue
 		}
 
-		var chunk Response
-		if err = json.Unmarshal(s.Bytes(), &chunk); err != nil {
+		var wire struct {
+			Response
+			Message struct {
+				session.Message
+				Calls []struct {
+					Function struct {
+						Name      string          `json:"name"`
+						Arguments json.RawMessage `json:"arguments"`
+					} `json:"function"`
+				} `json:"tool_calls"`
+			} `json:"message"`
+		}
+		if err = json.Unmarshal(s.Bytes(), &wire); err != nil {
 			return result, fmt.Errorf("invalid ollama stream: %w", err)
 		}
+		chunk := wire.Response
+		chunk.Message = wire.Message.Message
 		if chunk.Error != "" {
 			return result, errors.New(chunk.Error)
+		}
+		for _, call := range wire.Message.Calls {
+			if len(req.Tools) == 0 || len(calls) > 0 || len(call.Function.Name) > 128 || len(call.Function.Arguments) > 32768 {
+				return result, &ActionError{Problem: "native request is unavailable, duplicated or exceeds its size limit"}
+			}
+			calls = append(calls, Call{Name: call.Function.Name, Arguments: call.Function.Arguments})
 		}
 
 		content.WriteString(chunk.Message.Content)
@@ -194,6 +214,10 @@ func (c *Client) Chat(ctx context.Context, req Request, emit func(Response)) (Re
 		if chunk.Done {
 			result = chunk
 			result.Message = session.Message{Role: "assistant", Content: content.String(), Thinking: thinking.String()}
+			if len(calls) > 0 && chunk.Reason != "stop" {
+				return result, &ActionError{Problem: "native request ended without successful completion"}
+			}
+			result.Calls = calls
 			return result, nil
 		}
 	}

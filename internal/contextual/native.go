@@ -3,7 +3,6 @@ package contextual
 import (
 	"encoding/json"
 	"errors"
-	"strings"
 
 	"github.com/erdajt/wraith/internal/ollama"
 )
@@ -88,5 +87,5 @@ func NormalizeAction(mode, content string, calls []ollama.Call) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(content) + "\n\n```" + marker + "\n" + string(data) + "\n```", nil
+	return content + "\n\n```" + marker + "\n" + string(data) + "\n```\n", nil
 }
