@@ -11,7 +11,7 @@ import (
 
 var commandName = regexp.MustCompile(`^[a-z][a-z0-9-]*(\.[a-z0-9-]+)*!?$`)
 
-// installRegistration exposes setup-only bindings, commands and event subscriptions.
+// installRegistration exposes live bindings, commands and event subscriptions.
 func (e *engine) installRegistration(api *lua.LTable) {
 	L := e.L
 	api.RawSetString("keymap", L.SetFuncs(L.NewTable(), map[string]lua.LGFunction{
@@ -116,6 +116,9 @@ func (e *engine) installRegistration(api *lua.LTable) {
 			return 1
 		},
 		"off": func(L *lua.LState) int {
+			if !e.setup && !e.closing {
+				e.dirty = true
+			}
 			id := L.CheckString(1)
 			for name, ids := range e.events {
 				e.events[name] = slices.DeleteFunc(ids, func(value string) bool { return value == id })
@@ -125,9 +128,10 @@ func (e *engine) installRegistration(api *lua.LTable) {
 	}))
 }
 
-// registration limits structural changes to candidate setup so reload remains atomic.
+// registration stages structural changes for host validation before publication.
 func (e *engine) registration(L *lua.LState) {
-	if !e.setup || e.closing {
-		L.RaiseError("register plugins, commands and keymaps during setup, then reload")
+	if e.closing {
+		L.RaiseError("registrations are disabled during teardown")
 	}
+	e.dirty = !e.setup
 }

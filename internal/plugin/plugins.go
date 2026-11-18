@@ -5,12 +5,12 @@ import lua "github.com/yuin/gopher-lua"
 // installPlugins loads local setup modules once and records bounded shutdown hooks.
 func (e *engine) installPlugins(api *lua.LTable) {
 	L := e.L
-	loaded := map[string]bool{}
+	e.loaded = map[string]bool{}
 	api.RawSetString("plugins", L.SetFuncs(L.NewTable(), map[string]lua.LGFunction{
 		"load": func(L *lua.LState) int {
 			e.registration(L)
 			name := L.CheckString(1)
-			if loaded[name] || len(loaded) >= 128 {
+			if e.loaded[name] || len(e.loaded) >= 128 {
 				L.RaiseError("plugin already loaded or plugin limit reached: %s", name)
 			}
 			opts := L.OptTable(2, L.NewTable())
@@ -36,7 +36,7 @@ func (e *engine) installPlugins(api *lua.LTable) {
 				e.cleanup = append(e.cleanup, cleanup)
 			}
 			L.Pop(1)
-			loaded[name] = true
+			e.loaded[name] = true
 			return 0
 		},
 	}))

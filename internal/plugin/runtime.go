@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"sync"
 	"time"
 
@@ -28,11 +29,14 @@ type Manifest struct {
 type Effect struct {
 	Name, Argument string
 	Config         *config.Config
+	Data           any
 }
 
 type Result struct {
-	Effects []Effect
-	Err     error
+	Effects  []Effect
+	Err      error
+	Manifest *Manifest
+	Revision uint64
 }
 
 type request struct {
@@ -40,6 +44,7 @@ type request struct {
 	data            []byte
 	config          config.Config
 	reply           *completion
+	revision        uint64
 }
 
 type completion struct {
@@ -53,14 +58,16 @@ func (c *completion) resolve(result Result) {
 }
 
 type Runtime struct {
-	queue    chan request
-	done     chan struct{}
-	ctx      context.Context
-	cancel   context.CancelFunc
-	mu       sync.Mutex
-	pending  map[string]request
-	waiting  map[*completion]struct{}
-	manifest Manifest
+	queue                                   chan request
+	done                                    chan struct{}
+	ctx                                     context.Context
+	cancel                                  context.CancelFunc
+	mu                                      sync.Mutex
+	pending                                 map[string]request
+	waiting                                 map[*completion]struct{}
+	manifest                                Manifest
+	revision, nextRevision, pendingRevision uint64
+	ack                                     chan publicationDecision
 }
 
 type engine struct {
@@ -76,6 +83,9 @@ type engine struct {
 	setup     bool
 	closing   bool
 	serial    uint64
+	dirty     bool
+	rollback  *registryState
+	loaded    map[string]bool
 }
 
 // Open loads one candidate on its VM owner; callers install it only after validating its manifest.
@@ -89,7 +99,7 @@ func Open(parent context.Context, directory string, c config.Config, actions []s
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(parent)
-	r := &Runtime{queue: make(chan request, 128), done: make(chan struct{}), ctx: ctx, cancel: cancel, pending: map[string]request{}, waiting: map[*completion]struct{}{}}
+	r := &Runtime{queue: make(chan request, 128), ack: make(chan publicationDecision, 1), done: make(chan struct{}), ctx: ctx, cancel: cancel, pending: map[string]request{}, waiting: map[*completion]struct{}{}}
 	ready := make(chan error, 1)
 	go r.serve(directory, detached, actions, ready)
 	go func() {
@@ -111,10 +121,9 @@ func Open(parent context.Context, directory string, c config.Config, actions []s
 
 // Manifest returns an independent copy of the candidate's registrations and effective settings.
 func (r *Runtime) Manifest() Manifest {
-	data, _ := json.Marshal(r.manifest)
-	var out Manifest
-	_ = json.Unmarshal(data, &out)
-	return out
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return cloneManifest(r.manifest)
 }
 
 // Submit queues a callback or coalesced event without blocking the ui or retaining mutable state.
@@ -137,8 +146,8 @@ func (r *Runtime) Submit(callback, event string, snapshot any, c config.Config) 
 		return nil, err
 	}
 	reply := &completion{channel: make(chan Result, 1)}
-	req := request{callback, event, data, copy, reply}
-	if previous, ok := r.pending[event]; event != "" && ok {
+	req := request{callback: callback, event: event, data: data, config: copy, reply: reply, revision: r.revision}
+	if previous, ok := r.pending[event]; (event == "window_changed" || event == "session_changed") && ok {
 		previous.reply.resolve(Result{})
 		delete(r.waiting, previous.reply)
 		r.waiting[reply] = struct{}{}
@@ -148,7 +157,7 @@ func (r *Runtime) Submit(callback, event string, snapshot any, c config.Config) 
 	select {
 	case r.queue <- req:
 		r.waiting[reply] = struct{}{}
-		if event != "" {
+		if event == "window_changed" || event == "session_changed" {
 			r.pending[event] = req
 		}
 		return reply.channel, nil
@@ -179,30 +188,50 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 	defer e.L.Close()
 	defer e.teardown(0)
 
-	r.manifest = e.manifest
+	r.mu.Lock()
+	r.manifest = cloneManifest(e.manifest)
+	r.mu.Unlock()
 	ready <- nil
 	for {
 		select {
 		case <-r.ctx.Done():
 			return
 		case req := <-r.queue:
-			if req.event != "" {
-				r.mu.Lock()
+			r.mu.Lock()
+			if req.event == "window_changed" || req.event == "session_changed" {
 				req = r.pending[req.event]
 				delete(r.pending, req.event)
-				r.mu.Unlock()
 			}
-			result := e.invoke(r.ctx, req)
+			stale := req.revision != r.revision
+			r.mu.Unlock()
+			result := Result{Err: errors.New("plugin registrations changed before callback dispatch")}
+			if !stale {
+				result = e.invoke(r.ctx, req)
+			}
 			r.mu.Lock()
+			if result.Manifest != nil {
+				r.nextRevision++
+				result.Revision, r.pendingRevision = r.nextRevision, r.nextRevision
+			}
 			req.reply.resolve(result)
 			delete(r.waiting, req.reply)
 			r.mu.Unlock()
+			if result.Manifest != nil && !r.publish(e, result.Revision) {
+				return
+			}
 		}
 	}
 }
 
 // invoke discards the whole action batch when a callback fails or exceeds its deadline.
-func (e *engine) invoke(parent context.Context, req request) Result {
+func (e *engine) invoke(parent context.Context, req request) (result Result) {
+	before := e.captureRegistry()
+	e.dirty = false
+	defer func() {
+		if result.Err != nil {
+			e.restoreRegistry(before)
+		}
+	}()
 	ctx, cancel := context.WithTimeout(parent, 250*time.Millisecond)
 	defer cancel()
 	e.L.SetContext(ctx)
@@ -223,6 +252,20 @@ func (e *engine) invoke(parent context.Context, req request) Result {
 		if err := e.L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true}, encodeValue(e.L, e.snapshot)); err != nil {
 			return Result{Err: err}
 		}
+	}
+	if e.dirty {
+		e.refreshManifest()
+		if err := e.manifest.Config.Validate(); err != nil {
+			return Result{Err: err}
+		}
+		for i := range e.effects {
+			if e.effects[i].Config != nil {
+				e.effects[i].Config.Keymaps = slices.Clone(e.manifest.Config.Keymaps)
+			}
+		}
+		e.rollback = &before
+		manifest := cloneManifest(e.manifest)
+		return Result{Effects: e.effects, Manifest: &manifest}
 	}
 	return Result{Effects: e.effects}
 }

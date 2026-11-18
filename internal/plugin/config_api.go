@@ -104,6 +104,9 @@ func (e *engine) setConfig(L *lua.LState, path string, value any) {
 	} else {
 		e.emit(L, Effect{Name: "config", Config: &next})
 	}
+	if !slices.Equal(e.manifest.Config.Keymaps, next.Keymaps) {
+		e.dirty = !e.setup
+	}
 	e.manifest.Config = next
 }
 
