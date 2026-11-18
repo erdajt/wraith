@@ -17,6 +17,7 @@ type Command struct {
 
 type Manifest struct {
 	Config     config.Config
+	Events     []string
 	Commands   []Command
 	Callbacks  []string
 	Overridden []string

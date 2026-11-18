@@ -7,8 +7,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// Update dispatches ui, provider and terminal events to their state handlers.
-func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+// update dispatches ui, provider and terminal events to their state handlers.
+func (a *App) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m := msg.(type) {
 	case pluginReloadMsg:
 		return a, a.finishPluginReload(m)

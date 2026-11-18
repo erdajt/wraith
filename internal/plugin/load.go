@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -98,6 +99,12 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	if err := e.manifest.Config.Validate(); err != nil {
 		return nil, nil, err
 	}
+	for event, ids := range e.events {
+		if len(ids) > 0 {
+			e.manifest.Events = append(e.manifest.Events, event)
+		}
+	}
+	slices.Sort(e.manifest.Events)
 	e.setup, ok = false, true
 	return e, func() { _ = root.Close() }, nil
 }

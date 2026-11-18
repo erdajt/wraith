@@ -29,7 +29,7 @@ func configDigest(c config.Config) [32]byte {
 
 // callPlugin captures bounded workspace state and queues work without blocking rendering.
 func (a *App) callPlugin(callback, event, argument string) tea.Cmd {
-	if a.plugins == nil {
+	if a.plugins == nil || event != "" && !slices.Contains(a.pluginManifest.Events, event) {
 		return nil
 	}
 	if a.pluginDepth >= 8 {
@@ -42,9 +42,16 @@ func (a *App) callPlugin(callback, event, argument string) tea.Cmd {
 		ids = append(ids, id)
 	}
 	slices.Sort(ids)
+	places := a.windowPlaces()
 	for _, id := range ids {
 		view := a.windows[id]
-		windows = append(windows, map[string]any{"id": id, "focused": id == a.windowID, "cursor": view.chatCursor, "column": view.chatColumn, "search": view.search, "offset": view.offset})
+		entry := map[string]any{"id": id, "focused": id == a.windowID, "cursor": view.chatCursor, "column": view.chatColumn, "search": view.search, "offset": view.offset, "visible": false}
+		for _, place := range places {
+			if place.id == id {
+				entry["width"], entry["height"], entry["visible"] = place.width, place.height, true
+			}
+		}
+		windows = append(windows, entry)
 	}
 	messages := []map[string]string{}
 	budget := 128 << 10
@@ -76,7 +83,7 @@ func (a *App) callPlugin(callback, event, argument string) tea.Cmd {
 
 // applyPluginResult rejects stale targets and routes effects through ordinary workspace guards.
 func (a *App) applyPluginResult(m pluginResultMsg) tea.Cmd {
-	if m.Runtime != a.plugins {
+	if m.Runtime != a.plugins || m.Result.Err == nil && len(m.Result.Effects) == 0 {
 		return nil
 	}
 	if m.Owner != a.keyOwner() || m.Draft != a.Prompt.String() || m.Digest != configDigest(a.Config) {
