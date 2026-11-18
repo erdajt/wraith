@@ -14,6 +14,7 @@ import (
 )
 
 type pluginResultMsg struct {
+	Parent       *pluginResultMsg
 	Runtime      *plugin.Runtime
 	Owner, Draft string
 	Digest       [32]byte
@@ -84,7 +85,7 @@ func (a *App) callPlugin(callback, event, argument string) tea.Cmd {
 
 // applyPluginResult rejects stale targets and routes effects through ordinary workspace guards.
 func (a *App) applyPluginResult(m pluginResultMsg) tea.Cmd {
-	if m.Runtime != a.plugins || m.Result.Err == nil && len(m.Result.Effects) == 0 {
+	if m.Runtime != a.plugins || m.Parent == nil && m.Result.Err == nil && len(m.Result.Effects) == 0 {
 		return nil
 	}
 	if m.Owner != a.keyOwner() || m.Draft != a.Prompt.String() || m.Digest != configDigest(a.Config) || m.Target != a.pluginTarget() {
@@ -118,8 +119,26 @@ func (a *App) applyPluginResult(m pluginResultMsg) tea.Cmd {
 		default:
 			cmd = a.runAction(effect.Name, effect.Argument)
 		}
+		callback := slices.Contains(a.pluginManifest.Callbacks, effect.Name)
+		for _, command := range a.pluginManifest.Commands {
+			callback = callback || effect.Name == "command."+command.Name
+		}
+		if callback {
+			if cmd == nil {
+				return nil
+			}
+			m.Result.Effects = m.Result.Effects[i+1:]
+			return func() tea.Msg {
+				result := cmd()
+				if child, ok := result.(pluginResultMsg); ok {
+					child.Parent = &m
+					return child
+				}
+				return result
+			}
+		}
 		if cmd != nil {
-			if i+1 < len(m.Result.Effects) {
+			if i+1 < len(m.Result.Effects) || m.Parent != nil {
 				m.Result.Effects = m.Result.Effects[i+1:]
 				m.Owner, m.Draft, m.Digest, m.Target = a.keyOwner(), a.Prompt.String(), configDigest(a.Config), a.pluginTarget()
 				if a.editing {
@@ -130,6 +149,11 @@ func (a *App) applyPluginResult(m pluginResultMsg) tea.Cmd {
 			}
 			return cmd
 		}
+	}
+	if m.Parent != nil {
+		next := *m.Parent
+		next.Owner, next.Draft, next.Digest, next.Target = a.keyOwner(), a.Prompt.String(), configDigest(a.Config), a.pluginTarget()
+		return func() tea.Msg { return next }
 	}
 	return nil
 }
