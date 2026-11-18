@@ -74,7 +74,11 @@ func (v *conversationView) reflow(rows []rendered) {
 		return
 	}
 	if v.chatCursor >= 0 {
-		v.chatCursor, v.chatColumn, _ = anchorAt(old, v.chatCursor, v.chatColumn).locate(rows)
+		var found bool
+		v.chatCursor, v.chatColumn, found = anchorAt(old, v.chatCursor, v.chatColumn).locate(rows)
+		if !found {
+			v.visualMode = ""
+		}
 		if len(rows) > 0 {
 			v.selected = rows[v.chatCursor].Message
 		}
@@ -89,4 +93,23 @@ func (v *conversationView) reflow(rows []rendered) {
 			v.visualMode = ""
 		}
 	}
+}
+
+// viewportStart keeps an anchored cursor visible after the available height changes.
+func (v *conversationView) viewportStart(height int) int {
+	end := max(0, len(v.rows)-height)
+	if v.follow {
+		return end
+	}
+	start := max(0, min(v.offset, end))
+	if v.chatCursor >= 0 {
+		if v.chatCursor < start {
+			start = v.chatCursor
+		}
+		if v.chatCursor >= start+height {
+			start = v.chatCursor - height + 1
+		}
+	}
+	v.offset = max(0, min(start, end))
+	return v.offset
 }

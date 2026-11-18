@@ -61,6 +61,28 @@ visual selection yanks prose character by character. if a selection touches a co
 
 `ctrl+e` on a user message asks to fork. accepting creates a new conversation with the earlier turns and puts the selected message in the prompt. the original conversation remains saved. assistant edits archive the original before replacing its text.
 
+### conversation windows
+
+with conversation focus, press `ctrl+w`, then a key:
+
+| key | action |
+| --- | --- |
+| `s` | split above and below |
+| `v` | split side by side |
+| `h j k l` | focus a window to the left, below, above or right |
+| `w` | cycle visible windows |
+| `c` | close this window; retain the last window |
+| `o` | keep only this window |
+| `=` | equalize sibling sizes |
+| `+`, `-` | grow or shrink height |
+| `>`, `<` | grow or shrink width |
+
+these windows show the same conversation. each keeps its own cursor, scroll, search and selection. the prompt, thinking expansion and messages remain shared. `:q` and `:qa` still quit the app; use `ctrl+w c` to close a window. raw terminals and prompt insert mode keep their own `ctrl+w` behavior.
+
+splits need at least 24 columns and 4 rows per window. resizing can temporarily hide siblings while keeping the focused window visible; expanding restores their layout. there can be at most 32 windows. clicking conversation text focuses that window and positions its cursor.
+
+streaming leaves frozen views in place. wrapping and thinking expansion retain source positions. forks and compaction move removed positions to the nearest retained message and clear selections that include removed content. clearing or resuming a session resets every window's navigation. table reflow retains the source row; a cell position can shift when a table becomes a narrow field list.
+
 ## menus, output and terminals
 
 | area | keys |

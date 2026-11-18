@@ -43,7 +43,7 @@ edit prompts with vim motions or your own editor. search and yank conversations.
 | area | included |
 | --- | --- |
 | prompts | insert, normal and visual modes; counts, motions, operators, undo, search, clipboard yanks and directory-scoped input recall |
-| conversation | themed cursor, highlighted search, visual selection, complete-command yanks, user-message forks and archived assistant edits |
+| conversation | shared-buffer horizontal and vertical splits, independent pane navigation, themed cursor, highlighted search, visual selection, complete-command yanks, user-message forks and archived assistant edits |
 | rendering | markdown headings, emphasis, tables, code blocks, streamed replies and expandable thinking |
 | commands | live slash completion, dotted settings categories, searchable pickers, configurable leader sequences and action-colored key hints |
 | execution | command and reason approval; run, hide output, edit, modify or reject; no second approval after selecting run |

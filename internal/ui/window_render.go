@@ -13,10 +13,7 @@ func (a *App) drawConversations(rows []string, p palette) {
 		view := a.windows[place.id]
 		focused := place.id == a.windowID && a.focus == "chat"
 		lines := a.windowTranscript(view, max(10, place.width-5), focused)
-		start := max(0, min(view.offset, len(lines)-place.height))
-		if view.follow {
-			start = max(0, len(lines)-place.height)
-		}
+		start := view.viewportStart(place.height)
 		frame := make([]string, place.height)
 		for y := range frame {
 			content := ""

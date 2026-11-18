@@ -30,7 +30,7 @@ func (a *App) transcript(w int) []rendered {
 func (a *App) windowTranscript(view *conversationView, w int, focused bool) []rendered {
 	p := a.Config.Palette()
 	var out []rendered
-	section, sourceLine, sourceCell := "summary", 0, 0
+	section, sourceLine, sourceCell := "summary-header", 0, 0
 	add := func(text string, index int) {
 		cell := sourceCell
 		for _, line := range strings.Split(ansi.Hardwrap(text, w, true), "\n") {
@@ -44,7 +44,12 @@ func (a *App) windowTranscript(view *conversationView, w int, focused bool) []re
 
 	if a.Session.Summary != "" {
 		add(ink(p.Second, "◌ compacted memory · ")+keyHints("/archives restores originals", p), -1)
-		add(a.expandStyled(ink(p.Muted, clean(a.Session.Summary))), -1)
+		section = "summary"
+		for i, line := range strings.Split(a.expandStyled(ink(p.Muted, clean(a.Session.Summary))), "\n") {
+			sourceLine = i
+			add(line, -1)
+		}
+		section, sourceLine = "summary-gap", 0
 		add("", -1)
 	}
 
@@ -85,9 +90,7 @@ func (a *App) windowTranscript(view *conversationView, w int, focused bool) []re
 			}
 			section = "thinking-header"
 			start := len(out)
-			for _, line := range strings.Split(ansi.Hardwrap(ink(p.Muted, arrow+" thinking · ")+keyHints(a.Config.Keys["thinking_toggle"]+" or click to toggle", p), w, true), "\n") {
-				add(ink(p.Accent, line), i)
-			}
+			add(ink(p.Muted, arrow+" thinking · ")+keyHints(a.Config.Keys["thinking_toggle"]+" or click to toggle", p), i)
 			for j := start; j < len(out); j++ {
 				out[j].Thinking = true
 			}

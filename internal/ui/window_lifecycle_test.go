@@ -73,3 +73,42 @@ func TestFrozenWindowDoesNotFollowStreamOrBlockAgent(t *testing.T) {
 		t.Fatal("hidden selection blocked agent continuation")
 	}
 }
+
+func TestWindowResizeKeepsCursorVisibleAndRestoresHiddenLeaves(t *testing.T) {
+	a := fixture(t)
+	a.width, a.height = 120, 50
+	a.Session.Messages = []session.Message{{Role: "assistant", Content: strings.Repeat("界 source text\n", 70)}}
+	a.windowAction("v")
+	a.windowAction("s")
+	a.ensureChatCursor()
+	a.chatCursor, a.chatColumn, a.offset = 50, 4, 40
+	a.follow = false
+	want := anchorAt(a.rows, a.chatCursor, a.chatColumn)
+	a.Update(tea.WindowSizeMsg{Width: 50, Height: 18})
+	a.View()
+	if a.chatCursor < a.offset || a.chatCursor >= a.offset+a.chatHeight() {
+		t.Fatal("resized cursor disappeared outside viewport")
+	}
+	if got := anchorAt(a.rows, a.chatCursor, a.chatColumn); got != want {
+		t.Fatalf("resize lost source position: %+v -> %+v", want, got)
+	}
+	a.Update(tea.WindowSizeMsg{Width: 120, Height: 50})
+	a.View()
+	if len(a.windowPlaces()) != 3 {
+		t.Fatal("expanding did not restore hidden leaves")
+	}
+}
+
+func TestForkPrefixDoesNotAnchorToLaterDuplicateMessages(t *testing.T) {
+	a := fixture(t)
+	a.Session.Messages = []session.Message{{Role: "user", Content: "same"}, {Role: "assistant", Content: "answer"}, {Role: "user", Content: "same"}}
+	a.selected = 0
+	a.jumpSelected()
+	a.visualMode, a.visualRow = "visual", a.chatCursor
+	a.remapConversation(a.Session.Messages, a.Session.Messages[:1])
+	a.Session.Messages = a.Session.Messages[:1]
+	a.transcript(a.chatWidth())
+	if a.visualMode != "visual" || a.rows[a.chatCursor].Message != 0 {
+		t.Fatal("fork matched a later duplicate instead of the retained prefix")
+	}
+}

@@ -57,10 +57,7 @@ func (a *App) mouse(m tea.MouseMsg) tea.Cmd {
 		}
 		a.focusWindow(place.id)
 		lines := a.transcript(a.chatWidth())
-		start := max(0, min(a.offset, len(lines)-place.height))
-		if a.follow {
-			start = max(0, len(lines)-place.height)
-		}
+		start := a.viewportStart(place.height)
 		index := start + m.Y - place.y
 		if index < len(lines) {
 			a.chatCursor, a.chatColumn = index, max(0, m.X-place.x-2)
