@@ -72,7 +72,7 @@ with conversation focus or the prompt in normal mode, press `ctrl+w`, then a key
 | `v` | split side by side |
 | `h j k l` | focus a window to the left, below, above or right |
 | `w` | cycle visible windows |
-| `c` | close this window; retain the last window |
+| `c` | close this window; quit when only one remains |
 | `o` | keep only this window |
 | `=` | equalize sibling sizes |
 | `+`, `-` | grow or shrink height |
@@ -147,7 +147,7 @@ keys:
   setting_help: '?'
 ```
 
-an explicit `bindings` map replaces the default leader map. spaces separate sequence keys. conflicting sequence prefixes are rejected. `keys` maps named actions to terminal key strings; see the [complete defaults](config.example.yaml) for every action. fixed vim motions are separate from these action bindings.
+an explicit `bindings` map replaces the default leader map. spaces separate sequence keys. conflicting sequence prefixes are rejected. `keys` maps named actions to terminal key strings; see the [complete defaults](config.example.yaml) for every action. use native editor mappings below to remap vim motions.
 
 yanks fill the internal register even if the external clipboard helper fails. use `clipboard: [wl-copy]` on wayland, `clipboard: [xclip, -selection, clipboard]` on x11, or `clipboard: []` for internal copying only. choose bindings your host terminal actually forwards.
 
@@ -165,7 +165,7 @@ keymaps:
   - {mode: chat.normal, keys: '<Space>sa', action: command.settings.appearance}
 ```
 
-modes are `prompt.insert`, `prompt.normal`, `prompt.visual`, `prompt.operator`, `chat.normal`, `chat.visual`, `chat.operator`, `command`, `search`, `picker`, `output`, `terminal` and `terminal.copy`. `*` explicitly applies everywhere. ordinary mappings do not intercept pending vim counts or operators; use an operator mode only when that is intentional. raw shells and insert mode have no window-chord delay unless you map keys there.
+editor modes use a surface and state, such as `prompt.insert`, `chat.normal` or `output.visual`; the full list is below. `command`, `search`, `picker`, `output`, `terminal` and `terminal.copy` are also accepted. `*` explicitly applies everywhere. counts retain the current normal or visual mode, so `2H` can apply a mapped motion twice. pending operators and literal targets use their own modes. raw shells and insert mode have no window-chord delay unless you map keys there.
 
 `<C-w>v` means control-w followed by v. `<A-e>`, `<S-Tab>`, `<Space>`, `<CR>`, `<Esc>`, arrows and function keys are supported. literal characters retain case; `<lt>` means a literal less-than sign. a sequence can contain up to 16 keys. terminals may send control-h for Backspace, control-i for Tab and control-m for Enter, so some combinations cannot be distinguished.
 
