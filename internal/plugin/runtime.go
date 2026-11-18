@@ -74,23 +74,24 @@ type Runtime struct {
 
 type engine struct {
 	ownershipLayers
-	L         *lua.LState
-	manifest  Manifest
-	functions map[string]*lua.LFunction
-	events    map[string][]string
-	cleanup   []cleanupHook
-	disposing []cleanupHook
-	actions   map[string]bool
-	builtins  map[string]bool
-	effects   []Effect
-	snapshot  any
-	setup     bool
-	closing   bool
-	serial    uint64
-	dirty     bool
-	rollback  *registryState
-	loaded    map[string]bool
-	packages  map[string]packageRecord
+	L              *lua.LState
+	manifest       Manifest
+	functions      map[string]*lua.LFunction
+	events         map[string][]string
+	cleanup        []cleanupHook
+	disposing      []cleanupHook
+	actions        map[string]bool
+	builtins       map[string]bool
+	effects        []Effect
+	snapshot       any
+	setup          bool
+	closing        bool
+	serial         uint64
+	dirty          bool
+	rollback       *registryState
+	loaded         map[string]bool
+	packages       map[string]packageRecord
+	observerErrors []error
 }
 
 // Open loads one candidate on its VM owner; callers install it only after validating its manifest.
@@ -217,6 +218,9 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 			result := Result{Err: errors.New("plugin registrations changed before callback dispatch")}
 			if !stale {
 				result = e.invoke(r.ctx, req)
+				for _, err := range e.observerErrors {
+					r.reportCleanup(err)
+				}
 			}
 			r.mu.Lock()
 			if err := r.ctx.Err(); err != nil {
@@ -236,9 +240,10 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 	}
 }
 
-// invoke discards the whole action batch when a callback fails or exceeds its deadline.
+// invoke stages command or isolated observer changes for host publication.
 func (e *engine) invoke(parent context.Context, req request) (result Result) {
 	before := e.captureRegistry()
+	e.observerErrors = nil
 	e.dirty = false
 	defer func() {
 		if result.Err != nil {
@@ -246,25 +251,26 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 			result.Err = errors.Join(result.Err, e.disposeHooks(hooks))
 		}
 	}()
-	ctx, cancel := context.WithTimeout(parent, 250*time.Millisecond)
-	defer cancel()
-	e.L.SetContext(ctx)
+	e.L.SetContext(parent)
 	e.effects = nil
 	e.syncOwnerBindings(req.config.Keymaps, "config")
 	e.manifest.Config = req.config
 	if err := json.Unmarshal(req.data, &e.snapshot); err != nil {
 		return Result{Err: err}
 	}
-	ids := []string{req.callback}
 	if req.event != "" {
-		ids = append([]string(nil), e.events[req.event]...)
-	}
-	for _, id := range ids {
-		fn := e.functions[id]
+		if err := e.invokeObservers(parent, req.event); err != nil {
+			return Result{Err: err}
+		}
+	} else {
+		fn := e.functions[req.callback]
 		if fn == nil {
 			return Result{Err: errors.New("plugin callback no longer exists")}
 		}
-		e.owner = e.callbackOwners[id]
+		ctx, cancel := context.WithTimeout(parent, 250*time.Millisecond)
+		defer cancel()
+		e.L.SetContext(ctx)
+		e.owner = e.callbackOwners[req.callback]
 		if err := e.L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true}, encodeValue(e.L, e.snapshot)); err != nil {
 			return Result{Err: err}
 		}
