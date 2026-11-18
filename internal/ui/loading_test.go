@@ -2,10 +2,11 @@ package ui
 
 import (
 	"encoding/json"
-	"github.com/erdajt/wraith/internal/ollama"
 	"net/http"
 	"reflect"
 	"testing"
+
+	"github.com/erdajt/wraith/internal/ollama"
 )
 
 func TestStartupLoadsChosenModelBeforeAnyChat(t *testing.T) {

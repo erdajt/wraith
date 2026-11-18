@@ -1,13 +1,14 @@
 package ui
 
 import (
-	"github.com/erdajt/wraith/internal/config"
-	"github.com/erdajt/wraith/internal/editor"
-	"github.com/erdajt/wraith/internal/session"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/erdajt/wraith/internal/config"
+	"github.com/erdajt/wraith/internal/editor"
+	"github.com/erdajt/wraith/internal/session"
 )
 
 func TestYamlEditorRetainsUneditedLuaLayers(t *testing.T) {

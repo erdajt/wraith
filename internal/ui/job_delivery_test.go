@@ -2,12 +2,12 @@ package ui
 
 import (
 	"encoding/json"
-	"github.com/erdajt/wraith/internal/ollama"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/runner"
 	"github.com/erdajt/wraith/internal/session"
 )

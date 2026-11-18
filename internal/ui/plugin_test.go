@@ -1,11 +1,11 @@
 package ui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
 	"os"
 	"path/filepath"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/plugin"
 )
 

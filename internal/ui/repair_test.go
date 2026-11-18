@@ -2,7 +2,6 @@ package ui
 
 import (
 	"errors"
-	"github.com/erdajt/wraith/internal/store"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/session"
+	"github.com/erdajt/wraith/internal/store"
 )
 
 func TestVariableRepairReplacesPartialReplyWithoutApprovingIt(t *testing.T) {

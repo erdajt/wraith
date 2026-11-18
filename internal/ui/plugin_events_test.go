@@ -6,10 +6,9 @@ import (
 	"testing"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/session"
-
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestLuaWindowEventsSeeUpdatedGeometry(t *testing.T) {

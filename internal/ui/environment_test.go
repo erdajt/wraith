@@ -1,11 +1,11 @@
 package ui
 
 import (
-	"github.com/erdajt/wraith/internal/variables"
 	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/erdajt/wraith/internal/variables"
 )
 
 func TestPrivateAssignmentsStayOutOfChatAndHistory(t *testing.T) {
