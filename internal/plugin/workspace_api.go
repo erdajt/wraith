@@ -1,7 +1,9 @@
 package plugin
 
 import (
+	"os"
 	"strconv"
+	"strings"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -10,6 +12,22 @@ import (
 func (e *engine) installWorkspace(api *lua.LTable) {
 	L := e.L
 	L.SetFuncs(api, map[string]lua.LGFunction{
+		"getenv": func(L *lua.LState) int {
+			name := L.CheckString(1)
+			if name == "" || len(name) > 256 || strings.ContainsAny(name, "=\x00") {
+				L.RaiseError("invalid environment variable name")
+			}
+			value, exists := os.LookupEnv(name)
+			if len(value) > 64<<10 {
+				L.RaiseError("environment value exceeds 64 kib")
+			}
+			if exists {
+				L.Push(lua.LString(value))
+			} else {
+				L.Push(lua.LNil)
+			}
+			return 1
+		},
 		"notify": func(L *lua.LState) int {
 			e.emit(L, Effect{Name: "notify", Argument: L.CheckString(1)})
 			return 0
