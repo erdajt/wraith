@@ -73,6 +73,7 @@ type Runtime struct {
 }
 
 type engine struct {
+	ownershipLayers
 	L         *lua.LState
 	manifest  Manifest
 	functions map[string]*lua.LFunction
@@ -245,6 +246,7 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 	defer cancel()
 	e.L.SetContext(ctx)
 	e.effects = nil
+	e.syncOwnerBindings(req.config.Keymaps, "config")
 	e.manifest.Config = req.config
 	if err := json.Unmarshal(req.data, &e.snapshot); err != nil {
 		return Result{Err: err}
@@ -258,10 +260,12 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 		if fn == nil {
 			return Result{Err: errors.New("plugin callback no longer exists")}
 		}
+		e.owner = e.callbackOwners[id]
 		if err := e.L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true}, encodeValue(e.L, e.snapshot)); err != nil {
 			return Result{Err: err}
 		}
 	}
+	e.owner = "config"
 	if e.dirty {
 		e.refreshManifest()
 		if err := e.manifest.Config.Validate(); err != nil {

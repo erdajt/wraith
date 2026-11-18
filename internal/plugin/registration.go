@@ -21,6 +21,7 @@ func (e *engine) installRegistration(api *lua.LTable) {
 			e.registration(L)
 			mode, keys := L.CheckString(1), L.CheckString(2)
 			binding := keymap.Binding{Mode: mode, Keys: keys, Description: L.OptString(4, "lua mapping")}
+			var callback *lua.LFunction
 			switch target := L.Get(3).(type) {
 			case lua.LString:
 				binding.Action = string(target)
@@ -32,31 +33,42 @@ func (e *engine) installRegistration(api *lua.LTable) {
 					}
 					binding.Input = string(input)
 				})
+			case *lua.LFunction:
+				callback, binding.Action = target, "lua.callback.pending"
 			default:
-				binding.Action = e.callback(L, target)
+				L.RaiseError("keymap.set requires an action, native keys or callback")
 			}
 			if _, err := keymap.New([]keymap.Binding{binding}); err != nil {
 				L.RaiseError("keymap.set: %v", err)
 			}
-			if len(e.manifest.Config.Keymaps) >= 512 {
+			id, _ := bindingIdentity(mode, keys)
+			if len(e.bindingLayers[id]) == 0 && len(e.manifest.Config.Keymaps) >= 512 {
 				L.RaiseError("keymap limit reached")
 			}
-			e.manifest.Config.Keymaps = append(e.manifest.Config.Keymaps, binding)
-			e.manifest.Overridden = append(e.manifest.Overridden, "keymaps")
+			if callback != nil {
+				binding.Action = e.callback(L, callback)
+			}
+			e.setOwnedBinding(id, binding)
+			if !slices.Contains(e.manifest.Overridden, "keymaps") {
+				e.manifest.Overridden = append(e.manifest.Overridden, "keymaps")
+			}
 			return 0
 		},
 		"del": func(L *lua.LState) int {
 			e.registration(L)
 			mode, text := L.CheckString(1), L.CheckString(2)
-			keys, err := keymap.Parse(text)
+			id, err := bindingIdentity(mode, text)
 			if err != nil {
 				L.RaiseError("keymap.del: %v", err)
 			}
-			e.manifest.Config.Keymaps = slices.DeleteFunc(e.manifest.Config.Keymaps, func(binding keymap.Binding) bool {
-				other, _ := keymap.Parse(binding.Keys)
-				return mode == binding.Mode && slices.Equal(keys, other)
-			})
-			e.manifest.Overridden = append(e.manifest.Overridden, "keymaps")
+			if layers := e.bindingLayers[id]; len(layers) > 0 {
+				layers = slices.DeleteFunc(layers, func(layer ownedBinding) bool { return layer.owner == e.owner })
+				e.bindingLayers[id] = append(layers, ownedBinding{owner: e.owner, deleted: true})
+				e.refreshOwnedBinding(id)
+			}
+			if !slices.Contains(e.manifest.Overridden, "keymaps") {
+				e.manifest.Overridden = append(e.manifest.Overridden, "keymaps")
+			}
 			return 0
 		},
 	}))
@@ -84,23 +96,18 @@ func (e *engine) installRegistration(api *lua.LTable) {
 			if reservedParent && !(replace && e.builtins["command."+name]) || !commandName.MatchString(name) || len(name) > 80 || e.actions["command."+name] && !replace || !existing && len(e.manifest.Commands) >= 128 {
 				L.RaiseError("invalid, reserved or duplicate command: %s", name)
 			}
+			description := L.OptString(3, "lua command")
 			callback := e.callback(L, L.Get(2))
-			e.manifest.Commands = slices.DeleteFunc(e.manifest.Commands, func(command Command) bool { return command.Name == name })
-			e.actions["command."+name] = true
-			e.manifest.Commands = append(e.manifest.Commands, Command{Name: name, Description: L.OptString(3, "lua command"), Callback: callback, NeedsArgument: arguments})
+			e.setOwnedCommand(Command{Name: name, Description: description, Callback: callback, NeedsArgument: arguments})
 			return 0
 		},
 		"delete": func(L *lua.LState) int {
 			e.registration(L)
 			name := L.CheckString(1)
-			for i, command := range e.manifest.Commands {
-				if command.Name == name {
-					e.manifest.Commands = slices.Delete(e.manifest.Commands, i, i+1)
-					if !e.builtins["command."+name] {
-						delete(e.actions, "command."+name)
-					}
-					break
-				}
+			if layers := e.commandLayers[name]; len(layers) > 0 {
+				layers = slices.DeleteFunc(layers, func(layer ownedCommand) bool { return layer.owner == e.owner })
+				e.commandLayers[name] = append(layers, ownedCommand{owner: e.owner, deleted: true})
+				e.refreshOwnedCommand(name)
 			}
 			return 0
 		},
@@ -111,6 +118,9 @@ func (e *engine) installRegistration(api *lua.LTable) {
 			name := L.CheckString(1)
 			if !slices.Contains([]string{"ready", "session_changed", "window_changed", "response_finished"}, name) && (!customEventName.MatchString(name) || len(name) > 128) {
 				L.RaiseError("unknown event: %s", name)
+			}
+			if len(e.events[name]) >= 32 {
+				L.RaiseError("events.on: event listener limit reached")
 			}
 			id := e.callback(L, L.Get(2))
 			e.events[name] = append(e.events[name], id)

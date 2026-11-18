@@ -16,6 +16,7 @@ type publicationDecision struct {
 }
 
 type registryState struct {
+	ownershipLayers
 	manifest        Manifest
 	functions       map[string]*lua.LFunction
 	events          map[string][]string
@@ -40,7 +41,7 @@ func (e *engine) captureRegistry() registryState {
 	for name, ids := range e.events {
 		events[name] = slices.Clone(ids)
 	}
-	return registryState{cloneManifest(e.manifest), maps.Clone(e.functions), events, maps.Clone(e.actions), maps.Clone(e.loaded), slices.Clone(e.cleanup), slices.Clone(e.disposing), slices.Clone(e.effects), e.dirty}
+	return registryState{e.cloneOwnership(), cloneManifest(e.manifest), maps.Clone(e.functions), events, maps.Clone(e.actions), maps.Clone(e.loaded), slices.Clone(e.cleanup), slices.Clone(e.disposing), slices.Clone(e.effects), e.dirty}
 }
 
 // restoreRegistry drops staged registrations without pretending to roll back arbitrary Lua state.
@@ -55,6 +56,7 @@ func (e *engine) restoreRegistry(s registryState) []cleanupHook {
 			discarded = append(discarded, hook)
 		}
 	}
+	e.ownershipLayers = s.ownershipLayers
 	e.manifest, e.functions, e.events = s.manifest, s.functions, s.events
 	e.actions, e.loaded, e.cleanup = s.actions, s.loaded, s.cleanup
 	e.disposing, e.effects, e.dirty = s.disposing, s.effects, s.dirty
@@ -134,6 +136,7 @@ func (r *Runtime) publish(e *engine, revision uint64) bool {
 // pruneCallbacks releases functions once no registration or pending effect can invoke them.
 func (e *engine) pruneCallbacks() {
 	retained := map[string]bool{}
+	e.retainOwnerCallbacks(retained)
 	for _, command := range e.manifest.Commands {
 		retained[command.Callback] = true
 	}
@@ -154,6 +157,7 @@ func (e *engine) pruneCallbacks() {
 			e.manifest.Callbacks = append(e.manifest.Callbacks, id)
 		} else {
 			delete(e.functions, id)
+			delete(e.callbackOwners, id)
 		}
 	}
 	slices.Sort(e.manifest.Callbacks)

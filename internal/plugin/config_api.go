@@ -105,7 +105,7 @@ func (e *engine) setConfig(L *lua.LState, path string, value any) {
 		e.emit(L, Effect{Name: "config", Config: &next})
 	}
 	if !slices.Equal(e.manifest.Config.Keymaps, next.Keymaps) {
-		e.dirty = !e.setup
+		e.syncOwnerBindings(next.Keymaps, e.owner)
 	}
 	e.manifest.Config = next
 }
@@ -171,6 +171,7 @@ func (e *engine) callback(L *lua.LState, value lua.LValue) string {
 	e.serial++
 	id := fmt.Sprintf("lua.callback.%d", e.serial)
 	e.functions[id] = fn
+	e.callbackOwners[id] = e.owner
 	e.manifest.Callbacks = append(e.manifest.Callbacks, id)
 	return id
 }
