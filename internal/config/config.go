@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/erdajt/wraith/internal/fsutil"
+	"github.com/erdajt/wraith/internal/keymap"
 	"gopkg.in/yaml.v3"
 )
 
@@ -42,6 +43,8 @@ type Appearance struct {
 }
 
 type Config struct {
+	Keymaps     []keymap.Binding    `json:"keymaps" yaml:"keymaps"`
+	KeyTimeout  int                 `json:"key_timeout" yaml:"key_timeout"`
 	Environment Environment         `json:"environment" yaml:"environment"`
 	Provider    string              `json:"provider" yaml:"provider"`
 	Providers   map[string]Provider `json:"providers" yaml:"providers"`
@@ -92,7 +95,7 @@ type Paths struct{ Config, Data, Cache string }
 
 // Default returns the application's default configuration.
 func Default() Config {
-	return Config{Environment: Environment{Scope: "directory"}, Provider: "ollama", Providers: DefaultProviders(), Clipboard: []string{"wl-copy"}, Appearance: Appearance{Background: "theme", Mouse: true}, Execution: Execution{CaptureBytes: 8 << 20, TailBytes: 64 << 10, MaxJobs: 4, MaxReads: 16, CommandTimeout: "10m", Mode: "agent", MaxSteps: 8, OutputContext: 8192}, Leader: "space", Bindings: DefaultBindings(), AutoStart: true, Version: 1, Host: "http://127.0.0.1:11434", Model: DefaultModel,
+	return Config{KeyTimeout: 750, Keymaps: []keymap.Binding{}, Environment: Environment{Scope: "directory"}, Provider: "ollama", Providers: DefaultProviders(), Clipboard: []string{"wl-copy"}, Appearance: Appearance{Background: "theme", Mouse: true}, Execution: Execution{CaptureBytes: 8 << 20, TailBytes: 64 << 10, MaxJobs: 4, MaxReads: 16, CommandTimeout: "10m", Mode: "agent", MaxSteps: 8, OutputContext: 8192}, Leader: "space", Bindings: DefaultBindings(), AutoStart: true, Version: 1, Host: "http://127.0.0.1:11434", Model: DefaultModel,
 		Context: 8192, Predict: 2048, Threads: 6, Temperature: 0.3, Thinking: "auto", Theme: "phosphor",
 		Editor: []string{"nvim"}, Shell: []string{"zsh", "-i"}, KeepAlive: "2m", Timeout: "10m",
 		Terminal: Terminal{Background: "inherit", Foreground: "inherit", OverlayWidth: 0.7, OverlayHeight: 0.6, SplitWidth: 0.4, Scrollback: 5000},
@@ -175,6 +178,13 @@ func Save(path string, c Config) error {
 
 // Validate checks configuration values and dependent settings before activation.
 func (c Config) Validate() error {
+	if c.KeyTimeout < 50 || c.KeyTimeout > 5000 {
+		return errors.New("key_timeout must be 50-5000 milliseconds")
+	}
+	if _, err := keymap.New(c.Keymaps); err != nil {
+		return err
+	}
+
 	if !slices.Contains([]string{"conversation", "directory", "global"}, c.Environment.Scope) {
 		return errors.New("environment.scope must be conversation, directory or global")
 	}

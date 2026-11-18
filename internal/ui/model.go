@@ -13,6 +13,7 @@ import (
 	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/editor"
 	"github.com/erdajt/wraith/internal/fsutil"
+	"github.com/erdajt/wraith/internal/keymap"
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/provider"
 	"github.com/erdajt/wraith/internal/runner"
@@ -85,6 +86,8 @@ type terminalMsg struct {
 }
 
 type App struct {
+	actions map[string]action
+	keymaps *keymap.Registry
 	*conversationView
 	windows                       map[uint64]*conversationView
 	windowTree                    *windowNode
@@ -194,6 +197,10 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool) (*App, e
 	a.windowID, a.nextWindowID = 1, 1
 	a.windows = map[uint64]*conversationView{1: a.conversationView}
 	a.windowTree = &windowNode{id: 1}
+	a.actions = a.builtinActions()
+	if a.keymaps, err = a.buildKeymaps(c); err != nil {
+		return nil, err
+	}
 
 	if !demo {
 		if err := a.refreshVariables(); err != nil {
