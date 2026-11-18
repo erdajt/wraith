@@ -1,4 +1,4 @@
-assert(wraith.api_version == 1)
+assert(wraith.api_version == 2)
 
 wraith.config.setup({
   theme = "rose-pine",

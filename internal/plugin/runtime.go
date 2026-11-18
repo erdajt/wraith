@@ -17,11 +17,12 @@ type Command struct {
 }
 
 type Manifest struct {
-	Config     config.Config
-	Events     []string
-	Commands   []Command
-	Callbacks  []string
-	Overridden []string
+	Config      config.Config
+	Events      []string
+	Commands    []Command
+	Callbacks   []string
+	Overridden  []string
+	Diagnostics []string
 }
 
 type Effect struct {
@@ -148,12 +149,11 @@ func (r *Runtime) Done() <-chan struct{} { return r.done }
 func (r *Runtime) serve(directory string, c config.Config, actions []string, ready chan<- error) {
 	defer close(r.done)
 	defer r.cancelQueued()
-	e, closeFiles, err := load(r.ctx, directory, c, actions)
+	e, err := load(r.ctx, directory, c, actions)
 	if err != nil {
 		ready <- err
 		return
 	}
-	defer closeFiles()
 	defer e.L.Close()
 	defer func() {
 		e.closing = true

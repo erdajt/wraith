@@ -1,6 +1,6 @@
 # lua configuration and plugins
 
-wraith embeds gopher-lua and exposes API version 1. `init.lua` is real lua 5.1-style code, with functions, loops, tables, closures and local modules. luaJIT and neovim's `vim` module are not included.
+wraith embeds gopher-lua and exposes API version 2. `init.lua` is real lua 5.1-style code, with functions, loops, tables, closures and local modules. luaJIT and neovim's `vim` module are not included.
 
 ## start
 
@@ -14,7 +14,7 @@ configuration loads in this order:
 resuming a session restores its provider and model unless the corresponding CLI override is supplied. `$XDG_CONFIG_HOME` and `--config-dir` change the configuration root. demo and snapshot modes do not load plugins.
 
 ```lua
-assert(wraith.api_version == 1)
+assert(wraith.api_version == 2)
 
 wraith.config.setup({
   theme = "rose-pine",
@@ -145,9 +145,11 @@ setup can register APIs and change candidate configuration. runtime workspace ac
 
 ## runtime boundaries
 
-modules resolve as `NAME.lua` or `NAME/init.lua` below the user configuration root. dots separate path components. traversal and symlinks escaping that root are rejected. changing `package.path` does not add search roots. project directories and assistant responses are never loaded as configuration.
+modules resolve through `package.path`, initially `config/lua/?.lua`, `config/lua/?/init.lua`, `config/?.lua` and `config/?/init.lua`. trusted code can change these paths and use symlinks or `package.preload`. the working directory and `LUA_PATH` are not added automatically. project files and assistant responses are never loaded as configuration.
 
-the VM includes base, string, table, math, coroutine and a controlled package loader. raw `io`, `os`, debug hooks, `dofile`, `loadfile`, binary loaders and stdout printing are unavailable. `wraith.getenv` provides bounded read access to environment variables. suspended coroutines resume under the current callback's deadline.
+the VM includes base, string, table, math, coroutine, package, `io`, `os` and `debug`. plugins run with your user account authority: they can read files and credentials, write files, run programs or exit the process. `dofile` and `loadfile` are available. `print` produces startup diagnostics or callback notices instead of writing into the terminal frame. native Lua modules and LuaJIT are unsupported. `wraith.capabilities` describes available runtime features.
+
+callback deadlines interrupt Lua instructions, not blocking native operations such as `os.execute` or file reads. reload and callback failure cannot undo external effects. suspended coroutines resume under the current callback's deadline.
 
 | limit | value |
 | --- | --- |
@@ -157,10 +159,10 @@ the VM includes base, string, table, math, coroutine and a controlled package lo
 | waiting callback requests | 128 |
 | effects per callback | 64 |
 | argument or environment value | 64 kib |
-| Lua source file or serialized snapshot | 1 mib |
+| `init.lua`, required source file or serialized snapshot | 1 mib |
 | retained callbacks / commands / loaded plugins | 512 / 128 / 128 |
 
-queue overflow is reported. cancellation releases waiting callers. one worker owns the VM; rendering does not wait for Lua execution. source files must be regular files. these limits protect lifecycle and message handling, but in-process Lua allocation is not a hard memory sandbox. install only local code you trust.
+queue overflow is reported. cancellation releases waiting callers. one worker owns the VM; rendering does not wait for Lua execution. initial and required source files must be regular files; direct trusted loaders are unrestricted. these limits protect lifecycle and message handling, but in-process Lua allocation is not a hard memory sandbox. install only local code you trust.
 
 ## command overrides
 
