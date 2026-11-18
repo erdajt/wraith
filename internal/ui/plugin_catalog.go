@@ -22,6 +22,9 @@ func PluginActions() []string {
 
 // ValidatePlugin checks a complete candidate against the same registry used by the workspace.
 func ValidatePlugin(m plugin.Manifest) error {
+	if err := m.Config.Validate(); err != nil {
+		return err
+	}
 	a := &App{}
 	a.actions = a.pluginActions(m)
 	_, err := a.buildKeymaps(m.Config)

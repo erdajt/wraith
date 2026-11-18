@@ -31,6 +31,11 @@ func configDigest(c config.Config) [32]byte {
 
 // callPlugin captures bounded workspace state and queues work without blocking rendering.
 func (a *App) callPlugin(callback, event, argument string) tea.Cmd {
+	return a.callPluginData(callback, event, argument, nil)
+}
+
+// callPluginData includes detached event data while retaining the callback's input ownership.
+func (a *App) callPluginData(callback, event, argument string, data any) tea.Cmd {
 	if a.plugins == nil || event != "" && !slices.Contains(a.pluginManifest.Events, event) {
 		return nil
 	}
@@ -65,6 +70,7 @@ func (a *App) callPlugin(callback, event, argument string) tea.Cmd {
 	}
 	slices.Reverse(messages)
 	snapshot := map[string]any{"argument": argument, "event": event, "prompt": a.Prompt.String(), "input": a.inputSnapshot(), "windows": windows, "session": map[string]any{"id": a.Session.ID, "model": a.Session.Model, "provider": a.Config.Provider, "directory": a.Directory, "messages": messages, "message_count": len(a.Session.Messages)}}
+	snapshot["data"] = data
 	m := pluginResultMsg{Runtime: a.plugins, Owner: a.keyOwner(), Draft: a.Prompt.String(), Digest: configDigest(a.Config), Target: a.pluginTarget(), Depth: a.pluginDepth + 1}
 	result, err := a.plugins.Submit(callback, event, snapshot, a.Config)
 	if err != nil {
@@ -85,7 +91,12 @@ func (a *App) callPlugin(callback, event, argument string) tea.Cmd {
 
 // applyPluginResult rejects stale targets and routes effects through ordinary workspace guards.
 func (a *App) applyPluginResult(m pluginResultMsg) tea.Cmd {
-	if m.Runtime != a.plugins || m.Parent == nil && m.Result.Err == nil && len(m.Result.Effects) == 0 {
+	defer func() {
+		if m.Result.Revision != 0 {
+			_ = m.Runtime.Acknowledge(m.Result.Revision, false)
+		}
+	}()
+	if m.Runtime != a.plugins || m.Parent == nil && m.Result.Err == nil && len(m.Result.Effects) == 0 && m.Result.Manifest == nil {
 		return nil
 	}
 	if !a.pluginOwns(m) {
@@ -96,12 +107,22 @@ func (a *App) applyPluginResult(m pluginResultMsg) tea.Cmd {
 		a.notice = fmt.Sprintf("lua: %v", m.Result.Err)
 		return nil
 	}
+	if m.Result.Manifest != nil {
+		if err := a.installPluginRegistry(m); err != nil {
+			a.notice = "lua registrations unchanged: " + err.Error()
+			return nil
+		}
+		m.Result.Manifest, m.Result.Revision = nil, 0
+		m.Digest = configDigest(a.Config)
+	}
 	for i, effect := range m.Result.Effects {
 		if !a.actionAllowed(effect.Name) {
 			return nil
 		}
 		var cmd tea.Cmd
 		switch effect.Name {
+		case "event.emit":
+			cmd = a.callPluginData("", effect.Argument, "", effect.Data)
 		case "notify":
 			a.notice = strings.Map(func(r rune) rune {
 				if r < 32 || r == 127 {
@@ -122,7 +143,7 @@ func (a *App) applyPluginResult(m pluginResultMsg) tea.Cmd {
 		if effect.Name == "editor.open" && !a.editing {
 			return nil
 		}
-		callback := slices.Contains(a.pluginManifest.Callbacks, effect.Name)
+		callback := effect.Name == "event.emit" && cmd != nil || slices.Contains(a.pluginManifest.Callbacks, effect.Name)
 		for _, command := range a.pluginManifest.Commands {
 			callback = callback || effect.Name == "command."+command.Name
 		}

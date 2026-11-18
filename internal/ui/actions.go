@@ -183,7 +183,7 @@ func (a *App) actionAllowed(name string) bool {
 	if name == "input.feed" || name == "input.set_mode" {
 		return a.inputAvailable()
 	}
-	if name == "noop" || (name == "app.quit" || name == "app.quit_force" || name == "app.save_quit") || name == "operation.cancel" || name == "notify" || strings.HasPrefix(name, "lua.callback.") {
+	if name == "noop" || (name == "app.quit" || name == "app.quit_force" || name == "app.save_quit") || name == "operation.cancel" || name == "notify" || name == "event.emit" || strings.HasPrefix(name, "lua.callback.") {
 		return true
 	}
 	if a.editing || a.popup != nil || a.proposal != nil {
