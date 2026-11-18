@@ -1,9 +1,16 @@
 package plugin
 
 import (
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/erdajt/wraith/internal/config"
+	lua "github.com/yuin/gopher-lua"
 )
 
 func TestObserverFailurePreservesSuccessfulSubscribers(t *testing.T) {
@@ -39,6 +46,72 @@ wraith.events.on("response_finished", function() wraith.notify("last") end)`)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("observer failure was not reported")
+	}
+}
+
+func TestObserverBatchDoesNotShareCommandDeadline(t *testing.T) {
+	r := openTestRuntime(t, `for i = 1, 6 do
+ wraith.events.on("response_finished", function() while true do end end)
+end
+wraith.events.on("response_finished", function() wraith.notify("all observers reached") end)`)
+	pending, err := r.Submit("", "response_finished", nil, r.Manifest().Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := receiveResult(t, pending)
+	if got.Err != nil || len(got.Effects) != 1 || got.Effects[0].Argument != "all observers reached" || len(r.Diagnostics()) != 6 {
+		t.Fatalf("observer batch shared a deadline: %+v, diagnostics: %v", got, r.Diagnostics())
+	}
+}
+
+func TestInvalidObserverMappingDoesNotSuppressHealthySubscriber(t *testing.T) {
+	r := openTestRuntime(t, `wraith.events.on("response_finished", function()
+ wraith.keymap.set("prompt.normal", "x", "missing.action")
+ wraith.notify("discarded")
+end)
+wraith.events.on("response_finished", function() wraith.notify("healthy") end)`)
+	pending, err := r.Submit("", "response_finished", nil, r.Manifest().Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := receiveResult(t, pending)
+	if got.Err != nil || got.Manifest != nil || len(got.Effects) != 1 || got.Effects[0].Argument != "healthy" {
+		t.Fatalf("invalid observer mapping affected healthy subscriber: %+v", got)
+	}
+	diagnostics := r.Diagnostics()
+	if len(diagnostics) != 1 || !strings.Contains(diagnostics[0], "unknown action missing.action") {
+		t.Fatalf("missing mapping failure diagnostic: %v", diagnostics)
+	}
+}
+
+func TestParentCancellationStopsObserverBatch(t *testing.T) {
+	dir := t.TempDir()
+	source := `wraith.events.on("response_finished", function()
+ wraith.notify("discarded")
+ cancel_dispatch()
+end)
+wraith.events.on("response_finished", function() later_ran = true end)`
+	if err := os.WriteFile(filepath.Join(dir, "init.lua"), []byte(source), 0600); err != nil {
+		t.Fatal(err)
+	}
+	e, err := load(t.Context(), dir, config.Default(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.L.Close()
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	e.L.SetGlobal("cancel_dispatch", e.L.NewFunction(func(*lua.LState) int {
+		cancel()
+		return 0
+	}))
+
+	got := e.invoke(ctx, request{event: "response_finished", data: []byte("null"), config: e.manifest.Config})
+	if !errors.Is(got.Err, context.Canceled) || len(got.Effects) != 0 || e.L.GetGlobal("later_ran") != lua.LNil {
+		t.Fatalf("parent cancellation did not stop the batch: %+v", got)
+	}
+	if len(e.observerErrors) != 0 {
+		t.Fatalf("parent cancellation reported an observer failure: %v", e.observerErrors)
 	}
 }
 

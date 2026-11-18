@@ -40,6 +40,9 @@ func (e *engine) invokeObservers(parent context.Context, event string) error {
 		if parent.Err() != nil {
 			return parent.Err()
 		}
+		if err == nil {
+			err = e.validateRegistry()
+		}
 		if err != nil {
 			hooks := e.restoreRegistry(before)
 			err = errors.Join(err, e.disposeHooks(hooks))

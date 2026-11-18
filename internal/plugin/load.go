@@ -72,12 +72,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 		}
 		L.Pop(1)
 	}
-	for _, binding := range e.manifest.Config.Keymaps {
-		if binding.Input == "" && !e.actions[binding.Action] && e.functions[binding.Action] == nil {
-			return nil, fmt.Errorf("keymap %q: unknown action %s", binding.Keys, binding.Action)
-		}
-	}
-	if err := e.manifest.Config.Validate(); err != nil {
+	if err := e.validateRegistry(); err != nil {
 		return nil, err
 	}
 	for event, ids := range e.events {
