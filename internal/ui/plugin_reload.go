@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/config"
@@ -105,5 +106,8 @@ func (a *App) finishPluginReload(m pluginReloadMsg) tea.Cmd {
 		old.Close()
 	}
 	a.notice = "init.lua reloaded · pending key sequences cleared"
+	if len(manifest.Diagnostics) > 0 {
+		a.notice += " · lua: " + strings.ReplaceAll(clean(strings.Join(manifest.Diagnostics, " · ")), "\n", " ")
+	}
 	return tea.Batch(cmd, a.callPlugin("", "ready", ""))
 }

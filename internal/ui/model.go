@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -259,6 +260,9 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool, extensio
 		a.notice = "demo workspace · no model requests"
 		a.Session.Title = "tls assessment"
 		a.Session.Messages = []session.Message{{Role: "user", Content: "Review the TLS configuration on my isolated lab service. Preserve the hostname and verification steps."}, {Role: "assistant", Content: "Start by inspecting the certificate and negotiated protocol. This checks the service without changing its configuration.\n\n```sh\nopenssl s_client -connect lab.internal:443 \\\n  -servername lab.internal -brief </dev/null\n```\n\nRecord the protocol, cipher suite, issuer, and expiration. A successful handshake alone does not establish that every supported protocol is acceptable.\n\nNext: compare the observed settings with your expected TLS policy."}}
+	}
+	if len(a.pluginManifest.Diagnostics) > 0 {
+		a.notice += " · lua: " + strings.ReplaceAll(clean(strings.Join(a.pluginManifest.Diagnostics, " · ")), "\n", " ")
 	}
 	return a, nil
 }
