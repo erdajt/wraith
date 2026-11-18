@@ -65,10 +65,18 @@ type engine struct {
 
 // Open loads one candidate on its VM owner; callers install it only after validating its manifest.
 func Open(parent context.Context, directory string, c config.Config, actions []string) (*Runtime, error) {
+	encoded, err := json.Marshal(c)
+	if err != nil {
+		return nil, err
+	}
+	var detached config.Config
+	if err := json.Unmarshal(encoded, &detached); err != nil {
+		return nil, err
+	}
 	ctx, cancel := context.WithCancel(parent)
 	r := &Runtime{queue: make(chan request, 128), done: make(chan struct{}), ctx: ctx, cancel: cancel, pending: map[string]bool{}}
 	ready := make(chan error, 1)
-	go r.serve(directory, c, actions, ready)
+	go r.serve(directory, detached, actions, ready)
 	select {
 	case err := <-ready:
 		if err != nil {

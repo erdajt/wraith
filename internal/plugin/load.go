@@ -72,6 +72,8 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	L.SetGlobal("wraith", api)
 	e.installConfig(api)
 	e.installRegistration(api)
+	e.installWorkspace(api)
+	e.installPlugins(api)
 
 	fn, err := loadFile(L, root, "init.lua")
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
