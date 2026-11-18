@@ -88,12 +88,13 @@ type terminalMsg struct {
 }
 
 type App struct {
-	configEditBase   *config.Config
-	pluginLoadCancel context.CancelFunc
-	plugins          *plugin.Runtime
-	pluginManifest   plugin.Manifest
-	pluginSerial     uint64
-	pluginDepth      int
+	configEditBase    *config.Config
+	pluginLoadCancel  context.CancelFunc
+	plugins           *plugin.Runtime
+	pluginManifest    plugin.Manifest
+	pluginDiagnostics []string
+	pluginSerial      uint64
+	pluginDepth       int
 
 	editorFile        *editor.File
 	editorSucceeded   bool
@@ -272,7 +273,7 @@ func (a *App) Init() tea.Cmd {
 	if a.demo {
 		return a.ticker()
 	}
-	return tea.Batch(a.ticker(), a.probe(), a.callPlugin("", "ready", ""))
+	return tea.Batch(a.ticker(), a.probe(), a.callPlugin("", "ready", ""), a.watchPluginNotices(a.plugins))
 }
 
 // ticker schedules the next animation and job-update tick.
