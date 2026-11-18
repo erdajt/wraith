@@ -45,6 +45,16 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, a.key(m)
 	case restartTerminalMsg:
 		return a, a.restartExitedTerminal(m)
+	case pasteMsg:
+		return a, a.pasted(m)
+	case pasteTimeoutMsg:
+		p := a.panes[m.Index]
+		if p != nil && p.PTY == m.PTY && p.PasteID == m.ID {
+			p.PTY.CancelPaste(p.PasteID)
+			p.PasteCancelled = true
+			a.notice = "shell did not acknowledge insertion · command retained; ctrl+c interrupts, /terminal-restart resets"
+		}
+		return a, nil
 	case terminalMsg:
 		p := a.panes[m.Index]
 		if p == nil || p.PTY != m.PTY {

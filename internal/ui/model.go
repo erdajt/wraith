@@ -46,6 +46,8 @@ type pane struct {
 	Screen                  *terminal.Screen
 	Visible                 bool
 	Pending, Path, Language string
+	PasteID                 string
+	PasteCancelled          bool
 	Err                     string
 }
 type tick time.Time

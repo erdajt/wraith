@@ -43,10 +43,22 @@ func (a *App) restartExitedTerminal(m restartTerminalMsg) tea.Cmd {
 	}
 	focus, visible, attempts := a.focus, p.Visible, p.Restarts+1
 	p.PTY.Close()
+	p.PasteID, p.PasteCancelled = "", false
 	a.panes[m.Index] = nil
 	cmd := a.openTerminal(m.Index)
 	if replacement := a.panes[m.Index]; replacement != nil {
 		replacement.Visible, replacement.Restarts = visible, attempts
+		replacement.Pending, replacement.Path, replacement.Language = p.Pending, p.Path, p.Language
+		if replacement.Pending != "" {
+			a.notice = "shell restarted · saved command retained for manual insertion"
+		}
+	} else {
+		p.Err = a.notice + " · /terminal-restart " + fmt.Sprint(m.Index+1)
+		p.Restarts = 3
+		a.panes[m.Index] = p
+		if p.Path != "" {
+			a.notice += " · saved snippet at " + p.Path
+		}
 	}
 	a.focus = focus
 	return cmd

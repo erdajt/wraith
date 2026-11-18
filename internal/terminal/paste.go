@@ -113,7 +113,7 @@ func (p *PTY) QueuePaste(command string) (string, error) {
 	if p.paste == nil {
 		return "", errors.New("shell has no automatic insertion integration; use manual staging")
 	}
-	if command == "" || len(command) > 4<<20 {
+	if strings.TrimSpace(command) == "" || len(command) > 4<<20 {
 		return "", errors.New("saved command is empty or exceeds 4 mib")
 	}
 	for _, char := range command {
@@ -134,7 +134,7 @@ func (p *PTY) QueuePaste(command string) (string, error) {
 	return id, nil
 }
 
-// CancelPaste removes a queued payload; an insertion already acknowledged remains in the shell buffer.
+// CancelPaste removes a queued payload; its outcome remains uncertain until acknowledgement or shell exit.
 func (p *PTY) CancelPaste(id string) {
 	if p.paste != nil {
 		p.paste.remove(id)
@@ -151,7 +151,7 @@ func (p *pasteBridge) remove(id string) {
 const zshPaste = `
 function _wraith_paste_widget() {
   emulate -L zsh
-  local request payload
+  local request payload payloadfd
   if ! IFS= read -r -u 3 request; then
     zle -F 3
     return
@@ -165,7 +165,12 @@ function _wraith_paste_widget() {
     print -r -- "$request occupied" >&4
     return
   fi
-  payload=$(<"$_wraith_paste_root/$request")
+  if ! exec {payloadfd}< "$_wraith_paste_root/$request"; then
+    print -r -- "$request cancelled" >&4
+    return
+  fi
+  IFS= read -r -d '' -u $payloadfd payload || true
+  exec {payloadfd}<&-
   BUFFER=$payload
   CURSOR=$#BUFFER
   print -r -- "$request inserted" >&4

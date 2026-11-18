@@ -30,18 +30,43 @@ func (a *App) terminalKey(k tea.KeyMsg) tea.Cmd {
 			return cmd
 		}
 
+		if p.PasteID != "" {
+			if key == "esc" || key == "ctrl+c" {
+				p.PTY.CancelPaste(p.PasteID)
+				p.PasteCancelled = true
+				a.notice = "insertion cancellation requested · awaiting shell acknowledgement"
+				if key == "ctrl+c" {
+					if err := p.PTY.Write([]byte{3}); err != nil {
+						a.notice = err.Error()
+					}
+				}
+			} else {
+				a.notice = "waiting for insertion acknowledgement · ctrl+c interrupts; /terminal-restart resets the shell"
+			}
+			return nil
+		}
 		if p.Pending != "" {
 			if key == "enter" {
+				if p.PTY.Pastes != nil {
+					return a.insertSaved(index)
+				}
 				data, err := stagedInput(p.Pending, p.Screen.Bracketed)
 				if err != nil {
 					a.notice = err.Error()
 					return nil
 				}
 				if err := p.PTY.Write(data); err != nil {
-					a.notice = err.Error()
+					p.PasteID = "manual-write-error"
+					a.notice = err.Error() + " · insertion outcome unknown; restart the shell before retrying"
 				} else {
 					a.notice = "command inserted into shell; review it, then press enter to execute"
 					p.Pending = ""
+				}
+			} else if key == "ctrl+c" {
+				if err := p.PTY.Write([]byte{3}); err != nil {
+					a.notice = err.Error()
+				} else {
+					a.notice = "shell input interrupted · enter retries insertion; snippet retained"
 				}
 			} else if key == "esc" {
 				p.Pending = ""

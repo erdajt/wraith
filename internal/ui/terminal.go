@@ -66,6 +66,8 @@ func (a *App) readTerminal(index int) tea.Cmd {
 	p := a.panes[index].PTY
 	return func() tea.Msg {
 		select {
+		case event, ok := <-p.Pastes:
+			return pasteMsg{Index: index, PTY: p, Event: event, Open: ok}
 		case event, ok := <-p.Events:
 			return terminalMsg{Index: index, PTY: p, Event: event, Open: ok}
 		case <-a.done:

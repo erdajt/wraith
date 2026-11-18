@@ -112,7 +112,8 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 			return nil
 		}
 		if p := a.panes[n-1]; p != nil && p.PTY != nil {
-			p.PTY.Close()
+			p.Restarts = 0
+			return a.restartExitedTerminal(restartTerminalMsg{Index: n - 1, PTY: p.PTY})
 		}
 		a.panes[n-1] = nil
 		return a.toggleTerminal(n - 1)

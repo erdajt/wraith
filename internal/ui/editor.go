@@ -265,13 +265,17 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 			return cmd
 		}
 		p := a.panes[0]
+		if p.Pending != "" || p.PasteID != "" {
+			a.notice = "previous command is still staged · new snippet saved at " + path
+			return cmd
+		}
 		p.Path = path
 		p.Language = m.Language
 		if command == "" {
 			a.notice = "saved " + path + " · no interpreter mapped for " + m.Language
 		} else {
 			p.Pending = command
-			a.notice = "saved code is staged · enter inserts the command; a second enter executes"
+			return tea.Batch(cmd, a.insertSaved(0))
 		}
 		return cmd
 	}
