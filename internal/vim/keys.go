@@ -10,6 +10,11 @@ import (
 // Key dispatches a key according to the current mode, count and pending operator.
 func (b *Buffer) Key(key, text string) {
 	b.Yanked = false
+	vertical := key == "up" || key == "down" || b.Mode != "insert" && (key == "j" || key == "k")
+	count := b.Mode != "insert" && key >= "0" && key <= "9" && (key != "0" || b.Count != "")
+	if b.Mode == "search" || b.Pending != "" || !vertical && !count {
+		b.vertical = false
+	}
 
 	if key == "esc" {
 		if b.Mode == "insert" && b.Pos > b.lineStart(b.Pos) {
@@ -165,8 +170,7 @@ func (b *Buffer) Key(key, text string) {
 		b.Linewise = false
 		b.remove(max(b.lineStart(b.Pos), b.Pos-n), b.Pos)
 	case "s":
-		b.remove(b.Pos, min(b.lineEnd(b.Pos), b.Pos+n))
-		b.Mode = "insert"
+		b.apply("c", b.Pos, min(b.lineEnd(b.Pos), b.Pos+n), false)
 	case "Y":
 		start, end := b.lineStart(b.Pos), b.lineEnd(b.Pos)
 		for range n - 1 {
@@ -176,10 +180,11 @@ func (b *Buffer) Key(key, text string) {
 		}
 		b.apply("y", start, min(len(b.Text), end+1), true)
 	case "D", "C":
-		b.apply("d", b.Pos, b.lineEnd(b.Pos), false)
+		op := "d"
 		if key == "C" {
-			b.Mode = "insert"
+			op = "c"
 		}
+		b.apply(op, b.Pos, b.lineEnd(b.Pos), false)
 	case "S":
 		b.apply("c", b.lineStart(b.Pos), b.lineEnd(b.Pos), false)
 	case "p", "P":
@@ -241,6 +246,7 @@ func (b *Buffer) Key(key, text string) {
 
 // apply applies a yank, delete or change to a rune range and updates mode and register state.
 func (b *Buffer) apply(op string, a, z int, line bool) {
+	b.vertical = false
 	b.Linewise = line
 
 	if op == "y" {
@@ -253,11 +259,11 @@ func (b *Buffer) apply(op string, a, z int, line bool) {
 		return
 	}
 
-	b.remove(a, z)
 	b.Mode = "normal"
 	if op == "c" {
 		b.Mode = "insert"
 	}
+	b.remove(a, z)
 
 	b.clamp()
 }

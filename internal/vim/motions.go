@@ -118,18 +118,26 @@ func (b *Buffer) motion(key string, n int) {
 // moveVertical moves one line while retaining the column when the destination permits it.
 func (b *Buffer) moveVertical(delta int) {
 	start := b.lineStart(b.Pos)
-	col := b.Pos - start
-
+	if !b.vertical {
+		b.preferredColumn = b.Pos - start
+	}
+	b.vertical = true
+	target := start
 	if delta > 0 {
-		e := b.lineEnd(b.Pos)
-		if e < len(b.Text) {
-			b.Pos = min(b.lineEnd(e+1), e+1+col)
+		end := b.lineEnd(b.Pos)
+		if end == len(b.Text) {
+			return
 		}
+		target = end + 1
 	} else if start > 0 {
-		s := b.lineStart(start - 1)
-		b.Pos = min(start-1, s+col)
+		target = b.lineStart(start - 1)
 	}
 
+	end := b.lineEnd(target)
+	if b.Mode != "insert" {
+		end = max(target, end-1)
+	}
+	b.Pos = min(end, target+b.preferredColumn)
 	b.clamp()
 }
 

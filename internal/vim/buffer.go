@@ -21,6 +21,8 @@ type Buffer struct {
 	Search             string
 	query              string
 	undo, redo         []snapshot
+	vertical           bool
+	preferredColumn    int
 }
 
 // New creates an empty buffer in insert mode.
@@ -31,6 +33,7 @@ func (b *Buffer) String() string { return string(b.Text) }
 
 // Set replaces text, saving undo state and entering insert mode at the end.
 func (b *Buffer) Set(s string) {
+	b.vertical = false
 	b.save()
 	b.Text = []rune(s)
 	b.Pos = len(b.Text)
@@ -76,6 +79,7 @@ func (b *Buffer) lineEnd(p int) int {
 
 // Insert inserts text at the cursor and records undo state.
 func (b *Buffer) Insert(s string) {
+	b.vertical = false
 	b.save()
 	r := []rune(s)
 	b.Text = append(b.Text[:b.Pos], append(r, append([]rune(nil), b.Text[b.Pos:]...)...)...)
@@ -84,6 +88,7 @@ func (b *Buffer) Insert(s string) {
 
 // remove deletes a bounded rune range and saves it in the yank register.
 func (b *Buffer) remove(a, z int) {
+	b.vertical = false
 	a = max(0, min(a, len(b.Text)))
 	z = max(a, min(z, len(b.Text)))
 	b.save()
@@ -95,6 +100,7 @@ func (b *Buffer) remove(a, z int) {
 
 // restore moves one snapshot between undo and redo history and restores its cursor.
 func (b *Buffer) restore(redo bool) {
+	b.vertical = false
 	source, dest := &b.undo, &b.redo
 	if redo {
 		source, dest = &b.redo, &b.undo

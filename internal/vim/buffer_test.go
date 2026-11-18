@@ -151,3 +151,153 @@ func TestLiteralReplaceAndBigWordMotions(t *testing.T) {
 		t.Fatalf("cw consumed trailing space: %q", b.String())
 	}
 }
+
+func TestVerticalMotionsRetainColumnsAcrossShortLines(t *testing.T) {
+	for _, tc := range []struct {
+		name, text, mode string
+		start, want      int
+		input            []string
+	}{
+		{"short line", "abcd\nx\nwxyz", "normal", 2, 5, []string{"j"}},
+		{"down", "abcd\nx\nwxyz", "normal", 2, 9, []string{"j", "j"}},
+		{"up", "abcd\nx\nwxyz", "normal", 9, 2, []string{"k", "k"}},
+		{"count", "abcd\nx\nwxyz", "normal", 2, 9, []string{"2", "j"}},
+		{"empty", "abcd\n\nwxyz", "normal", 2, 8, []string{"j", "j"}},
+		{"insert endpoint", "abcd\nx\nwxyz", "insert", 2, 6, []string{"down"}},
+		{"horizontal resets", "abcd\nx\nwxyz", "normal", 2, 7, []string{"j", "0", "j"}},
+		{"unicode", "界abc\nx\n界xyz", "normal", 2, 9, []string{"j", "j"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			b := normal(tc.text)
+			b.Mode, b.Pos = tc.mode, tc.start
+			keys(b, tc.input...)
+			if b.Pos != tc.want || b.Mode != tc.mode || b.String() != tc.text {
+				t.Fatalf("movement changed state: pos=%d mode=%s text=%q", b.Pos, b.Mode, b.String())
+			}
+		})
+	}
+}
+
+func TestVerticalColumnResetsAfterEditsAndLiteralTargets(t *testing.T) {
+	for _, edit := range []string{"insert", "undo", "replace", "find", "set"} {
+		t.Run(edit, func(t *testing.T) {
+			b := normal("abcd\nxk\nwxyz")
+			b.Pos = 3
+			keys(b, "j")
+			switch edit {
+			case "insert":
+				b.Insert("z")
+			case "undo":
+				b.Insert("z")
+				keys(b, "u")
+			case "replace":
+				keys(b, "r", "j")
+			case "find":
+				keys(b, "F", "x")
+			case "set":
+				b.Set("abcdef\nx\nwxyz")
+				b.Mode, b.Pos = "normal", 7
+			}
+			column := b.Pos - b.lineStart(b.Pos)
+			keys(b, "j")
+			if b.Pos-b.lineStart(b.Pos) != column {
+				t.Fatal("edit or literal argument retained stale desired column")
+			}
+		})
+	}
+}
+
+func TestEditingTracesPreserveTextCursorAndMode(t *testing.T) {
+	for _, tc := range []struct {
+		name, before, after string
+		input               []string
+		position            int
+	}{
+		{"append", "abc", "abc!", []string{"A", "!", "esc"}, 3},
+		{"prepend", "abc", "!abc", []string{"I", "!", "esc"}, 0},
+		{"open below", "abc", "abc\nx", []string{"o", "x", "esc"}, 4},
+		{"open above", "abc", "x\nabc", []string{"O", "x", "esc"}, 0},
+		{"substitute", "abc", "xbc", []string{"s", "x", "esc"}, 0},
+		{"substitute last", "abc", "abx", []string{"2", "l", "s", "x", "esc"}, 2},
+		{"change last word", "a bc", "a x", []string{"w", "c", "w", "x", "esc"}, 2},
+		{"substitute line", "abc", "x", []string{"S", "x", "esc"}, 0},
+		{"change rest", "abc", "ax", []string{"l", "C", "x", "esc"}, 1},
+		{"delete rest", "abc", "a", []string{"l", "D"}, 0},
+		{"delete before", "abc", "bc", []string{"l", "X"}, 0},
+		{"join", "a\nb", "a b", []string{"J"}, 0},
+		{"case", "a", "A", []string{"~"}, 0},
+		{"undo replace", "abc", "abc", []string{"r", "界", "u"}, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			b := normal(tc.before)
+			keys(b, tc.input...)
+			if b.String() != tc.after || b.Pos != tc.position || b.Mode != "normal" {
+				t.Fatalf("text=%q cursor=%d mode=%s", b.String(), b.Pos, b.Mode)
+			}
+		})
+	}
+}
+
+func TestReverseLineSelectionAndNestedPairMotions(t *testing.T) {
+	b := normal("one\ntwo\nthree")
+	keys(b, "G", "V", "k")
+	left, right := b.Selection()
+	if left != 4 || right != len(b.Text) {
+		t.Fatalf("reverse line selection lost complete lines: %d:%d", left, right)
+	}
+	keys(b, "y")
+	if string(b.Register) != "two\nthree" || !b.Linewise || b.Pos != 4 || b.Mode != "normal" {
+		t.Fatal("line yank lost selection or register type")
+	}
+
+	b = normal("((界))")
+	keys(b, "%")
+	if b.Pos != 4 {
+		t.Fatal("nested pair did not reach matching close")
+	}
+	keys(b, "%")
+	if b.Pos != 0 {
+		t.Fatal("reverse nested pair did not return to open")
+	}
+	b.Set("(unclosed")
+	b.Mode, b.Pos = "normal", 0
+	keys(b, "%")
+	if b.Pos != 0 {
+		t.Fatal("unmatched pair moved the cursor")
+	}
+}
+
+func TestInsertControlsAndSearchCancellation(t *testing.T) {
+	b := New()
+	b.Set("ab\ncd")
+	b.Pos = 3
+	keys(b, "backspace", "delete", "home", "end", "left", "right", "enter", "tab")
+	if b.String() != "abd\n    " || b.Pos != 8 || b.Mode != "insert" {
+		t.Fatalf("insert controls: %q at %d", b.String(), b.Pos)
+	}
+	b.Key("esc", "")
+	keys(b, "/", "a", "b", "backspace")
+	if b.SearchQuery() != "a" || b.Status() != "/a" {
+		t.Fatal("search editing did not update visible query")
+	}
+	b.Key("esc", "")
+	if b.Mode != "normal" || b.Search != "" || b.Pos != 7 {
+		t.Fatal("cancelled search changed cursor or committed query")
+	}
+}
+
+func TestCharacterEditsReplaceLinewiseRegisterType(t *testing.T) {
+	for _, tc := range []struct {
+		input []string
+		want  string
+	}{
+		{[]string{"Y", "s", "x", "esc", "p"}, "xabc"},
+		{[]string{"Y", "l", "X", "p"}, "bac"},
+	} {
+		b := normal("abc")
+		keys(b, tc.input...)
+		if b.Linewise || string(b.Register) != "a" || b.String() != tc.want {
+			t.Fatalf("character edit retained line register: text=%q register=%q linewise=%t", b.String(), string(b.Register), b.Linewise)
+		}
+	}
+}
