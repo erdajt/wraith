@@ -20,10 +20,12 @@ func TestNativeRequestsUseCanonicalActionValidation(t *testing.T) {
 		{"placeholder", "agent", "request_command", `{"command":"curl <TARGET>","reason":"check"}`, false},
 		{"duplicate", "agent", "request_command", `{"command":"true","command":"false","reason":"check"}`, false},
 		{"unknown field", "agent", "request_command", `{"command":"true","reason":"check","execute":true}`, false},
+		{"null background", "agent", "request_command", `{"command":"true","reason":"check","background":null}`, false},
 		{"control", "agent", "request_command", `{"command":"printf \u001b","reason":"check"}`, false},
 		{"poll", "agent", "read_output", `{"tool":"poll","id":"0123456789abcdef01234567"}`, true},
 		{"query", "agent", "read_output", `{"tool":"output","id":"0123456789abcdef01234567","pattern":"ready","limit":20}`, true},
 		{"bounds", "agent", "read_output", `{"tool":"output","id":"0123456789abcdef01234567","limit":201}`, false},
+		{"null limit", "agent", "read_output", `{"tool":"output","id":"0123456789abcdef01234567","limit":null}`, false},
 		{"blocks output", "blocks", "read_output", `{"tool":"poll","id":"0123456789abcdef01234567"}`, false},
 		{"unknown function", "agent", "exec", `{}`, false},
 		{"no mode", "", "request_command", `{"command":"true","reason":"check"}`, false},
@@ -60,7 +62,7 @@ func TestMixedOrMultipleNativeRequestsAreRejected(t *testing.T) {
 			t.Fatal("accepted wrong call count")
 		}
 	}
-	for _, content := range []string{"```wraith-run\n{}\n```", "```text\nwraith-run {}\n```", string(call.Arguments)} {
+	for _, content := range []string{"```wraith-run\n{}\n```", "```text\nwraith-run {}\n```", string(call.Arguments), "```sh\nprintf ready", "~~~text\nexample", "````markdown\nexample"} {
 		if _, err := NormalizeAction("agent", content, []ollama.Call{call}); err == nil {
 			t.Fatal("accepted mixed actions")
 		}

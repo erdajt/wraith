@@ -64,6 +64,9 @@ func decodeObject(text string, out any) error {
 		if err = d.Decode(&value); err != nil {
 			return errors.New("invalid action value")
 		}
+		if string(value) == "null" {
+			return errors.New("action fields cannot be null")
+		}
 	}
 
 	if _, err = d.Token(); err != nil {

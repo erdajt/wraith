@@ -47,6 +47,20 @@ wraith --provider openai --model your-model-id
 wraith --provider codex
 ```
 
+## action transport
+
+`providers.<name>.action_protocol` accepts `auto`, `native` or `text`; an omitted value means `auto`.
+
+- `auto` uses native function calls for ollama models that advertise tools. other providers keep the text request protocol.
+- `native` enables function calls for ollama, openai-compatible or anthropic endpoints. select a model that supports tools; unsupported endpoints report their error without a silent fallback.
+- `text` uses the existing fenced request protocol. cli providers always use this transport and reject `native`.
+
+both transports use the same approval window. agent mode offers command requests and bounded output reads. blocks mode offers command requests only. compaction and structured extraction requests offer no tools. tool schemas count toward the request budget.
+
+native arguments stay private to the decoder until a completed response passes validation. multiple calls, mixed text/native requests and malformed arguments are rejected. corrective retries are visible and stop after three attempts. network and authentication failures are not retried as protocol corrections.
+
+calls are converted to ordinary conversation text, and job receipts/results return as user evidence. provider call ids, native tool-result envelopes and signed thinking blocks are not replayed. wraith's durable job ids remain valid across compaction and resume. historical calls never execute on resume.
+
 ## cli profiles
 
 install and authenticate the CLI separately. the default profiles reuse its saved login. `command` is an executable-and-arguments array, allowing an absolute path or your own wrapper. `/models` opens the codex catalog and supports `j`/`k`, arrows, filtering and enter. choosing a model saves it as that provider's default and refreshes its context and thinking settings. `/model exact-model-id` also selects directly.

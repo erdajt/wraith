@@ -90,6 +90,8 @@ pickers accept arrows, `j/k`, `/` filtering and enter. `?` explains a selected s
 
 agent mode asks before executing a concrete command. choose **run**, **run with output hidden**, **edit**, **view full command**, **ask assistant to modify**, or **reject**. editing and saving authorizes that command once. an empty modification field prepares a `modify:` draft for your next prompt. unresolved placeholders remain suggestions.
 
+ollama models that advertise tools use native function requests automatically. api profiles can enable them with `action_protocol: native`; `text` keeps the fenced protocol. both use the same approval flow. malformed requests get up to three visible corrections, while ordinary shell examples stay suggestions. [action transport](docs/providers.md#action-transport)
+
 approved agent commands run in the background. the chat stays available. `/jobs` shows current jobs and live output; `/history` keeps saved commands, status and results. the agent receives a job id, can search or page authorized output, and gets completion evidence when the chat is ready. empty polls pause automatic calls instead of looping.
 
 | execution mode | default output behavior |

@@ -87,5 +87,17 @@ func NormalizeAction(mode, content string, calls []ollama.Call) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	return content + "\n\n```" + marker + "\n" + string(data) + "\n```\n", nil
+	canonical := content + "\n\n```" + marker + "\n" + string(data) + "\n```\n"
+	if marker == "wraith-run" {
+		request, err := RequestedCommand(canonical)
+		if err != nil || request == nil {
+			return "", errors.New("close prose code fences before requesting a native action")
+		}
+	} else {
+		request, err := RequestedTool(canonical)
+		if err != nil || request == nil {
+			return "", errors.New("close prose code fences before requesting a native action")
+		}
+	}
+	return canonical, nil
 }
