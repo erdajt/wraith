@@ -10,7 +10,7 @@ import (
 )
 
 func TestStagedEditReplacesOnlyItsOriginalPendingCommand(t *testing.T) {
-	for _, name := range []string{"saved", "cancelled", "changed", "inserted", "unacknowledged", "restarted"} {
+	for _, name := range []string{"saved", "cancelled", "empty", "changed", "inserted", "unacknowledged", "restarted"} {
 		t.Run(name, func(t *testing.T) {
 			a := fixture(t)
 			a.openTerminal(1)
@@ -26,7 +26,11 @@ func TestStagedEditReplacesOnlyItsOriginalPendingCommand(t *testing.T) {
 				t.Fatal(err)
 			}
 			if name != "cancelled" {
-				if err := os.WriteFile(f.Path, []byte("printf edited"), 0600); err != nil {
+				content := "printf edited"
+				if name == "empty" {
+					content = " \n\t"
+				}
+				if err := os.WriteFile(f.Path, []byte(content), 0600); err != nil {
 					t.Fatal(err)
 				}
 			}

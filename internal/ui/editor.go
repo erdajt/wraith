@@ -297,6 +297,10 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 				return nil
 			}
 		}
+		if m.Kind == "staged" && strings.TrimSpace(text) == "" {
+			a.notice = "empty staged command rejected"
+			return nil
+		}
 		if strings.Contains(text, "wraith::") {
 			if editor.Extension(m.Language) != ".sh" {
 				a.notice = "resolve private references in the source before saving"
