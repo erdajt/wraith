@@ -38,6 +38,25 @@ func TestSnapshotIsReadOnlyAndFitsTerminal(t *testing.T) {
 	}
 }
 
+func TestSessionsPrintsHealthyChatsBeforeReportingDamagedFiles(t *testing.T) {
+	root := t.TempDir()
+	s := session.New("test-model")
+	s.Title = "healthy chat"
+	if err := (store.Store{Root: root}).Save(s); err != nil {
+		t.Fatal(err)
+	}
+	broken := session.ID()
+	if err := os.WriteFile(filepath.Join(root, "sessions", broken+".json.gz"), []byte("not a gzip stream"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	var out bytes.Buffer
+	err := run([]string{"--config-dir", filepath.Join(root, "config"), "--data-dir", root, "sessions"}, &out)
+	if err == nil || !strings.Contains(err.Error(), broken) || !strings.Contains(out.String(), s.ID) || !strings.Contains(out.String(), s.Title) {
+		t.Fatalf("partial cli listing lost data or warning: %q, %v", out.String(), err)
+	}
+}
+
 func TestExportIncludesRecoveredFacts(t *testing.T) {
 	root := t.TempDir()
 	s := session.New("test-model")

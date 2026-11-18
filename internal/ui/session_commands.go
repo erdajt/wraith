@@ -43,7 +43,7 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 		return a.probe()
 	case "chats", "sessions":
 		list, err := a.Store.ListDirectory(a.Directory)
-		if err != nil {
+		if err != nil && len(list) == 0 {
 			a.notice = err.Error()
 			return nil
 		}
@@ -53,6 +53,10 @@ func (a *App) sessionCommand(name, arg string) tea.Cmd {
 			items = append(items, item{s.Title, s.ID, s.Updated.Local().Format("jan 02 15:04") + " · " + s.ID[:8]})
 		}
 		a.popup = &menu{Kind: "sessions", Title: "saved chats", Items: items}
+		if err != nil {
+			a.popup.Hints = "unreadable session files skipped · check the status message"
+			a.notice = err.Error()
+		}
 	case "resume":
 		if arg == "" {
 			return a.sessionCommand("sessions", "")

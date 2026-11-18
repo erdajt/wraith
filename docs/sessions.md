@@ -19,6 +19,8 @@ wraith sessions
 
 without an id, resume opens a picker. use arrows or `j/k`, `/` to filter, and enter to select. only conversations from the current canonical directory appear. launching through a symlink to the same directory still matches.
 
+unreadable session files produce a warning while healthy sessions remain selectable. `wraith sessions` prints readable entries and returns an error listing damaged files. the files stay untouched; restore them from backup or inspect a copy before attempting recovery.
+
 an invalid id reports `invalid session id` and starts fresh. an id from another directory reports where the original conversation occurred and starts fresh. change to that directory before resuming. sessions without a recorded directory can be exported but are not assigned to a directory implicitly.
 
 resume restores the recorded provider and model. explicit startup `--provider` and `--model` flags can override them. the profile must still exist in the config. conversation-scoped variables return with their session; directory and global variables follow their own scopes.

@@ -22,12 +22,9 @@ func canonicalDirectory(path string) string {
 	return filepath.Clean(path)
 }
 
-// ListDirectory lists sessions whose canonical directory matches directory.
+// ListDirectory filters readable sessions by canonical directory while preserving listing errors.
 func (s Store) ListDirectory(directory string) ([]session.Session, error) {
 	all, err := s.List()
-	if err != nil {
-		return nil, err
-	}
 
 	var found []session.Session
 	for _, chat := range all {
@@ -35,7 +32,7 @@ func (s Store) ListDirectory(directory string) ([]session.Session, error) {
 			found = append(found, chat)
 		}
 	}
-	return found, nil
+	return found, err
 }
 
 // LoadDirectory loads a session only if it belongs to directory.

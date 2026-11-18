@@ -1,11 +1,34 @@
 package ui
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/session"
 )
+
+func TestResumePickerWarnsAndKeepsHealthyChatsSelectable(t *testing.T) {
+	a := fixture(t)
+	if err := a.Store.Save(a.Session); err != nil {
+		t.Fatal(err)
+	}
+	healthy := a.Session.ID
+	broken := session.ID()
+	if err := os.WriteFile(filepath.Join(a.Paths.Data, "sessions", broken+".json.gz"), []byte("not a gzip stream"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	a.OpenSessions()
+	if a.popup == nil || len(a.popup.Items) != 1 || !strings.Contains(a.popup.Hints, "unreadable") || !strings.Contains(a.notice, broken) {
+		t.Fatal("damaged chat disabled picker or its warning was lost")
+	}
+	a.menuKey(tea.KeyMsg{Type: tea.KeyEnter})
+	if a.Session.ID != healthy || a.popup != nil {
+		t.Fatal("healthy chat could not be resumed")
+	}
+}
 
 func TestResumePickerSupportsArrowsVimAndSearch(t *testing.T) {
 	a := fixture(t)

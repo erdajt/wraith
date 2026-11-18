@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/erdajt/wraith/internal/fsutil"
@@ -87,7 +88,7 @@ func (s Store) ReadArchive(name string) (session.Session, error) {
 	return read(filepath.Join(s.Root, "archives", name))
 }
 
-// List loads saved sessions ordered by most recent update.
+// List returns readable sessions by update time and joins errors for unreadable files.
 func (s Store) List() ([]session.Session, error) {
 	paths, err := filepath.Glob(filepath.Join(s.Root, "sessions", "*.json.gz"))
 	if err != nil {
@@ -95,16 +96,18 @@ func (s Store) List() ([]session.Session, error) {
 	}
 
 	var out []session.Session
+	var problems []error
 	for _, p := range paths {
-		v, e := read(p)
+		v, e := s.Load(strings.TrimSuffix(filepath.Base(p), ".json.gz"))
 		if e != nil {
-			return nil, fmt.Errorf("%s: %w", filepath.Base(p), e)
+			problems = append(problems, fmt.Errorf("%s: %w", filepath.Base(p), e))
+			continue
 		}
 		out = append(out, v)
 	}
 
 	sort.Slice(out, func(i, j int) bool { return out[i].Updated.After(out[j].Updated) })
-	return out, nil
+	return out, errors.Join(problems...)
 }
 
 // compressed atomically writes a session as compressed json.

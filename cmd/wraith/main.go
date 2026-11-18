@@ -155,14 +155,11 @@ func run(args []string, out io.Writer) error {
 				return e
 			}
 			list, e := s.ListDirectory(directory)
-			if e != nil {
-				return e
-			}
 
 			for _, v := range list {
 				fmt.Fprintf(out, "%s  %s  %s\n", v.ID, v.Updated.Local().Format("2006-01-02 15:04"), v.Title)
 			}
-			return nil
+			return e
 		case "export":
 			if flags.NArg() != 2 {
 				return errors.New("usage: wraith export session-id")
