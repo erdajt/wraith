@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -9,7 +10,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/contextual"
-	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/provider"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/store"
@@ -56,8 +56,12 @@ func (a *App) submit() tea.Cmd {
 
 	probe, _ := a.pendingEvidence()
 	probe.Messages = append(probe.Messages, session.Message{Role: "user", Content: text})
-	if err := contextual.Fits(probe, a.runtimeConfig(), a.chatInstructions()); err != nil {
+	if _, err := a.chatBudget(probe); err != nil {
 		a.notice = err.Error()
+		var overflow *provider.ContextError
+		if !errors.As(err, &overflow) {
+			return nil
+		}
 		a.pendingPrompt = text
 		if a.Config.Compact.Mode == "auto" {
 			return a.startCompact()
@@ -113,8 +117,12 @@ func (a *App) startChat() tea.Cmd {
 		a.notice = err.Error() + "; /retry after changing /think"
 		return nil
 	}
-	if err = contextual.Fits(a.Session, a.runtimeConfig(), a.chatInstructions()); err != nil {
+	if _, err = a.chatBudget(a.Session); err != nil {
 		a.notice = err.Error()
+		var overflow *provider.ContextError
+		if !errors.As(err, &overflow) {
+			return nil
+		}
 		a.pendingAgent = true
 		if a.Config.Compact.Mode == "auto" {
 			return a.startCompact()
@@ -134,8 +142,7 @@ func (a *App) startChat() tea.Cmd {
 	a.partial = session.Message{Role: "assistant"}
 	a.phase = "connecting"
 
-	req := ollama.Request{RunIDs: a.Session.RunIDs(), ExecutionMode: a.Config.Execution.Mode, PrivateInventory: true, Model: a.Session.Model, Messages: contextual.ForChat(a.Session, a.Config, a.Instructions), Think: think, KeepAlive: a.Config.KeepAlive, Options: ollama.Options{Context: a.contextLimit(), Predict: a.Config.Predict, Temperature: a.Config.Temperature, Threads: a.Config.Threads}}
-	req.Capabilities = append([]string(nil), a.Info.Capabilities...)
+	req := a.chatRequest(a.Session, think)
 	client := a.Client
 	a.streamStopped = false
 	a.streamSerial++
@@ -222,7 +229,8 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 			}
 		}
 	}
-	a.Session.Usage = m.Chunk.Usage(contextual.Estimate(contextual.ForChat(a.SessionWithoutLastAssistant(), a.Config, a.chatInstructions())))
+	inputEstimate, _ := a.Client.Estimate(a.chatRequest(a.SessionWithoutLastAssistant(), nil))
+	a.Session.Usage = m.Chunk.Usage(inputEstimate)
 	a.partial = session.Message{}
 	if err := a.Store.Save(a.Session); err != nil {
 		a.notice = "save failed: " + err.Error()
@@ -260,7 +268,7 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 		}
 	}
 
-	switch contextual.Decision(a.Config.Compact.Mode, a.Session.Declines, contextual.NeedsCompact(a.Session, a.runtimeConfig(), a.chatInstructions())) {
+	switch contextual.Decision(a.Config.Compact.Mode, a.Session.Declines, a.chatUsed() >= int(float64(a.contextLimit())*a.Config.Compact.Threshold)) {
 	case "compact":
 		return a.startCompact()
 	case "ask":

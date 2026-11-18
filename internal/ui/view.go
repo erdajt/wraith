@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/x/ansi"
-	"github.com/erdajt/wraith/internal/contextual"
 )
 
 // View composes the workspace frame, including transcript, prompt, status bars and overlays.
@@ -40,7 +39,7 @@ func (a *App) View() string {
 	}
 	right := ink(p.Second, mode) + ink(p.Muted, "  "+a.focus+"  ")
 	rows[0] = base(p, logo+strings.Repeat(" ", max(1, w-ansi.StringWidth(logo)-ansi.StringWidth(right)))+right, w)
-	used := contextual.ChatUsed(a.Session, a.Config, a.chatInstructions())
+	used := a.chatUsed()
 	ratio := float64(used) / float64(a.contextLimit())
 	bar := int(ratio * 12)
 	bar = max(0, min(12, bar))

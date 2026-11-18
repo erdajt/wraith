@@ -1,10 +1,11 @@
 package ui
 
 import (
+	"errors"
+	"github.com/erdajt/wraith/internal/provider"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/runner"
 	"github.com/erdajt/wraith/internal/session"
 )
@@ -43,7 +44,13 @@ func (a *App) runPendingTool() tea.Cmd {
 		}
 	}
 
-	remaining := a.contextLimit() - a.Config.Predict - 128 - contextual.ChatUsed(a.Session, a.runtimeConfig(), a.chatInstructions())
+	used, budgetErr := a.chatBudget(a.Session)
+	var overflow *provider.ContextError
+	if budgetErr != nil && !errors.As(budgetErr, &overflow) {
+		a.notice = budgetErr.Error()
+		return nil
+	}
+	remaining := a.contextLimit() - a.Config.Predict - 128 - used
 	available := min(a.Config.Execution.OutputContext, max(0, remaining-256))
 	budget := min(a.Config.Execution.OutputContext, available*3)
 	if budget < 256 {
@@ -108,8 +115,12 @@ func (a *App) runPendingTool() tea.Cmd {
 		message = evidence.Message()
 	}
 	candidate.Messages = append(candidate.Messages, message)
-	if contextual.Fits(candidate, a.runtimeConfig(), a.chatInstructions()) != nil {
-		return a.deferOutputRead()
+	if _, err := a.chatBudget(candidate); err != nil {
+		if errors.As(err, &overflow) {
+			return a.deferOutputRead()
+		}
+		a.notice = err.Error()
+		return nil
 	}
 
 	if err := a.Store.Save(candidate); err != nil {

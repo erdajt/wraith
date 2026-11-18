@@ -69,3 +69,5 @@ active sessions, archives and recovery snapshots all contain the session schema 
 wraith retries a failed model compaction up to three times after the first attempt. each retry receives the validation error and a bounded excerpt of the rejected extraction and audit. it starts from the original conversation, not the failed candidate. cancellation and invalid local budgets stop immediately. exhausting retries leaves the active conversation unchanged; the recovery cache and archive remain available.
 
 protected facts cannot always fit into a smaller context. retries do not relax preservation checks or silently trim them. increase context, reduce recent turns, or start another session if the protected material itself fills the window.
+
+submission checks use the prepared provider request, including native tool schemas and private-variable instructions. capacity failures retain the draft and use the configured compaction flow. privacy or provider-configuration errors stop submission without starting compaction.
