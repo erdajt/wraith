@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -25,8 +26,15 @@ func TestNeovimTerminalEditorAndCopyMode(t *testing.T) {
 	c.AutoStart = false
 	c.Host = "http://127.0.0.1:1"
 	c.Clipboard = nil
-	c.Editor = []string{nvim, "--clean", "-n"}
-	c.Shell = []string{"/bin/sh", "-i"}
+	c.Editor = []string{nvim, "--clean", "-n", "-c", "set laststatus=2 statusline=wraith-editor-ready"}
+	c.Shell = []string{"/bin/sh", "-c", `
+count=0
+if [ -r "$1" ]; then read -r count < "$1"; fi
+count=$((count + 1))
+printf '%s\n' "$count" > "$1"
+printf 'shell-ready-%s\n' "$count"
+exec /bin/sh -i
+`, "wraith-test-shell", filepath.Join(root, "shell-starts")}
 
 	if err := config.Save(root+"/config/config.yaml", c); err != nil {
 		t.Fatal(err)
@@ -44,6 +52,9 @@ func TestNeovimTerminalEditorAndCopyMode(t *testing.T) {
 		t.Helper()
 		timeout := time.After(8 * time.Second)
 		for {
+			if strings.Contains(ansi.Strip(strings.Join(screen.Lines(false, "", ""), "\n")), want) {
+				return
+			}
 			select {
 			case e, ok := <-p.Events:
 				if !ok || e.Err != nil {
@@ -54,10 +65,6 @@ func TestNeovimTerminalEditorAndCopyMode(t *testing.T) {
 					if err := p.Write(reply); err != nil {
 						t.Fatal(err)
 					}
-				}
-
-				if strings.Contains(ansi.Strip(strings.Join(screen.Lines(false, "", ""), "\n")), want) {
-					return
 				}
 			case <-timeout:
 				t.Fatalf("missing %q:\n%s", want, ansi.Strip(strings.Join(screen.Lines(false, "", ""), "\n")))
@@ -77,17 +84,16 @@ func TestNeovimTerminalEditorAndCopyMode(t *testing.T) {
 	send("\x1b")
 	time.Sleep(80 * time.Millisecond)
 	send("draft evidence\x05")
-	wait("draft evidence")
-	time.Sleep(150 * time.Millisecond)
+	wait("wraith-editor-ready")
 	send("\x1bA edited\x1b:wq\r")
 	wait("prompt updated")
 	wait("draft evidence edited")
 	send("\x1bs")
-	wait("side shell")
+	wait("shell-ready-1")
 	send("printf '%s%s\\n' shell- evidence\r")
 	wait("shell-evidence")
 	send("exit\r")
-	time.Sleep(350 * time.Millisecond)
+	wait("shell-ready-2")
 	send("printf '%s%s\\n' restarted- shell\r")
 	wait("restarted-shell")
 
