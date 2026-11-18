@@ -1,6 +1,7 @@
 package ui
 
 import (
+	tea "github.com/charmbracelet/bubbletea"
 	"os"
 	"path/filepath"
 	"testing"
@@ -60,5 +61,27 @@ func TestLuaResultCannotOverwriteNewInputOrApproval(t *testing.T) {
 	a.Update(a.callPlugin(id, "", "")())
 	if a.Prompt.String() != "new input" || a.popup.Kind != "approval" || a.proposal == nil {
 		t.Fatal("callback bypassed approval ownership")
+	}
+}
+
+func TestLuaSlashCompletionRunsCommandsAndOpensTheirChildren(t *testing.T) {
+	a := pluginFixture(t, `wraith.commands.create("tools.greet", function(ctx) wraith.prompt.set("hello " .. ctx.argument) end)`)
+	a.Prompt.Set("/to")
+	a.key(tea.KeyMsg{Type: tea.KeyEnter})
+	if a.Prompt.String() != "/tools." {
+		t.Fatalf("custom parent did not expand: %q", a.Prompt.String())
+	}
+	a.key(tea.KeyMsg{Type: tea.KeyTab})
+	if a.Prompt.String() != "/tools.greet " {
+		t.Fatalf("custom child did not complete: %q", a.Prompt.String())
+	}
+	a.Prompt.Set("/tools.greet world")
+	cmd := a.key(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("custom slash command was rejected")
+	}
+	a.Update(cmd())
+	if a.Prompt.String() != "hello world" {
+		t.Fatalf("slash callback failed: %q", a.Prompt.String())
 	}
 }

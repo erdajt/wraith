@@ -35,7 +35,12 @@ func (a *App) slashKey(k tea.KeyMsg) (tea.Cmd, bool) {
 				return nil, true
 			}
 			choice := choices[index]
-			if k.String() == "tab" && len(subcommands[choice.Name]) > 0 {
+			children := len(subcommands[choice.Name]) > 0
+			for _, command := range a.pluginManifest.Commands {
+				children = children || strings.HasPrefix(command.Name, choice.Name+".")
+			}
+			_, executable := a.actions["command."+choice.Name]
+			if children && (k.String() == "tab" || !executable) {
 				a.Prompt.Set("/" + choice.Name + ".")
 				a.completionIndex = 0
 				return nil, true
@@ -52,7 +57,7 @@ func (a *App) slashKey(k tea.KeyMsg) (tea.Cmd, bool) {
 		}
 
 		name, _, _ := strings.Cut(strings.TrimSpace(text), " ")
-		matches := matchingCommands(name)
+		matches := a.pluginCommands(name)
 		if len(matches) == 0 || matches[0].Name != name {
 			a.notice = "unknown command · edit the command name or press esc"
 			return nil, true

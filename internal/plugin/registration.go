@@ -3,6 +3,7 @@ package plugin
 import (
 	"regexp"
 	"slices"
+	"strings"
 
 	"github.com/erdajt/wraith/internal/keymap"
 	lua "github.com/yuin/gopher-lua"
@@ -51,7 +52,9 @@ func (e *engine) installRegistration(api *lua.LTable) {
 		"create": func(L *lua.LState) int {
 			e.registration(L)
 			name := L.CheckString(1)
-			if !commandName.MatchString(name) || len(name) > 80 || e.actions["command."+name] || len(e.manifest.Commands) >= 128 {
+			parent, _, dotted := strings.Cut(name, ".")
+			reservedParent := dotted && e.actions["command."+parent] && !slices.ContainsFunc(e.manifest.Commands, func(command Command) bool { return command.Name == parent })
+			if reservedParent || !commandName.MatchString(name) || len(name) > 80 || e.actions["command."+name] || len(e.manifest.Commands) >= 128 {
 				L.RaiseError("invalid, reserved or duplicate command: %s", name)
 			}
 			e.actions["command."+name] = true
