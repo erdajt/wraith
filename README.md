@@ -54,7 +54,7 @@ edit prompts with vim motions or your own editor. search and yank conversations.
 | shells | centered and side panes, configurable dimensions, real ptys, persistent shell state and vim scrollback copy mode |
 | providers | ollama, openai-compatible apis, anthropic, deepseek, codex cli and claude cli; configurable profiles and model catalogs |
 | sessions | compressed storage, directory-scoped resume/search, saved draft recovery, interrupted-response retry, archive restore and markdown export |
-| extensibility | real Lua configuration, local plugins, custom Ex/slash commands, native vim mappings, input modes, workspace APIs, lifecycle events and atomic reload |
+| extensibility | trusted Lua configuration, local plugins, custom Ex/slash commands, native vim mappings, input modes, workspace APIs, lifecycle events and validated configuration reload |
 | appearance | ten themes, custom palettes, inherited backgrounds, themed cursors, an animated hooded mark and reduced motion |
 
 </details>
