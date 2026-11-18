@@ -9,9 +9,16 @@ import (
 	"github.com/erdajt/wraith/internal/editor"
 	"github.com/erdajt/wraith/internal/fsutil"
 	"github.com/erdajt/wraith/internal/provider"
+	"github.com/erdajt/wraith/internal/terminal"
 )
 
+type stagedEdit struct {
+	PTY           *terminal.PTY
+	Path, Pending string
+}
+
 type editedMsg struct {
+	Staged         *stagedEdit
 	Kind, Language string
 	File           *editor.File
 	Index          int
@@ -27,6 +34,20 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 	if a.demo {
 		a.notice = "external editing is disabled in demo mode"
 		return nil
+	}
+
+	var staged *stagedEdit
+	if kind == "staged" {
+		if index < 0 || index >= len(a.panes) || a.panes[index] == nil {
+			a.notice = "staged shell no longer exists"
+			return nil
+		}
+		p := a.panes[index]
+		if p.Pending == "" || p.PasteID != "" {
+			a.notice = "wait for insertion acknowledgement before editing the staged command"
+			return nil
+		}
+		staged = &stagedEdit{PTY: p.PTY, Path: p.Path, Pending: p.Pending}
 	}
 
 	ext := ".md"
@@ -63,9 +84,9 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 			return nil
 		}
 		text = a.messageAt(index)
-	case "block", "run":
+	case "block", "run", "staged":
 		ext = editor.Extension(language)
-		if kind == "block" {
+		if kind == "block" || kind == "staged" {
 			if err := a.refreshVariables(); err != nil {
 				a.notice = err.Error()
 				return nil
@@ -99,7 +120,9 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 		return nil
 	}
 	a.editing = true
-	return tea.ExecProcess(cmd, func(err error) tea.Msg { return editedMsg{kind, language, f, index, err} })
+	return tea.ExecProcess(cmd, func(err error) tea.Msg {
+		return editedMsg{Kind: kind, Language: language, File: f, Index: index, Err: err, Staged: staged}
+	})
 }
 
 // editResponse edits an assistant response or requests a fork before editing a user message.
@@ -260,7 +283,20 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 		a.proposal.Source += "-edited"
 		applied = true
 		return a.runApproved()
-	case "block":
+	case "block", "staged":
+		index := 0
+		if m.Kind == "staged" {
+			index = m.Index
+			if m.Staged == nil || index < 0 || index >= len(a.panes) {
+				a.notice = "staged edit has no shell target"
+				return nil
+			}
+			p := a.panes[index]
+			if p == nil || p.PTY != m.Staged.PTY || p.Path != m.Staged.Path || p.Pending != m.Staged.Pending || p.PasteID != "" {
+				a.notice = "staged command changed while the editor was open"
+				return nil
+			}
+		}
 		if strings.Contains(text, "wraith::") {
 			if editor.Extension(m.Language) != ".sh" {
 				a.notice = "resolve private references in the source before saving"
@@ -284,13 +320,13 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 		}
 
 		applied = true
-		cmd := a.openTerminal(0)
-		if a.panes[0] == nil {
+		cmd := a.openTerminal(index)
+		if a.panes[index] == nil {
 			a.notice = "saved snippet at " + path + "; shell could not start"
 			return cmd
 		}
-		p := a.panes[0]
-		if p.Pending != "" || p.PasteID != "" {
+		p := a.panes[index]
+		if m.Kind != "staged" && (p.Pending != "" || p.PasteID != "") {
 			a.notice = "previous command is still staged · new snippet saved at " + path
 			return cmd
 		}
@@ -300,7 +336,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 			a.notice = "saved " + path + " · no interpreter mapped for " + m.Language
 		} else {
 			p.Pending = command
-			return tea.Batch(cmd, a.insertSaved(0))
+			return tea.Batch(cmd, a.insertSaved(index))
 		}
 		return cmd
 	}
@@ -319,5 +355,5 @@ func (a *App) editStaged(index int) tea.Cmd {
 		a.notice = err.Error()
 		return nil
 	}
-	return a.edit("block", p.Language, string(b), -1)
+	return a.edit("staged", p.Language, string(b), index)
 }
