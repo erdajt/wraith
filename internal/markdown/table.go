@@ -17,7 +17,7 @@ func cells(line string) []string {
 }
 
 // renderTable renders a table or narrow-screen field list and returns the consumed source lines.
-func renderTable(lines []string, width int, p config.Palette, transform func(string) string) ([]string, int) {
+func renderTable(lines []string, width int, p config.Palette, transform func(string) string) ([]Row, int) {
 	rows := [][]string{cells(lines[0])}
 	consumed := 2
 	for consumed < len(lines) && strings.Contains(lines[consumed], "|") && strings.TrimSpace(lines[consumed]) != "" {
@@ -41,17 +41,24 @@ func renderTable(lines []string, width int, p config.Palette, transform func(str
 		total += w + 3
 	}
 
-	var out []string
+	var out []Row
 	if total > width {
-		for _, row := range rows[1:] {
+		for n, row := range rows[1:] {
+			cellOffset := 0
 			for i, cell := range row {
-				out = append(out, strings.Split(ansi.Wrap(transform(inline(rows[0][i], p, ";1", 0)+paint(p.Border, ": ")+inline(cell, p, "", 0)), width, ""), "\n")...)
+				text := transform(inline(rows[0][i], p, ";1", 0) + paint(p.Border, ": ") + inline(cell, p, "", 0))
+				for _, part := range strings.Split(ansi.Wrap(text, width, ""), "\n") {
+					out = append(out, Row{Text: part, Source: n + 2, Cell: cellOffset})
+					cellOffset += ansi.StringWidth(part)
+				}
 			}
-			out = append(out, "")
+			out = append(out, Row{Source: n + 2, Cell: cellOffset})
 		}
 
 		if len(rows) == 1 {
-			out = append(out, inline(strings.Join(rows[0], " · "), p, ";1", 0))
+			for _, text := range strings.Split(ansi.Hardwrap(inline(strings.Join(rows[0], " · "), p, ";1", 0), width, true), "\n") {
+				out = append(out, Row{Text: text})
+			}
 		}
 		return out, consumed
 	}
@@ -63,7 +70,7 @@ func renderTable(lines []string, width int, p config.Palette, transform func(str
 		}
 		return paint(p.Border, left+strings.Join(parts, middle)+right)
 	}
-	out = append(out, border("┌", "┬", "┐"))
+	out = append(out, Row{Text: border("┌", "┬", "┐")})
 
 	for n, row := range rows {
 		var line strings.Builder
@@ -77,12 +84,16 @@ func renderTable(lines []string, width int, p config.Palette, transform func(str
 			line.WriteString(" " + rendered + strings.Repeat(" ", widths[i]-ansi.StringWidth(rendered)+1) + paint(p.Border, "│"))
 		}
 
-		out = append(out, line.String())
+		sourceLine := n + 1
 		if n == 0 {
-			out = append(out, border("├", "┼", "┤"))
+			sourceLine = 0
+		}
+		out = append(out, Row{Text: line.String(), Source: sourceLine})
+		if n == 0 {
+			out = append(out, Row{Text: border("├", "┼", "┤"), Source: 1})
 		}
 	}
 
-	out = append(out, border("└", "┴", "┘"))
+	out = append(out, Row{Text: border("└", "┴", "┘"), Source: consumed})
 	return out, consumed
 }

@@ -14,8 +14,9 @@ var list = regexp.MustCompile(`^(\s*)(?:[-+*]|([0-9]+)[.)])\s+(.*)$`)
 var rule = regexp.MustCompile(`^ {0,3}(?:\*\s*){3,}$|^ {0,3}(?:-\s*){3,}$|^ {0,3}(?:_\s*){3,}$`)
 
 type Row struct {
-	Text  string
-	Block int
+	Text         string
+	Block        int
+	Source, Cell int
 }
 
 // Render renders markdown into terminal rows with code-block indices and an updated block count.
@@ -29,16 +30,20 @@ func Render(source string, width int, p config.Palette, block int, transforms ..
 		}
 		return text
 	}
+	sourceLine := 0
 	add := func(s string) {
 		s = transform(s)
+		cell := 0
 		for _, line := range strings.Split(ansi.Hardwrap(s, width, true), "\n") {
-			out = append(out, Row{Text: line, Block: active})
+			out = append(out, Row{Text: line, Block: active, Source: sourceLine, Cell: cell})
+			cell += ansi.StringWidth(line)
 		}
 	}
 	lines := strings.Split(source, "\n")
 	fence := ""
 
 	for i := 0; i < len(lines); i++ {
+		sourceLine = i
 		line := lines[i]
 		trim := strings.TrimSpace(line)
 		indent := len(line) - len(strings.TrimLeft(line, " "))
@@ -70,7 +75,9 @@ func Render(source string, width int, p config.Palette, block int, transforms ..
 		if i+1 < len(lines) && tableSeparator(lines[i+1]) && strings.Contains(line, "|") {
 			table, consumed := renderTable(lines[i:], width, p, transform)
 			for _, row := range table {
-				add(row)
+				row.Source += i
+				row.Block = -1
+				out = append(out, row)
 			}
 			i += consumed - 1
 			continue
