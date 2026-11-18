@@ -22,6 +22,8 @@ type Options struct {
 	Threads     int     `json:"num_thread,omitempty"`
 }
 type Request struct {
+	Capabilities     []string          `json:"-"`
+	Tools            []Tool            `json:"tools,omitempty"`
 	RepairAction     string            `json:"-"`
 	RunIDs           map[string]bool   `json:"-"`
 	CompactionTask   string            `json:"-"`
@@ -36,6 +38,7 @@ type Request struct {
 	Options          Options           `json:"options"`
 }
 type Response struct {
+	Calls        []Call          `json:"-"`
 	Message      session.Message `json:"message"`
 	Done         bool            `json:"done"`
 	Reason       string          `json:"done_reason"`

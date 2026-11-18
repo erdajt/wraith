@@ -4,6 +4,7 @@ import (
 	"errors"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/session"
@@ -60,8 +61,13 @@ func decodeRequest(text string) (*CommandRequest, error) {
 	if err := decodeObject(text, &r); err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(r.Command) == "" || strings.TrimSpace(r.Reason) == "" || strings.ContainsAny(r.Command, "\x00\x1b\r") {
+	if strings.TrimSpace(r.Command) == "" || strings.TrimSpace(r.Reason) == "" {
 		return nil, errors.New("command request is empty or contains terminal controls")
+	}
+	for _, char := range r.Command + r.Reason {
+		if unicode.IsControl(char) && char != '\n' && char != '\t' {
+			return nil, errors.New("command request is empty or contains terminal controls")
+		}
 	}
 	return &r, nil
 }
