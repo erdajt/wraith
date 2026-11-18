@@ -82,6 +82,9 @@ func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emi
 				if command != nil && tool != nil {
 					rejected = errors.New("request one command or output tool per response")
 				}
+				if rejected == nil && command == nil && tool == nil && request.ExecutionMode == "agent" && request.CompactionTask == "" && request.Format == nil {
+					rejected = contextual.UnclearCommandIntent(result.Message.Content)
+				}
 				if tool != nil && rejected == nil {
 					_, rejected = c.Variables.Validate(tool.Pattern, true)
 				}

@@ -8,6 +8,8 @@ in agent mode, approved commands return their input, status and bounded output t
 
 execution requests display the resolved command and its `reason:`. transport markers and json fields are decoded before chat rendering, selection, copying or editor handoff. unresolved placeholders remain suggestions. read the full command before approving; placeholder detection cannot recognize every possible template.
 
+in agent mode, a command object in an ordinary json block or a misplaced request marker triggers a visible correction attempt, up to three retries. the model must clarify whether it wants execution or an example. wraith never promotes the malformed answer itself. plain shell examples remain suggestions; open `/blocks` to act on one manually.
+
 choose with `j/k` or arrows and enter:
 
 - **run** executes once and captures merged stdout/stderr; no second approval follows.

@@ -16,6 +16,8 @@ func (e *ActionProtocolError) Error() string {
 		return "output query sent as a command request"
 	case "command":
 		return "command sent as an output query"
+	case "intent":
+		return "command object needs an explicit execution or example format"
 	default:
 		return "action request used the wrong channel"
 	}
@@ -28,6 +30,8 @@ func (e *ActionProtocolError) Correction() string {
 		return "This is an output query, not a shell command. Keep the query object and place it in a fenced wraith-tool block instead of wraith-run. Do not wrap the query in a command or request shell execution. The from field is a one-based output line number, not a byte offset; use 1 to begin at the first line."
 	case "command":
 		return "A shell command request belongs in a fenced wraith-run block with command and reason strings, not wraith-tool. It still requires user approval; nothing from the rejected response was executed."
+	case "intent":
+		return "Clarify whether you intend to request execution or only illustrate a command. Nothing from the rejected answer was executed. For an example, use an ordinary sh fence with shell text only. Only when requesting execution, use this exact block structure with your actual command and reason:\n```wraith-run\n{\"command\":\"printf '%s\\n' ready\",\"reason\":\"check shell output\"}\n```\nDo not wrap the request marker in a text, json or shell fence. Do not request execution for hypothetical or incomplete examples."
 	default:
 		return ""
 	}
