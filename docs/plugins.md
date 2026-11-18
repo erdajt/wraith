@@ -116,7 +116,7 @@ operations run after the callback returns successfully. snapshot reads within th
 
 effects retain order. a nested custom command finishes its effects before its caller resumes. an empty callback also returns control to its caller; a failed or stale callback stops the chain. editor actions hold the chain until their own saved edit is applied; closing without saving, editor errors and workspace changes stop it. workspace ownership is checked before dispatch. approval dialogs, editors and raw shell input retain control of their surfaces. a later effect can be refused if an earlier operation opened a dialog. plugin effects cannot approve a proposed model command. model requests and approved jobs retain the normal privacy, context and execution paths.
 
-callback results are discarded after runtime replacement or changes to the captured focus, selection, navigation, mode, draft or settings. ids from closed windows are rejected. nested custom-command callbacks stop after eight levels. local code may configure behavior, but it cannot bypass these guards through an event hook.
+callback results are discarded after runtime replacement or changes to the captured focus, selection, navigation, mode, draft or settings. ids from closed windows are rejected. nested custom-command callbacks stop after eight levels. queued host actions follow these guards even from event hooks. trusted code can execute programs directly through Lua libraries; those operations are outside model-command approval.
 
 ## events and plugin lifecycle
 
@@ -170,7 +170,7 @@ callback deadlines interrupt Lua instructions, not blocking native operations su
 | `init.lua`, required source file or serialized snapshot | 1 mib |
 | retained callbacks / commands / loaded plugins | 512 / 128 / 128 |
 
-queue overflow is reported. cancellation releases waiting callers. one worker owns the VM; rendering does not wait for Lua execution. initial and required source files must be regular files; direct trusted loaders are unrestricted. these limits protect lifecycle and message handling, but in-process Lua allocation is not a hard memory sandbox. install only local code you trust.
+queue overflow is reported. cancellation releases waiting callers after the worker returns from its current call. a blocking native call can delay cancellation and teardown. one worker owns the VM; rendering does not wait for Lua execution. initial and required source files must be regular files; direct trusted loaders are unrestricted. these limits protect lifecycle and message handling, but in-process Lua allocation is not a hard memory sandbox. install only local code you trust.
 
 ## command overrides
 
