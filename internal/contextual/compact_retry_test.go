@@ -21,13 +21,16 @@ func (f *retryChat) Chat(_ context.Context, r ollama.Request, _ func(ollama.Resp
 	text := "broken json"
 	if f.calls > 1 {
 		f.feedback = strings.Contains(r.Messages[0].Content, "invalid compaction json") && strings.Contains(r.Messages[0].Content, "broken json")
+
 		if f.repair {
 			text = `{"summary":"lab review","facts":["scope is the isolated lab"]}`
+
 			if strings.HasPrefix(r.Messages[0].Content, AuditPrompt) {
 				text = `{"missing":[]}`
 			}
 		}
 	}
+
 	return ollama.Response{Done: true, Message: session.Message{Content: text}}, nil
 }
 

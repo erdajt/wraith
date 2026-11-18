@@ -9,23 +9,27 @@ import (
 
 var runReference = regexp.MustCompile(`\bid: ([a-f0-9]{24})\b`)
 
+// RedactActions redacts content while preserving action syntax and known command ids.
 func RedactActions(content string, redact func(string) string, ids map[string]bool) string {
 	type replacement struct {
 		start, end int
 		text       string
 	}
 	var replacements []replacement
+
 	for _, span := range runReference.FindAllStringSubmatchIndex(content, -1) {
 		id := content[span[2]:span[3]]
 		if ids[id] {
 			replacements = append(replacements, replacement{span[2], span[3], id})
 		}
 	}
+
 	for _, marker := range []string{"wraith-run", "wraith-tool"} {
 		for _, section := range commandSections(content, marker) {
 			if !section.complete {
 				continue
 			}
+
 			var data []byte
 			if marker == "wraith-run" {
 				request, err := decodeRequest(section.text)
@@ -45,6 +49,7 @@ func RedactActions(content string, redact func(string) string, ids map[string]bo
 				request.Pattern = redact(request.Pattern)
 				data, _ = json.Marshal(request)
 			}
+
 			text := "```" + marker + "\n" + string(data) + "\n```\n"
 			if section.suggestion {
 				text = "```text\n" + marker + " " + string(data) + "\n```\n"
@@ -52,6 +57,7 @@ func RedactActions(content string, redact func(string) string, ids map[string]bo
 			replacements = append(replacements, replacement{section.start, section.end, text})
 		}
 	}
+
 	sort.Slice(replacements, func(i, j int) bool {
 		if replacements[i].start == replacements[j].start {
 			return replacements[i].end > replacements[j].end
@@ -60,14 +66,17 @@ func RedactActions(content string, redact func(string) string, ids map[string]bo
 	})
 	var out strings.Builder
 	position := 0
+
 	for _, replacement := range replacements {
 		if replacement.start < position {
 			continue
 		}
+
 		out.WriteString(redact(content[position:replacement.start]))
 		out.WriteString(replacement.text)
 		position = replacement.end
 	}
+
 	out.WriteString(redact(content[position:]))
 	return out.String()
 }

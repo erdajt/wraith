@@ -12,11 +12,13 @@ type commandSection struct {
 	suggestion bool
 }
 
+// commandSections locates action sections while distinguishing examples from execution requests.
 func commandSections(content, marker string) []commandSection {
 	lines := strings.SplitAfter(content, "\n")
 	var sections []commandSection
 	offset := 0
 	fence := ""
+
 	for i := 0; i < len(lines); i++ {
 		line := strings.TrimSpace(lines[i])
 		if fence != "" {
@@ -26,6 +28,7 @@ func commandSections(content, marker string) []commandSection {
 			offset += len(lines[i])
 			continue
 		}
+
 		mark := ""
 		if strings.HasPrefix(line, "```") || strings.HasPrefix(line, "~~~") {
 			n := 0
@@ -39,6 +42,7 @@ func commandSections(content, marker string) []commandSection {
 					body += lines[end]
 					end++
 				}
+
 				if strings.HasPrefix(strings.TrimSpace(body), marker) {
 					section := commandSection{start: offset, suggestion: true, complete: end < len(lines)}
 					section.text = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(body), marker))
@@ -59,6 +63,7 @@ func commandSections(content, marker string) []commandSection {
 			offset += len(lines[i])
 			continue
 		}
+
 		section := commandSection{start: offset}
 		if mark != "" {
 			offset += len(lines[i])
@@ -73,6 +78,7 @@ func commandSections(content, marker string) []commandSection {
 		} else {
 			section.text = strings.TrimSpace(strings.TrimPrefix(line, marker))
 			offset += len(lines[i])
+
 			for {
 				var raw json.RawMessage
 				decoder := json.NewDecoder(strings.NewReader(section.text))
@@ -80,6 +86,7 @@ func commandSections(content, marker string) []commandSection {
 					section.complete = true
 					break
 				}
+
 				if i+1 >= len(lines) {
 					break
 				}
@@ -88,15 +95,19 @@ func commandSections(content, marker string) []commandSection {
 				offset += len(lines[i])
 			}
 		}
+
 		section.end = offset
 		sections = append(sections, section)
 	}
+
 	return sections
 }
 
+// DisplayContent replaces internal action syntax with readable commands, reasons and output labels.
 func DisplayContent(content string) string {
 	var out strings.Builder
 	position := 0
+
 	for _, section := range commandSections(content, "wraith-run") {
 		out.WriteString(content[position:section.start])
 		request, err := decodeRequest(section.text)
@@ -113,6 +124,7 @@ func DisplayContent(content string) string {
 		}
 		position = section.end
 	}
+
 	out.WriteString(content[position:])
 	return displayTools(out.String())
 }

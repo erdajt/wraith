@@ -9,6 +9,7 @@ import (
 
 type ActionProtocolError struct{ Target string }
 
+// Error describes a request sent through the wrong action channel.
 func (e *ActionProtocolError) Error() string {
 	switch e.Target {
 	case "output":
@@ -20,6 +21,7 @@ func (e *ActionProtocolError) Error() string {
 	}
 }
 
+// Correction returns model feedback for correcting the action channel.
 func (e *ActionProtocolError) Correction() string {
 	switch e.Target {
 	case "output":
@@ -31,15 +33,18 @@ func (e *ActionProtocolError) Correction() string {
 	}
 }
 
+// decodeObject decodes a bounded action object, rejecting duplicate, unknown and mistyped fields.
 func decodeObject(text string, out any) error {
 	if len(text) > 32768 {
 		return errors.New("action request exceeds 32 kib")
 	}
+
 	d := json.NewDecoder(strings.NewReader(text))
 	first, err := d.Token()
 	if err != nil || first != json.Delim('{') {
 		return errors.New("action request must be an object")
 	}
+
 	seen := map[string]bool{}
 	for d.More() {
 		key, err := d.Token()
@@ -56,12 +61,14 @@ func decodeObject(text string, out any) error {
 			return errors.New("invalid action value")
 		}
 	}
+
 	if _, err = d.Token(); err != nil {
 		return errors.New("unterminated action request")
 	}
 	if _, err = d.Token(); err != io.EOF {
 		return errors.New("action request has trailing data")
 	}
+
 	switch out.(type) {
 	case *CommandRequest:
 		if seen["tool"] && !seen["command"] {
@@ -72,6 +79,7 @@ func decodeObject(text string, out any) error {
 			return &ActionProtocolError{Target: "command"}
 		}
 	}
+
 	d = json.NewDecoder(strings.NewReader(text))
 	d.DisallowUnknownFields()
 	if err = d.Decode(out); err != nil {

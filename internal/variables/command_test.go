@@ -8,6 +8,7 @@ import (
 func TestCommandReferencesCatchBarePrivateArguments(t *testing.T) {
 	t.Parallel()
 	s := NewSnapshot([]Entry{{Name: "TARGET_DOMAIN", Value: "private.example"}}, nil)
+
 	for _, command := range []string{
 		"dig +short TARGET_DOMAIN | xargs -I {} printf '%s' {}",
 		"env -u TARGET_DOMAIN dig TARGET_DOMAIN",
@@ -27,6 +28,7 @@ func TestCommandReferencesCatchBarePrivateArguments(t *testing.T) {
 func TestCommandReferencesKeepShellSyntaxAndUnrelatedNames(t *testing.T) {
 	t.Parallel()
 	s := NewSnapshot([]Entry{{Name: "TARGET_DOMAIN", Value: "private.example"}}, nil)
+
 	for _, command := range []string{
 		"dig +short wraith::TARGET_DOMAIN",
 		"unset TARGET_DOMAIN",

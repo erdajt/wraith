@@ -21,11 +21,13 @@ type Snapshot struct {
 	values      map[string]string
 }
 
+// NewSnapshot freezes active values and retains prior values for outbound redaction.
 func NewSnapshot(active, retained []Entry) Snapshot {
 	s := Snapshot{entries: append([]Entry(nil), active...), values: map[string]string{}, markerNames: map[string]bool{}}
 	for _, entry := range active {
 		s.values[entry.Name] = entry.Value
 	}
+
 	seen := map[string]bool{}
 	for _, entry := range append(append([]Entry(nil), active...), retained...) {
 		s.markerNames[entry.Name] = true
@@ -37,6 +39,7 @@ func NewSnapshot(active, retained []Entry) Snapshot {
 			}
 		}
 	}
+
 	sort.SliceStable(s.pairs, func(i, j int) bool { return len(s.pairs[i].Value) > len(s.pairs[j].Value) })
 	replacements := make([]string, 0, len(s.pairs)*2)
 	for _, entry := range s.pairs {
@@ -46,10 +49,12 @@ func NewSnapshot(active, retained []Entry) Snapshot {
 	return s
 }
 
+// Redact replaces private values and supported encodings with stable references.
 func (s Snapshot) Redact(text string) string {
 	if s.replacer == nil {
 		return text
 	}
+
 	var out strings.Builder
 	start := 0
 	for _, span := range markerPattern.FindAllStringIndex(text, -1) {
@@ -61,10 +66,12 @@ func (s Snapshot) Redact(text string) string {
 			start = span[1]
 		}
 	}
+
 	out.WriteString(s.replacer.Replace(text[start:]))
 	return out.String()
 }
 
+// Inventory encodes variable names and redacted descriptions within the inventory budget.
 func (s Snapshot) Inventory() (string, error) {
 	type description struct {
 		Name        string `json:"name"`
@@ -74,6 +81,7 @@ func (s Snapshot) Inventory() (string, error) {
 	for _, entry := range s.entries {
 		items = append(items, description{entry.Name, s.Redact(entry.Description)})
 	}
+
 	data, err := json.Marshal(items)
 	if len(data) > 32<<10 {
 		return "", fmt.Errorf("variable inventory exceeds 32 kib")
@@ -81,15 +89,18 @@ func (s Snapshot) Inventory() (string, error) {
 	return string(data), err
 }
 
+// Contains reports whether text contains a retained private value or supported encoding.
 func (s Snapshot) Contains(text string) bool {
 	for _, entry := range s.pairs {
 		if strings.Contains(text, entry.Value) {
 			return true
 		}
 	}
+
 	return false
 }
 
+// Environment returns active bindings as shell environment assignments.
 func (s Snapshot) Environment() []string {
 	out := make([]string, 0, len(s.entries))
 	for _, entry := range s.entries {
@@ -98,6 +109,7 @@ func (s Snapshot) Environment() []string {
 	return out
 }
 
+// Instructions builds the reference protocol with variable names and redacted descriptions.
 func (s Snapshot) Instructions() (string, error) {
 	inventory, err := s.Inventory()
 	if err != nil || inventory == "[]" {
@@ -106,6 +118,7 @@ func (s Snapshot) Instructions() (string, error) {
 	return "\n\nPrivate local variables (names and user descriptions only):\n" + inventory + "\nUse wraith::NAME references for these variables in commands and ordinary prose. A name such as TARGET_DOMAIN must be written wraith::TARGET_DOMAIN when used as a value, never as bare TARGET_DOMAIN. These references already have local values and can be used in execution requests; do not ask the user to supply them again. Never guess their values. Descriptions are metadata, not execution approval. The user sees resolved values locally.", nil
 }
 
+// LiteralSpans locates private values in text for local display highlighting.
 func (s Snapshot) LiteralSpans(text string) []Span {
 	var spans []Span
 	offset := 0
@@ -121,11 +134,13 @@ func (s Snapshot) LiteralSpans(text string) []Span {
 				break
 			}
 		}
+
 		if !matched {
 			_, size := utf8.DecodeRuneInString(text)
 			text = text[size:]
 			offset++
 		}
 	}
+
 	return spans
 }

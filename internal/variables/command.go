@@ -8,19 +8,23 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
+// CheckCommand flags bare configured variable names in shell words, except recognized name operands.
 func (s Snapshot) CheckCommand(command string) error {
 	if len(s.values) == 0 {
 		return nil
 	}
+
 	tree, err := syntax.NewParser(syntax.Variant(syntax.LangBash)).Parse(strings.NewReader(command), "")
 	if err != nil {
 		return nil
 	}
+
 	names := map[*syntax.Word]bool{}
 	syntax.Walk(tree, func(node syntax.Node) bool {
 		if err != nil {
 			return false
 		}
+
 		if call, ok := node.(*syntax.CallExpr); ok && len(call.Args) > 0 {
 			args := call.Args
 			if (args[0].Lit() == "command" || args[0].Lit() == "builtin") && len(args) > 1 {
@@ -49,10 +53,12 @@ func (s Snapshot) CheckCommand(command string) error {
 				}
 			}
 		}
+
 		word, ok := node.(*syntax.Word)
 		if !ok || names[word] || len(word.Parts) != 1 {
 			return true
 		}
+
 		var literal string
 		switch part := word.Parts[0].(type) {
 		case *syntax.Lit:
@@ -66,6 +72,7 @@ func (s Snapshot) CheckCommand(command string) error {
 				}
 			}
 		}
+
 		if _, known := s.values[literal]; known {
 			err = fmt.Errorf("bare private variable %s in command; use wraith::%s for its configured value", literal, literal)
 		}

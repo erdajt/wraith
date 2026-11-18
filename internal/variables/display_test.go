@@ -13,6 +13,7 @@ func TestLiteralSpansPreserveEscapedValuesAndLongestMatches(t *testing.T) {
 	for _, span := range s.LiteralSpans(text) {
 		values = append(values, string([]rune(text)[span.Start:span.End]))
 	}
+
 	if !reflect.DeepEqual(values, []string{"lab.example", "a'\\''b", "example"}) {
 		t.Fatalf("unexpected display spans: %q", values)
 	}

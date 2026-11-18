@@ -15,6 +15,7 @@ const (
 	Global       Scope = "global"
 )
 
+// Path returns the editable variable file for the requested scope.
 func (s Store) Path(directory string, scope Scope) string {
 	switch scope {
 	case Global:
@@ -27,6 +28,7 @@ func (s Store) Path(directory string, scope Scope) string {
 	}
 }
 
+// paths resolves the write target and inherited variable files for a scope.
 func (s Store) paths(directory string, scope Scope) (string, []string, error) {
 	if real, err := filepath.EvalSymlinks(directory); err == nil {
 		directory = real
@@ -37,6 +39,7 @@ func (s Store) paths(directory string, scope Scope) (string, []string, error) {
 	if scope != Conversation && scope != Directory && scope != Global {
 		return "", nil, errors.New("variable scope must be conversation, directory or global")
 	}
+
 	paths := []string{s.Path(directory, Global), s.Path(directory, Directory)}
 	if s.Conversation != "" {
 		id, err := hex.DecodeString(s.Conversation)
@@ -47,5 +50,6 @@ func (s Store) paths(directory string, scope Scope) (string, []string, error) {
 	} else if scope == Conversation {
 		return "", nil, errors.New("conversation variables require a conversation id")
 	}
+
 	return s.Path(directory, scope), paths, nil
 }

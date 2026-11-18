@@ -6,39 +6,48 @@ import (
 	"strings"
 )
 
+// Rewrite adds, replaces or removes an assignment while retaining its comments.
 func Rewrite(text, name, value string, remove bool) (string, error) {
 	if !namePattern.MatchString(name) {
 		return "", fmt.Errorf("invalid variable name")
 	}
+
 	entries, err := Parse(text)
 	if err != nil {
 		return "", err
 	}
+
 	if !remove {
 		if _, err := Parse(name + "=" + strconv.Quote(value)); err != nil {
 			return "", err
 		}
 	}
+
 	found := false
 	for _, entry := range entries {
 		if entry.Name == name {
 			found = true
 		}
 	}
+
 	if !found {
 		if remove {
 			return "", fmt.Errorf("variable %s is not defined in this scope", name)
 		}
+
 		if text != "" && !strings.HasSuffix(text, "\n") {
 			text += "\n"
 		}
 		return text + name + "=" + strconv.Quote(value) + "\n", nil
 	}
+
 	lines := strings.Split(text, "\n")
 	block := false
+
 	for row, line := range lines {
 		var quote byte
 		codeStart, valueStart, valueEnd := -1, -1, len(line)
+
 		for i := 0; i < len(line); i++ {
 			if block {
 				if strings.HasPrefix(line[i:], "*/") {
@@ -47,6 +56,7 @@ func Rewrite(text, name, value string, remove bool) (string, error) {
 				}
 				continue
 			}
+
 			ch := line[i]
 			if quote != 0 {
 				if ch == '\\' && quote == '"' {
@@ -56,11 +66,13 @@ func Rewrite(text, name, value string, remove bool) (string, error) {
 				}
 				continue
 			}
+
 			separated := i == 0 || line[i-1] == ' ' || line[i-1] == '\t'
 			if separated && (ch == '#' || strings.HasPrefix(line[i:], "//")) {
 				valueEnd = i
 				break
 			}
+
 			if separated && strings.HasPrefix(line[i:], "/*") {
 				if valueStart >= 0 {
 					valueEnd = min(valueEnd, i)
@@ -69,6 +81,7 @@ func Rewrite(text, name, value string, remove bool) (string, error) {
 				i++
 				continue
 			}
+
 			if codeStart < 0 && ch != ' ' && ch != '\t' {
 				codeStart = i
 			}
@@ -79,9 +92,11 @@ func Rewrite(text, name, value string, remove bool) (string, error) {
 				quote = ch
 			}
 		}
+
 		if codeStart < 0 || valueStart < 0 || strings.TrimSpace(line[codeStart:valueStart-1]) != name {
 			continue
 		}
+
 		suffix := line[valueEnd:]
 		if remove {
 			lines[row] = line[:codeStart] + suffix
@@ -96,6 +111,7 @@ func Rewrite(text, name, value string, remove bool) (string, error) {
 					}
 				}
 			}
+
 			if last < len(lines) && strings.TrimSpace(lines[last]) != "" {
 				lines[last] += "\n"
 			}
@@ -105,11 +121,13 @@ func Rewrite(text, name, value string, remove bool) (string, error) {
 				lines[row] += " " + suffix
 			}
 		}
+
 		result := strings.Join(lines, "\n")
 		if _, err := Parse(result); err != nil {
 			return "", err
 		}
 		return result, nil
 	}
+
 	return "", fmt.Errorf("variable assignment could not be edited")
 }

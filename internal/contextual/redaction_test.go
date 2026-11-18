@@ -16,6 +16,7 @@ func TestActionRedactionPreservesKeysAndKnownIds(t *testing.T) {
 	if err != nil || request == nil || request.ID != id || request.Pattern != "wraith::TOKEN" || !strings.HasPrefix(redacted, "check wraith::TOKEN") {
 		t.Fatalf("tool redaction: %s %v", redacted, err)
 	}
+
 	command := "```wraith-run\n{\"command\":\"printf ab\",\"reason\":\"inspect command\"}\n```"
 	requestCommand, err := RequestedCommand(RedactActions(command, snapshot.Redact, nil))
 	if err != nil || requestCommand == nil || requestCommand.Command != "printf wraith::TOKEN" || requestCommand.Reason != "inspect wraith::FIELD" {

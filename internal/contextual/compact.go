@@ -25,6 +25,7 @@ type Memory struct {
 
 var literal = regexp.MustCompile("`[^`\\n]{1,1000}`|https?://[^\\s<>]+|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}(?::[0-9]+)?|(?:~?/|[A-Za-z]:\\\\)[A-Za-z0-9_./\\\\:@%+-]+|CVE-[0-9]{4}-[0-9]+")
 
+// compactAttempt extracts and audits older turns, accepting only a smaller context that fits its budget.
 func compactAttempt(ctx context.Context, client Chatter, s session.Session, c config.Config, instructions string, think any, progress func(string), feedback string) (session.Session, error) {
 	compactPrompt, auditPrompt := CompactPrompt+feedback, AuditPrompt+feedback
 	cut := len(s.Messages) - c.Compact.KeepTurns*2
@@ -34,6 +35,7 @@ func compactAttempt(ctx context.Context, client Chatter, s session.Session, c co
 	if cut <= 0 {
 		return s, errors.New("not enough older turns to compact; pin key facts and start a new chat, or reduce keep_turns")
 	}
+
 	before := Used(s, instructions)
 	candidate := s.Clone()
 	ids := s.RunIDs()
@@ -43,6 +45,7 @@ func compactAttempt(ctx context.Context, client Chatter, s session.Session, c co
 	}
 	slices.Sort(candidate.RunReferences)
 	candidate.Messages = append([]session.Message(nil), s.Messages[cut:]...)
+
 	room := c.Context - c.Compact.Budget
 	overhead := Estimate([]session.Message{{Content: compactPrompt + auditPrompt}}) + 512
 	if room < overhead+256 {
@@ -50,6 +53,7 @@ func compactAttempt(ctx context.Context, client Chatter, s session.Session, c co
 	}
 	chunkBytes := min(room-overhead, 64<<20) * 3 / 2
 	chunks := Fragments(s.Messages[:cut], chunkBytes)
+
 	facts := append([]string(nil), s.Facts...)
 	for _, id := range candidate.RunReferences {
 		facts = append(facts, "tracked command id: "+id)
@@ -57,14 +61,17 @@ func compactAttempt(ctx context.Context, client Chatter, s session.Session, c co
 	if s.Summary != "" {
 		facts = append(facts, "previous working state: "+s.Summary)
 	}
+
 	var summaries []string
 	for i, chunk := range chunks {
 		if err := ctx.Err(); err != nil {
 			return s, err
 		}
+
 		if progress != nil {
 			progress(fmt.Sprintf("extracting fragment %d/%d", i+1, len(chunks)))
 		}
+
 		var memory Memory
 		if err := extract(ctx, client, c, think, compactPrompt, chunk, ids, &memory); err != nil {
 			return s, fmt.Errorf("fragment %d: %w", i+1, err)
@@ -77,14 +84,17 @@ func compactAttempt(ctx context.Context, client Chatter, s session.Session, c co
 				return s, errors.New("compactor returned an empty fact")
 			}
 		}
+
 		encoded, _ := json.Marshal(memory)
 		auditInput := "SOURCE FRAGMENT:\n" + chunk + "\nCANDIDATE MEMORY:\n" + string(encoded)
 		if Estimate([]session.Message{{Content: auditPrompt}, {Content: auditInput}})+c.Compact.Budget+128 > c.Context {
 			return s, errors.New("memory audit exceeds context; lower compact.budget or increase context")
 		}
+
 		if progress != nil {
 			progress(fmt.Sprintf("auditing fragment %d/%d", i+1, len(chunks)))
 		}
+
 		var audit struct {
 			Missing []string `json:"missing"`
 		}
@@ -94,6 +104,7 @@ func compactAttempt(ctx context.Context, client Chatter, s session.Session, c co
 		if audit.Missing == nil {
 			return s, errors.New("auditor omitted its missing-facts field")
 		}
+
 		facts = append(facts, memory.Facts...)
 		facts = append(facts, audit.Missing...)
 		for _, value := range literal.FindAllString(chunk, -1) {
@@ -101,6 +112,7 @@ func compactAttempt(ctx context.Context, client Chatter, s session.Session, c co
 		}
 		summaries = append(summaries, memory.Summary)
 	}
+
 	candidate.Summary = strings.Join(summaries, "\n")
 	candidate.Facts = unique(facts)
 	candidate.Declines = 0
@@ -115,11 +127,13 @@ func compactAttempt(ctx context.Context, client Chatter, s session.Session, c co
 	return candidate, nil
 }
 
+// extract requests structured compaction output and rejects truncated or invalid json.
 func extract(ctx context.Context, client Chatter, c config.Config, think any, system, input string, ids map[string]bool, out any) error {
 	task := "extract"
 	if strings.HasPrefix(system, AuditPrompt) {
 		task = "audit"
 	}
+
 	r, err := client.Chat(ctx, ollama.Request{RunIDs: ids, CompactionTask: task, Model: c.Model, Messages: []session.Message{{Role: "system", Content: system}, {Role: "user", Content: input}}, Format: "json", Think: think, KeepAlive: c.KeepAlive, Options: ollama.Options{Context: c.Context, Predict: c.Compact.Budget, Temperature: 0.1}}, nil)
 	if err != nil {
 		return err
@@ -133,12 +147,15 @@ func extract(ctx context.Context, client Chatter, c config.Config, think any, sy
 	return nil
 }
 
+// Fragments splits messages into bounded fragments without breaking utf-8 characters.
 func Fragments(messages []session.Message, limit int) []string {
 	if limit < 128 {
 		limit = 128
 	}
+
 	var out []string
 	var buf strings.Builder
+
 	for index, m := range messages {
 		text := m.Content
 		for part := 1; len(text) > 0; part++ {
@@ -149,10 +166,12 @@ func Fragments(messages []session.Message, limit int) []string {
 				buf.Reset()
 				room = limit - len(header)
 			}
+
 			n := min(len(text), room)
 			for n > 0 && n < len(text) && !utf8.RuneStart(text[n]) {
 				n--
 			}
+
 			buf.WriteString(header)
 			buf.WriteString(text[:n])
 			text = text[n:]
@@ -162,12 +181,14 @@ func Fragments(messages []session.Message, limit int) []string {
 			}
 		}
 	}
+
 	if buf.Len() > 0 {
 		out = append(out, buf.String())
 	}
 	return out
 }
 
+// unique trims and deduplicates nonempty facts while preserving their order.
 func unique(values []string) []string {
 	seen := map[string]bool{}
 	out := make([]string, 0, len(values))

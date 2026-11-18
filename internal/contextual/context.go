@@ -9,6 +9,7 @@ import (
 	"github.com/erdajt/wraith/internal/session"
 )
 
+// Messages assembles system instructions, retained context and conversation messages.
 func Messages(s session.Session, instructions string) []session.Message {
 	system := System
 	if strings.TrimSpace(instructions) != "" {
@@ -23,6 +24,7 @@ func Messages(s session.Session, instructions string) []session.Message {
 	if len(s.Facts) > 0 {
 		system += "\n\nHistorical facts (retain attribution and corrections):\n- " + strings.Join(s.Facts, "\n- ")
 	}
+
 	out := []session.Message{{Role: "system", Content: system}}
 	for _, m := range s.Messages {
 		if m.Role != "user" && m.Role != "assistant" {
@@ -30,9 +32,11 @@ func Messages(s session.Session, instructions string) []session.Message {
 		}
 		out = append(out, session.Message{Role: m.Role, Content: m.Content, Evidence: m.Evidence})
 	}
+
 	return out
 }
 
+// Estimate approximates token usage from content bytes and per-message overhead.
 func Estimate(messages []session.Message) int {
 	n := 16
 	for _, m := range messages {
@@ -41,6 +45,7 @@ func Estimate(messages []session.Message) int {
 	return n
 }
 
+// Used adjusts the input estimate using observed prompt usage when it was higher.
 func Used(s session.Session, instructions string) int {
 	n := Estimate(Messages(s, instructions))
 	if s.Usage.InputEstimate > 0 && s.Usage.Prompt > s.Usage.InputEstimate {
@@ -49,10 +54,12 @@ func Used(s session.Session, instructions string) int {
 	return n
 }
 
+// NeedsCompact reports whether estimated chat usage reaches the configured threshold.
 func NeedsCompact(s session.Session, c config.Config, instructions string) bool {
 	return ChatUsed(s, c, instructions) >= int(float64(c.Context)*c.Compact.Threshold)
 }
 
+// Fits checks that input, reserved output and overhead fit the context window.
 func Fits(s session.Session, c config.Config, instructions string) error {
 	n := ChatUsed(s, c, instructions)
 	if c.Context < 128 || n > c.Context-128 || c.Predict > c.Context-128-n {
@@ -61,6 +68,7 @@ func Fits(s session.Session, c config.Config, instructions string) error {
 	return nil
 }
 
+// Decision chooses whether to ask, compact or wait based on mode and prior declines.
 func Decision(mode string, declines int, over bool) string {
 	if !over || mode == "manual" {
 		return "none"

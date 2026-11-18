@@ -29,27 +29,32 @@ type CommandRequest struct {
 
 var placeholder = regexp.MustCompile(`<[/A-Za-z_][^<>\n]*>|\{\{[^{}]+\}\}|\b(?:YOUR_[A-Z_]+|REPLACE_ME|TARGET_IP_OR_HOST)\b`)
 
+// RequestedCommand extracts one execution request, ignoring examples, incomplete sections and placeholders.
 func RequestedCommand(content string) (*CommandRequest, error) {
 	var request *CommandRequest
 	for _, section := range commandSections(content, "wraith-run") {
 		if !section.complete || section.suggestion {
 			continue
 		}
+
 		if request != nil {
 			return nil, errors.New("model requested multiple commands; ask for one step")
 		}
+
 		r, err := decodeRequest(section.text)
 		if err != nil {
 			return nil, err
 		}
 		request = r
 	}
+
 	if request != nil && placeholder.MatchString(request.Command) {
 		return nil, nil
 	}
 	return request, nil
 }
 
+// decodeRequest validates command text and its required reason.
 func decodeRequest(text string) (*CommandRequest, error) {
 	var r CommandRequest
 	if err := decodeObject(text, &r); err != nil {
@@ -61,6 +66,7 @@ func decodeRequest(text string) (*CommandRequest, error) {
 	return &r, nil
 }
 
+// ForChat adds the selected execution policy and provider instructions to session context.
 func ForChat(s session.Session, c config.Config, instructions string) []session.Message {
 	messages := Messages(s, instructions)
 	policy := BlocksPrompt
@@ -68,12 +74,14 @@ func ForChat(s session.Session, c config.Config, instructions string) []session.
 		policy = AgentPrompt
 	}
 	messages[0].Content += "\n\n" + policy
+
 	if prompt := c.Providers[c.Provider].SystemPrompt; prompt != "" {
 		messages[0].Content += "\n\nprovider instructions:\n" + prompt
 	}
 	return messages
 }
 
+// ChatUsed estimates input usage including execution and provider instructions.
 func ChatUsed(s session.Session, c config.Config, instructions string) int {
 	return Used(s, instructions) + Estimate(ForChat(s, c, instructions)) - Estimate(Messages(s, instructions))
 }

@@ -10,6 +10,7 @@ import (
 
 func TestShellExpansionPreservesArgumentBytesWithoutEvaluatingValues(t *testing.T) {
 	t.Parallel()
+
 	for _, test := range []struct{ name, source, value, want string }{
 		{"bare", "wraith::TARGET", "host.test", "host.test"},
 		{"single quoted", "'wraith::TARGET'", "one' two", "one' two"},
@@ -25,16 +26,19 @@ func TestShellExpansionPreservesArgumentBytesWithoutEvaluatingValues(t *testing.
 			if test.name == "assignment" {
 				input = test.source
 			}
+
 			command, err := snapshot.Shell(input)
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			cmd := exec.CommandContext(t.Context(), "/bin/sh", "-c", command)
 			cmd.Dir = t.TempDir()
 			output, err := cmd.CombinedOutput()
 			if err != nil || string(output) != test.want {
 				t.Fatalf("argument changed: %q %v (command %q)", output, err, command)
 			}
+
 			if _, err = os.Stat(filepath.Join(cmd.Dir, "marker")); !os.IsNotExist(err) {
 				t.Fatal("private value executed as shell syntax")
 			}
@@ -45,6 +49,7 @@ func TestShellExpansionPreservesArgumentBytesWithoutEvaluatingValues(t *testing.
 func TestShellRejectsUnsupportedReferencePositions(t *testing.T) {
 	t.Parallel()
 	s := NewSnapshot([]Entry{{Name: "TARGET", Value: "value"}}, nil)
+
 	for _, command := range []string{
 		"wraith::TARGET --version",
 		"printf '%s' wraith::UNKNOWN",
@@ -69,10 +74,12 @@ func TestShellRedirectAndUnrelatedSyntaxRemainIntact(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	out, err := exec.CommandContext(t.Context(), "/bin/sh", "-c", command).CombinedOutput()
 	if err != nil || string(out) != "done" {
 		t.Fatalf("redirect failed: %q %v", out, err)
 	}
+
 	data, err := os.ReadFile(path)
 	if err != nil || string(data) != "saved" || strings.Contains(command, "wraith::") {
 		t.Fatal("redirect did not use literal path")
