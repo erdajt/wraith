@@ -50,7 +50,14 @@ func (a *App) settingsCategory(category string) {
 		if key == "providers" {
 			b = []byte("edit provider profiles and credentials")
 		}
-		items = append(items, item{Label: key, Value: key, Detail: string(b)})
+		detail := string(b)
+		for _, overridden := range a.pluginManifest.Overridden {
+			if key == overridden || strings.HasPrefix(key, overridden+".") {
+				detail += " · init.lua on reload"
+				break
+			}
+		}
+		items = append(items, item{Label: key, Value: key, Detail: detail})
 	}
 	items = append(items, item{"edit config.yaml", "edit", "all values, custom palettes and key bindings"})
 	a.popup = &menu{Kind: "settings", Title: "settings · " + category, Hints: "e edits config.yaml", Items: items}

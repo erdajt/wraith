@@ -38,7 +38,16 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 	case "instructions":
 		text = a.Instructions
 	case "config":
-		b, _ := config.Encode(a.Config, "config.yaml")
+		candidate := a.Config
+		if a.plugins != nil {
+			var err error
+			candidate, err = config.LoadDirectory(a.Paths.Config)
+			if err != nil {
+				a.notice = err.Error()
+				return nil
+			}
+		}
+		b, _ := config.Encode(candidate, "config.yaml")
 		text = string(b) + "\n"
 		ext = ".yaml"
 	case "pin":

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/provider"
 )
@@ -75,7 +74,7 @@ func (a *App) activateProvider(name, model string) tea.Cmd {
 		return nil
 	}
 
-	if err := config.Save(config.File(a.Paths.Config), c); err != nil {
+	if err := a.saveConfig(c); err != nil {
 		a.notice = err.Error()
 		return nil
 	}

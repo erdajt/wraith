@@ -79,7 +79,7 @@ func (a *App) set(key, value string) tea.Cmd {
 		a.notice = err.Error()
 		return nil
 	}
-	if err := config.Save(config.File(a.Paths.Config), c); err != nil {
+	if err := a.saveConfig(c); err != nil {
 		a.notice = err.Error()
 		return nil
 	}

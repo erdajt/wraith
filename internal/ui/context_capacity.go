@@ -34,7 +34,7 @@ func (a *App) setContext(value string) tea.Cmd {
 		capacity = n
 	}
 	c := a.Config.WithModelContext(a.Session.Model, capacity)
-	if err := config.Save(config.File(a.Paths.Config), c); err != nil {
+	if err := a.saveConfig(c); err != nil {
 		a.notice = "could not save context: " + err.Error()
 		return nil
 	}
