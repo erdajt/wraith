@@ -133,6 +133,7 @@ func (a *App) buildKeymaps(c config.Config) (*keymap.Registry, error) {
 			}
 		}
 	}
+	defaultCount := len(bindings)
 	bindings = append(bindings, c.Keymaps...)
 	for i := range bindings {
 		binding := &bindings[i]
@@ -144,7 +145,7 @@ func (a *App) buildKeymaps(c config.Config) (*keymap.Registry, error) {
 			binding.Description = entry.description
 		}
 	}
-	return keymap.New(bindings)
+	return keymap.WithDefaults(bindings[:defaultCount], bindings[defaultCount:])
 }
 
 // runAction dispatches a registered operation without interpreting it as terminal input.

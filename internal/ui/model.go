@@ -94,12 +94,13 @@ type App struct {
 	pluginSerial     uint64
 	pluginDepth      int
 
-	editorDeferred  []tea.Msg
-	keyPending      []tea.KeyMsg
-	keyPendingScope string
-	keySerial       uint64
-	actions         map[string]action
-	keymaps         *keymap.Registry
+	editorDeferred    []tea.Msg
+	keyPending        []tea.KeyMsg
+	keyPendingDefault bool
+	keyPendingScope   string
+	keySerial         uint64
+	actions           map[string]action
+	keymaps           *keymap.Registry
 	*conversationView
 	windows                       map[uint64]*conversationView
 	windowTree                    *windowNode

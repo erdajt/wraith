@@ -85,15 +85,21 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		a.keyPending = nil
 		return a.cancelInput()
 	}
+	if len(a.keyPending) > 0 && a.keyPendingScope != a.keyScope() {
+		a.keyPending = nil
+		a.notice = "key sequence cancelled after focus changed"
+	}
 	if k.Paste {
-		if len(a.keyPending) > 0 && a.keyPendingScope != a.keyScope() {
-			a.keyPending = nil
-			a.notice = "key sequence cancelled after focus changed"
-		}
 		keys := append(append([]tea.KeyMsg(nil), a.keyPending...), k)
 		a.keyPending = nil
 		return a.replayKeys(keys, a.keyScope())
 	}
+	return a.mapKey(k, len(a.keyPending) > 0 && a.keyPendingDefault, false)
+}
+
+// mapKey resolves one route while keeping fallback chords separate from user mappings.
+func (a *App) mapKey(k tea.KeyMsg, defaults, expired bool) tea.Cmd {
+	key := k.String()
 	scope := a.keyScope()
 	if len(a.keyPending) > 0 && scope != a.keyPendingScope {
 		a.keyPending = nil
@@ -110,8 +116,11 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		names[i] = value.String()
 	}
 	match := a.keymaps.Lookup(a.inputMode(), names)
-	if match.Pending {
-		a.keyPending, a.keyPendingScope = keys, scope
+	if defaults {
+		match = a.keymaps.LookupDefault(a.inputMode(), names)
+	}
+	if match.Pending && !expired {
+		a.keyPending, a.keyPendingScope, a.keyPendingDefault = keys, scope, defaults
 		a.keySerial++
 		serial := a.keySerial
 		var hints []string
@@ -130,6 +139,9 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		}
 		return a.runAction(match.Action, "")
 	}
+	if defaults {
+		return a.dispatchKeys(queuedKeysMsg{Keys: keys, Owner: a.keyOwner(), Raw: true})
+	}
 	return a.replayKeys(keys, scope)
 }
 
@@ -146,7 +158,7 @@ func (a *App) keymapTimeout(serial uint64) tea.Cmd {
 	if serial != a.keySerial || len(a.keyPending) == 0 {
 		return nil
 	}
-	keys, scope := a.keyPending, a.keyPendingScope
+	keys, scope, defaults := a.keyPending, a.keyPendingScope, a.keyPendingDefault
 	a.keyPending = nil
 	if a.keyScope() != scope {
 		a.notice = "key sequence cancelled after focus changed"
@@ -157,10 +169,18 @@ func (a *App) keymapTimeout(serial uint64) tea.Cmd {
 		names[i] = key.String()
 	}
 	match := a.keymaps.Lookup(a.inputMode(), names)
+	if defaults {
+		match = a.keymaps.LookupDefault(a.inputMode(), names)
+	}
 	if match.Exact {
+		if match.Action == "focus.next" && len(keys) == 1 {
+			if cmd, handled := a.slashKey(keys[0]); handled {
+				return cmd
+			}
+		}
 		return a.runAction(match.Action, "")
 	}
-	return a.replayKeys(keys, scope)
+	return a.dispatchKeys(queuedKeysMsg{Keys: keys, Owner: a.keyOwner(), Raw: defaults, Expired: true})
 }
 
 // cancelInput keeps cancellation available even when the configurable binding changes.

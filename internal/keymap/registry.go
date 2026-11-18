@@ -19,7 +19,10 @@ type Match struct {
 	Hints               []Binding
 }
 
-type Registry struct{ entries map[string]map[string]Binding }
+type Registry struct {
+	entries  map[string]map[string]Binding
+	defaults *Registry
+}
 
 // New validates complete mappings before returning a registry with later overrides applied.
 func New(bindings []Binding) (*Registry, error) {
@@ -41,6 +44,29 @@ func New(bindings []Binding) (*Registry, error) {
 		r.entries[binding.Mode][strings.Join(keys, "\x00")] = binding
 	}
 	return r, nil
+}
+
+// WithDefaults retains the configured base mappings separately from user overrides.
+func WithDefaults(defaults, overrides []Binding) (*Registry, error) {
+	base, err := New(defaults)
+	if err != nil {
+		return nil, err
+	}
+	all := append(append([]Binding(nil), defaults...), overrides...)
+	r, err := New(all)
+	if err != nil {
+		return nil, err
+	}
+	r.defaults = base
+	return r, nil
+}
+
+// LookupDefault resolves fallback input without re-entering user mappings.
+func (r *Registry) LookupDefault(mode string, keys []string) Match {
+	if r == nil {
+		return Match{}
+	}
+	return r.defaults.Lookup(mode, keys)
 }
 
 // Lookup resolves an exact sequence and its continuations for a single input context.
