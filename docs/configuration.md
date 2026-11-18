@@ -126,3 +126,5 @@ settings are applied after validation. shell executable, initial directory, envi
 | `leader` | `space` or one character |
 
 execution bounds are in [execution](execution.md#limits-and-recovery). provider-specific fields are in [providers](providers.md). every default action and leader sequence is listed in [keybindings](keybindings.md) and [config.example.yaml](config.example.yaml).
+
+`keymaps` adds mode-specific sequences in vim notation over the default actions. `key_timeout` controls prefix waiting. `/keymaps` shows effective mappings; [keybindings](keybindings.md#mode-specific-mappings) covers modes, actions and directional window remaps. invalid mappings do not replace the running configuration.

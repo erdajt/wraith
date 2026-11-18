@@ -16,13 +16,13 @@ func (a *App) runCommand(line string) tea.Cmd {
 		return a.quit()
 	}
 
-	if a.busy && name != "help" && name != "context" && name != "cancel" && name != "jobs" && name != "history" {
+	if a.busy && name != "help" && name != "keymaps" && name != "context" && name != "cancel" && name != "jobs" && name != "history" {
 		a.notice = "wait for the current operation or use /cancel"
 		return nil
 	}
 	if a.demo {
 		switch name {
-		case "help", "h", "?", "context", "settings", "theme", "think", "thinking", "pins", "blocks", "quit", "q":
+		case "help", "keymaps", "h", "?", "context", "settings", "theme", "think", "thinking", "pins", "blocks", "quit", "q":
 		default:
 			a.notice = "this command is disabled in demo mode"
 			return nil
@@ -41,6 +41,13 @@ func (a *App) runCommand(line string) tea.Cmd {
 	}
 
 	switch name {
+	case "keymaps":
+		var lines []string
+		for _, binding := range a.keymaps.Bindings() {
+			lines = append(lines, binding.Mode+"  "+binding.Keys+"  "+binding.Action+"\n  "+binding.Description)
+		}
+		a.showText("help", "active keymaps", strings.Join(lines, "\n\n"))
+		return nil
 	case "env":
 		return a.environmentCommand(arg, false)
 	case "provider", "providers":

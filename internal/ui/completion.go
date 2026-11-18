@@ -8,6 +8,7 @@ type commandSpec struct {
 }
 
 var commandSpecs = []commandSpec{
+	{"keymaps", "inspect active keymaps and action names", false},
 	{"env", "manage private variables and descriptions", false},
 	{"provider", "switch the model backend", false},
 	{"providers", "choose a configured provider", false},

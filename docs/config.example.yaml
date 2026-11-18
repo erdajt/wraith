@@ -1,3 +1,5 @@
+keymaps: []
+key_timeout: 750
 environment:
     scope: directory
 provider: ollama
@@ -5,6 +7,7 @@ providers:
     anthropic:
         context: 0
         model_contexts: {}
+        action_protocol: ""
         kind: anthropic
         base_url: https://api.anthropic.com/v1
         api_key: ""
@@ -21,6 +24,7 @@ providers:
     claude:
         context: 0
         model_contexts: {}
+        action_protocol: ""
         kind: claude-cli
         base_url: ""
         api_key: ""
@@ -39,6 +43,7 @@ providers:
     codex:
         context: 0
         model_contexts: {}
+        action_protocol: ""
         kind: codex-cli
         base_url: ""
         api_key: ""
@@ -56,6 +61,7 @@ providers:
     deepseek:
         context: 0
         model_contexts: {}
+        action_protocol: ""
         kind: openai
         base_url: https://api.deepseek.com
         api_key: ""
@@ -72,6 +78,7 @@ providers:
     ollama:
         context: 0
         model_contexts: {}
+        action_protocol: ""
         kind: ollama
         base_url: ""
         api_key: ""
@@ -88,6 +95,7 @@ providers:
     openai:
         context: 0
         model_contexts: {}
+        action_protocol: ""
         kind: openai
         base_url: https://api.openai.com/v1
         api_key: ""

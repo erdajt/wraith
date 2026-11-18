@@ -51,7 +51,7 @@ this is a modal editor, not a complete embedded neovim instance. macros, plugins
 
 | commands | purpose |
 | --- | --- |
-| `/help`, `/h`, `/?` | show commands and current bindings |
+| `/help`, `/h`, `/?`, `/keymaps` | show commands, active mappings and action names |
 | `/providers`, `/provider name` | select a backend |
 | `/models`, `/model [id]` | choose or directly set a model |
 | `/think [value]`, `/thinking` | native effort controls and reasoning visibility |

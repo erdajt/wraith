@@ -147,3 +147,25 @@ keys:
 an explicit `bindings` map replaces the default leader map. spaces separate sequence keys. conflicting sequence prefixes are rejected. `keys` maps named actions to terminal key strings; see the [complete defaults](config.example.yaml) for every action. fixed vim motions are separate from these action bindings.
 
 yanks fill the internal register even if the external clipboard helper fails. use `clipboard: [wl-copy]` on wayland, `clipboard: [xclip, -selection, clipboard]` on x11, or `clipboard: []` for internal copying only. choose bindings your host terminal actually forwards.
+
+### mode-specific mappings
+
+`keymaps` uses vim notation and named actions. it applies after default bindings. `/keymaps` lists the effective mappings and descriptions. this maps directional focus to your keys while retaining the default split chords:
+
+```yaml
+key_timeout: 750
+keymaps:
+  - {mode: chat.normal, keys: '<C-h>', action: window.left}
+  - {mode: chat.normal, keys: '<C-j>', action: window.down}
+  - {mode: chat.normal, keys: '<C-k>', action: window.up}
+  - {mode: chat.normal, keys: '<C-l>', action: window.right}
+  - {mode: chat.normal, keys: '<Space>sa', action: command.settings.appearance}
+```
+
+modes are `prompt.insert`, `prompt.normal`, `prompt.visual`, `prompt.operator`, `chat.normal`, `chat.visual`, `chat.operator`, `command`, `search`, `picker`, `output`, `terminal` and `terminal.copy`. `*` explicitly applies everywhere. ordinary mappings do not intercept pending vim counts or operators; use an operator mode only when that is intentional. raw shells and insert mode have no window-chord delay unless you map keys there.
+
+`<C-w>v` means control-w followed by v. `<A-e>`, `<S-Tab>`, `<Space>`, `<CR>`, `<Esc>`, arrows and function keys are supported. literal characters retain case; `<lt>` means a literal less-than sign. a sequence can contain up to 16 keys. terminals may send control-h for Backspace, control-i for Tab and control-m for Enter, so some combinations cannot be distinguished.
+
+`key_timeout` is 50–5000 milliseconds. an exact mapping with longer children waits for another key, then runs at timeout. an unmatched sequence returns to its original editor once. escape cancels a pending sequence. changing focus or installing new mappings discards pending keys. `ctrl+q` and `ctrl+c` remain direct quit/cancel fallbacks; control-c still interrupts a focused shell.
+
+window actions are `window.split_horizontal`, `window.split_vertical`, `window.left`, `window.down`, `window.up`, `window.right`, `window.next`, `window.close`, `window.only`, `window.equalize`, `window.grow_height`, `window.shrink_height`, `window.grow_width` and `window.shrink_width`. other workspace actions are `prompt.send`, `editor.open`, `focus.next`, `terminal.overlay`, `terminal.side`, `app.quit`, `operation.cancel` and `noop`. every listed slash command has a `command.NAME` action, including settings categories. bind `noop` to consume a sequence without running an operation.
