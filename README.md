@@ -54,6 +54,7 @@ edit prompts with vim motions or your own editor. search and yank conversations.
 | shells | centered and side panes, configurable dimensions, real ptys, persistent shell state and vim scrollback copy mode |
 | providers | ollama, openai-compatible apis, anthropic, deepseek, codex cli and claude cli; configurable profiles and model catalogs |
 | sessions | compressed storage, directory-scoped resume/search, interrupted-response retry, archive restore and markdown export |
+| extensibility | real Lua configuration, local plugins, custom slash commands, modal callbacks, workspace APIs, lifecycle events and atomic reload |
 | appearance | ten themes, custom palettes, inherited backgrounds, themed cursors, an animated hooded mark and reduced motion |
 
 </details>
@@ -173,6 +174,26 @@ keys:
 ```
 
 an explicit `bindings` map replaces default leader sequences. direct action keys live under `keys`. quit hints are red, refresh blue, and cancel yellow; custom palettes can override them. [configuration reference](docs/configuration.md) · [complete default yaml](docs/config.example.yaml)
+
+## make it yours with lua
+
+`~/.config/wraith/init.lua` loads after YAML. use real Lua functions and local modules to add commands, remap actions, register themes and react to workspace events.
+
+```lua
+wraith.config.setup({ theme = "rose-pine", key_timeout = 500 })
+
+for key, direction in pairs({ h = "left", j = "down", k = "up", l = "right" }) do
+  wraith.keymap.set("chat.normal", "<C-" .. key .. ">", "window." .. direction)
+end
+
+wraith.commands.create("review", function(ctx)
+  wraith.prompt.set("review " .. ctx.argument .. " for correctness")
+end, "prepare a review prompt")
+```
+
+`ctrl+w s` splits above/below; `ctrl+w v` splits side by side. each view navigates the same conversation independently. `/review this package` prepares the example prompt. `/keymaps` lists active bindings. `/reload` replaces a valid configuration and keeps the previous runtime when loading fails.
+
+[API reference](docs/plugins.md) · [complete configuration](docs/examples/lua/init.lua) · [tested plugin](docs/examples/lua/plugins/review.lua) · [window controls](docs/keybindings.md#conversation-windows)
 
 ## choose your colors
 

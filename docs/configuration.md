@@ -72,11 +72,17 @@ keys:
 
 [config.example.yaml](config.example.yaml) is generated from the defaults. [terminal settings](terminals.md) cover pane dimensions, colors, shell and scrollback. fonts, numerical opacity and blur belong to the host terminal; wraith can inherit its background but cannot assign independent pane alpha.
 
+## lua configuration
+
+`init.lua` loads after YAML and before CLI overrides. use it for functions, local plugins, custom commands, modal mappings, palettes and lifecycle hooks. `/reload` validates a fresh candidate before replacing the current runtime. settings show which values Lua overrides on reload; editing YAML preserves unrelated active Lua values.
+
+[Lua API and lifecycle](plugins.md) · [tested init.lua](examples/lua/init.lua) · [example plugin](examples/lua/plugins/review.lua)
+
 ## storage
 
 | location below the wraith root | contents |
 | --- | --- |
-| config: `config.yaml`, `instructions.md` | settings and global user preferences |
+| config: `config.yaml`, `init.lua`, `instructions.md` | settings and global user preferences |
 | data: `sessions/`, `archives/` | compressed active sessions and immutable originals |
 | config: `variables/` | conversation/directory/global bindings and retained-value redaction journal |
 | data: `commands/` | compressed tracked command metadata/output and live recovery journals |

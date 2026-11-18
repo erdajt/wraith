@@ -1,0 +1,160 @@
+# lua configuration and plugins
+
+wraith embeds gopher-lua and exposes API version 1. `init.lua` is real lua 5.1-style code, with functions, loops, tables, closures and local modules. luaJIT and neovim's `vim` module are not included.
+
+## start
+
+configuration loads in this order:
+
+1. built-in defaults
+2. `~/.config/wraith/config.yaml`
+3. `~/.config/wraith/init.lua`
+4. command-line provider, model and theme overrides
+
+resuming a session restores its provider and model unless the corresponding CLI override is supplied. `$XDG_CONFIG_HOME` and `--config-dir` change the configuration root. demo and snapshot modes do not load plugins.
+
+```lua
+assert(wraith.api_version == 1)
+
+wraith.config.setup({
+  theme = "rose-pine",
+  appearance = { background = "inherit" },
+  key_timeout = 500,
+})
+
+for _, mode in ipairs({ "chat.normal", "chat.visual" }) do
+  wraith.keymap.set(mode, "<C-h>", "window.left")
+  wraith.keymap.set(mode, "<C-j>", "window.down")
+  wraith.keymap.set(mode, "<C-k>", "window.up")
+  wraith.keymap.set(mode, "<C-l>", "window.right")
+end
+```
+
+`ctrl+w s` and `ctrl+w v` already split the conversation horizontally and vertically. every view keeps its own cursor, scroll, search and selection in the same conversation.
+
+copy the [complete example](examples/lua/init.lua) to your configuration root and [its plugin](examples/lua/plugins/review.lua) to `plugins/review.lua` below that root. `/review.draft this package` prepares a prompt. `/review.layout` splits the view. the example is loaded and exercised by the unit tests.
+
+## reload and persistence
+
+`/reload` reads YAML and Lua into a fresh candidate. syntax errors, invalid settings, conflicting bindings and unknown actions leave the current runtime active. errors include the Lua source and line when supplied by the interpreter. a startup failure falls back to YAML and displays the error.
+
+successful reload installs the candidate, clears pending key sequences, cancels old callbacks and closes the old VM. commands, mappings and subscriptions are replaced. a reload is discarded if focus, draft or settings change while it loads. finish a model operation or dialog before reloading.
+
+`/set` and settings pickers save explicit changes to YAML. they do not copy unrelated Lua-only values, callback ids or credentials into it. the config editor opens the YAML source. settings marked `init.lua on reload` will be overridden again when Lua next loads. change those values in `init.lua` for a lasting result. a setting that depends on a Lua-only provider or palette may require editing Lua instead of saving an incomplete YAML configuration.
+
+runtime `wraith.config` updates are temporary. `/reload` restores the saved YAML and Lua layers. it does not preserve one-time CLI overrides.
+
+## settings and themes
+
+| API | behavior |
+| --- | --- |
+| `wraith.config.get()` | detached table containing effective settings |
+| `wraith.config.get("appearance.background")` | one existing setting |
+| `wraith.config.set(path, value)` | replace an existing setting after validation |
+| `wraith.config.setup(table)` | merge named settings atomically; preserve omitted object fields |
+| `wraith.theme.register(name, palette)` | register a custom palette |
+| `wraith.theme.use(name)` | select a registered or built-in palette |
+| `wraith.getenv(name)` | read a process environment variable; return `nil` when absent |
+
+arrays replace their previous values; `{}` clears an existing array. unknown fields, invalid colors and invalid numeric values fail validation. `config.setup` can add profiles and palettes through their containing maps. `config.set` requires an existing path.
+
+```lua
+wraith.config.setup({ clipboard = {} })
+wraith.config.set("providers.openai.api_key", wraith.getenv("OPENAI_API_KEY") or "")
+wraith.theme.register("night", {
+  bg = "#151b22", fg = "#d8dee9", muted = "#8692a6",
+  accent = "#8fbcbb", second = "#b48ead", border = "#394454",
+  warn = "#ebcb8b",
+})
+wraith.theme.use("night")
+```
+
+optional palette fields are `variable`, `hint_quit`, `hint_refresh` and `hint_cancel`. colors use `#rrggbb`. [theme settings](themes.md) cover inherited backgrounds. fonts and numerical opacity remain properties of the host terminal.
+
+## mappings and commands
+
+```lua
+wraith.keymap.set("chat.normal", "<Space>sv", "window.split_vertical")
+wraith.keymap.set("prompt.normal", "<Space>p", function(ctx)
+  wraith.prompt.set("review " .. ctx.session.directory)
+end, "prepare a directory review")
+
+wraith.commands.create("review.note", function(ctx)
+  wraith.prompt.set("review " .. ctx.argument)
+end, "prepare a review prompt")
+```
+
+`keymap.set(mode, sequence, action_or_function, description)` registers an override. descriptions are optional. use `/keymaps` to inspect active mappings. [keybindings](keybindings.md#mode-specific-mappings) lists notation and modes. counts and pending vim operators retain their own modes.
+
+`keymap.del(mode, sequence)` removes configured overrides for that sequence; built-in defaults become available again. map to `noop` to consume a default key. registration happens during setup. edit the configuration and reload to replace mappings or commands.
+
+`commands.create(name, callback, description)` registers a slash command and a `command.NAME` action. command names use lowercase letters, digits and hyphens, with optional dotted children. built-in names, aliases and namespaces are reserved. `commands.delete(name)` removes a custom command during setup. custom commands appear in slash completion and `/help`. a virtual parent expands to its dotted children when selected.
+
+`wraith.action(name, argument)` queues a named operation from a callback. arguments are optional strings. host actions include `prompt.send`, `editor.open`, `focus.next`, `terminal.overlay`, `terminal.side`, `operation.cancel`, `app.quit`, `noop`, all `command.NAME` actions, and the `window.*` actions listed in [keybindings](keybindings.md). action calls do not synthesize terminal input.
+
+bindings resolve once. an exception consumes the mapping and reports the error. ambiguous sequences use `key_timeout`; escape cancels the prefix. failed prefixes replay once into the same input owner. direct `ctrl+c` and `ctrl+q` remain available.
+
+## workspace snapshots and effects
+
+| API | behavior in a callback |
+| --- | --- |
+| `wraith.session.get()` | copy of session id, model, provider, directory and bounded messages |
+| `wraith.windows.list()` | copies of window ids, focus, cursor, column, search, offset and visibility; visible windows include width and height |
+| `wraith.windows.split("horizontal")` | queue an above/below split; `vertical` places panes side by side |
+| `wraith.windows.focus(id)` | queue focus by stable window id |
+| `wraith.windows.close(id)` | close that view; omitted id means the focused view |
+| `wraith.prompt.get()` | draft captured when the callback was queued |
+| `wraith.prompt.set(text)` | queue replacement of the shared draft |
+| `wraith.notify(text)` | show a notice |
+
+each callback receives `ctx` with `argument`, `event`, `prompt`, `windows` and `session`. session messages contain role and content, limited to the latest 64 messages and 128 kib of content. `message_count` records the full count. a large message may be truncated. modifying snapshot tables does not change the app.
+
+operations run after the callback returns successfully. snapshot reads within that callback continue to describe its original state. split operations return no new id immediately; inspect a later window event to find it. an exception or timeout discards the callback's effect batch.
+
+effects retain order. workspace ownership is checked before dispatch. approval dialogs, editors and raw shell input retain control of their surfaces. a later effect can be refused if an earlier operation opened a dialog. plugin effects cannot approve a proposed model command. model requests and approved jobs retain the normal privacy, context and execution paths.
+
+callback results are discarded after runtime replacement or changes to the captured focus, selection, navigation, mode, draft or settings. ids from closed windows are rejected. nested custom-command callbacks stop after eight levels. local code may configure behavior, but it cannot bypass these guards through an event hook.
+
+## events and plugin lifecycle
+
+```lua
+local id = wraith.events.on("window_changed", function(ctx)
+  wraith.notify(tostring(#ctx.windows) .. " conversation views")
+end)
+
+return function()
+  wraith.events.off(id)
+end
+```
+
+| event | trigger |
+| --- | --- |
+| `ready` | initial workspace start or successful reload |
+| `session_changed` | the active session id changes |
+| `window_changed` | view focus or visible window geometry changes |
+| `response_finished` | an active model response stops; compaction is excluded |
+
+`events.on(name, function)` registers during setup and returns an id. `events.off(id)` removes the subscription, including from a callback or teardown. queued events of the same type retain the newest snapshot. superseded event callers are released without effects.
+
+`wraith.plugins.load("plugins.review", options)` uses `require` to load a local module once. it must return a table with `setup(options)`. setup may return a cleanup function; the table may also provide `teardown()`. successful runtimes run cleanup hooks in reverse registration order when replaced or closed. `init.lua` may itself return a cleanup function. failed candidates are closed without running their runtime actions.
+
+setup can register APIs and change candidate configuration. runtime workspace actions and snapshot inspection are unavailable during setup. teardown runs with runtime actions and configuration changes disabled. cleanup errors do not prevent VM closure.
+
+## runtime boundaries
+
+modules resolve as `NAME.lua` or `NAME/init.lua` below the user configuration root. dots separate path components. traversal and symlinks escaping that root are rejected. changing `package.path` does not add search roots. project directories and assistant responses are never loaded as configuration.
+
+the VM includes base, string, table, math, coroutine and a controlled package loader. raw `io`, `os`, debug hooks, `dofile`, `loadfile`, binary loaders and stdout printing are unavailable. `wraith.getenv` provides bounded read access to environment variables. suspended coroutines resume under the current callback's deadline.
+
+| limit | value |
+| --- | --- |
+| candidate setup | 2 seconds |
+| callback or event batch | 250 milliseconds |
+| all teardown hooks together | 200 milliseconds |
+| waiting callback requests | 128 |
+| effects per callback | 64 |
+| argument or environment value | 64 kib |
+| Lua source file or serialized snapshot | 1 mib |
+| retained callbacks / commands / loaded plugins | 512 / 128 / 128 |
+
+queue overflow is reported. cancellation releases waiting callers. one worker owns the VM; rendering does not wait for Lua execution. source files must be regular files. these limits protect lifecycle and message handling, but in-process Lua allocation is not a hard memory sandbox. install only local code you trust.

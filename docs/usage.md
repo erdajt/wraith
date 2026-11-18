@@ -51,6 +51,7 @@ this is a modal editor, not a complete embedded neovim instance. macros, plugins
 
 | commands | purpose |
 | --- | --- |
+| `/reload` | validate and replace YAML and Lua configuration; keep the previous runtime on failure |
 | `/help`, `/h`, `/?`, `/keymaps` | show commands, active mappings and action names |
 | `/providers`, `/provider name` | select a backend |
 | `/models`, `/model [id]` | choose or directly set a model |

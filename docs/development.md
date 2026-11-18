@@ -13,7 +13,7 @@ make install
 
 fixtures use an in-memory http transport, real linux ptys and temporary data directories. no installed model, gpu or running ollama service is required. the interactive subprocess test drives the actual bubble tea app through a pty, returns from a configured editor, hides and reopens a shell, and verifies that the side shell has independent state.
 
-when neovim is installed, a second integration test runs wraith inside its terminal, opens a nested editor, restarts a shell and searches/yanks terminal output. CI installs neovim to exercise this path.
+when neovim is installed, a second integration test runs wraith inside its terminal, opens a nested editor, restarts a shell and searches/yanks terminal output. CI installs neovim to exercise this path and zsh for actual line-editor insertion tests.
 
 focused checks cover stream completion and cancellation, provider request formats, native cli event decoding, model discovery, saved selection, bounded extraction, omission audits, exact pins and literals, third-decline compaction, original archives, corrective retries, failed replacement, output sharing, directory-scoped resume, input history, editor save detection, command quoting, terminal control handling, unicode, layout dimensions, modal edits and read-only snapshots.
 
@@ -46,3 +46,5 @@ unit tests use the standard [testing package](https://pkg.go.dev/testing), descr
 the execution suites run real short shell jobs for approval, cancellation, timeout, concurrent output and failed persistence. provider transports are fixtures, so privacy, streaming repair, compaction and evidence ownership are tested without credentials or a GPU. regression cases cover oversized polling lines, retained final errors, interrupted journals, variable rotation, non-shell editor review and CLI export redaction.
 
 CI runs the complete race suite with shuffled order and coverage on every push to `main` and on pull requests. it also verifies module checksums, formatting and vet, installs neovim for editor integration, fuzzes terminal parsing and modal editing, and builds Linux amd64/arm64 binaries. release tags call the same workflow before packaging. local success does not establish that a hosted run passed; inspect the corresponding Actions run when validating a deployment.
+
+Lua tests execute real scripts, including the documented configuration and plugin. they cover module confinement, FIFO rejection, retained coroutines, cancellation, reload rollback, YAML layering, actual slash completion, callback targeting, editor continuations and action guards. native Go tests remain beside their packages; example configuration lives under `docs/examples/lua`.

@@ -6,6 +6,8 @@ wraith is a single go binary. bubble tea owns terminal lifecycle and the event l
 | --- | --- |
 | `cmd/wraith` | flags, diagnostics, workspace lock, session selection and terminal startup |
 | `internal/config` | defaults, validation, xdg locations and configuration persistence |
+| `internal/keymap` | vim key notation, modal sequences and action resolution |
+| `internal/plugin` | real Lua VM ownership, confined module loading, configuration and callback effects |
 | `internal/provider` | normalized api and cli backends, streaming events and model catalogs |
 | `internal/runner` | concurrent approved jobs, process groups, recovery journals and redacted output queries |
 | `internal/variables` | annotated scoped bindings, immutable redaction snapshots and parser-backed shell substitution |
@@ -49,3 +51,11 @@ all provider requests pass a shared privacy boundary, including CLI discovery, c
 private snapshots are immutable for a request or approval. variable writes use a revision check and locked retained-value journal so rotation does not forget historical literals. parser-backed shell substitution produces literal shell words; non-shell source requires editor review. streamed invalid references cancel the attempt, show a retry status and replace superseded text. discarded attempts are compressed separately from accepted chat history.
 
 live job journals hold an owner lock, retained prefix, independent tail and checkpoints. final persistence precedes automatic completion delivery; session delivery ids make evidence insertion idempotent. output tools pause for compaction when evidence cannot fit, without consuming their cursor. readers freeze during selection so incoming output cannot change a yank.
+
+## lua ownership
+
+one worker owns each Lua VM. setup produces a candidate manifest with validated settings, keymaps, commands and callbacks. the UI validates that manifest against its action catalog before installing it. failed reloads leave the current runtime untouched.
+
+callbacks receive copied snapshots and return bounded effects. runtime identity, input ownership, selected-message state, draft and settings must still match before application. effects use the same guards as mapped actions; an approval decision is never exposed as a plugin action. reload cancels the old worker and releases pending callers. editor continuations resume after the editor result has been applied.
+
+YAML and effective configuration remain separate. settings persistence applies only explicit changes to YAML, preserving Lua-only overrides and credentials. see [plugin lifecycle and limits](plugins.md#runtime-boundaries).

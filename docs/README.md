@@ -10,6 +10,7 @@
 | [context](context.md) | capacity, thinking storage, instructions, pins, compaction and archives |
 | [sessions](sessions.md) | directory ownership, resume, forks, export and backups |
 | [providers](providers.md) | ollama, compatible apis, anthropic, deepseek and cli backends |
+| [plugins](plugins.md) | lua setup, API reference, commands, events, reload and runtime limits |
 | [configuration](configuration.md) | settings categories, validation, defaults and storage |
 | [full default config](config.example.yaml) | every serialized setting, provider field and default binding |
 | [themes](themes.md) | built-in themes, custom palettes, hint colors and backgrounds |
@@ -29,7 +30,8 @@ start with [getting started](getting-started.md). use `/help` inside wraith for 
 | an exact fact for one conversation | `/pin` and `/pins` |
 | a value the model should refer to by name | `/env` |
 | a model's context capacity | `/set context NUMBER` |
-| an app default or binding | `/settings` or `config.yaml` |
+| an app default or binding | `/settings`, `config.yaml` or `init.lua` |
+| a custom command or lifecycle callback | a local Lua plugin |
 | a command's output | `/history`; sharing is a separate choice |
 | the complete pre-compaction source | `/archives` |
 
