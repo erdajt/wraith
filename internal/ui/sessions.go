@@ -120,8 +120,9 @@ func (a *App) SessionError(err error) {
 
 // resetChatNavigation clears conversation cursor, selection, search and thinking expansion state.
 func (a *App) resetChatNavigation() {
-	a.chatCursor, a.chatColumn = -1, 0
-	a.visualMode, a.chatMotionPending, a.chatMotionCount, a.search = "", "", "", ""
+	for _, view := range a.windows {
+		*view = conversationView{chatCursor: -1, follow: true}
+	}
+	a.commandMode, a.searchMode, a.windowPending = false, false, false
 	a.thinkingExpanded = map[string]bool{}
-	a.follow = true
 }

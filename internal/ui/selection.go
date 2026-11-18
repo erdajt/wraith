@@ -26,7 +26,7 @@ func (a *conversationView) selectionBounds() (int, int, int, int) {
 
 // selectedText collects selected text, expanding any touched code block to its full command.
 func (a *App) selectedText() string {
-	lines := a.transcript(max(10, a.mainWidth()-5))
+	lines := a.transcript(a.chatWidth())
 	first, left, last, right := a.selectionBounds()
 	var out []string
 	seen := map[string]bool{}

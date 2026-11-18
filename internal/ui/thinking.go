@@ -19,7 +19,7 @@ func (a *App) thinkingOpen(index int) bool {
 
 // toggleThinking toggles thinking for a message and keeps its heading in view.
 func (a *App) toggleThinking(index int) {
-	lines := a.transcript(max(10, a.mainWidth()-5))
+	lines := a.transcript(a.chatWidth())
 	for n, line := range lines {
 		if line.Message == index && line.Thinking {
 			if a.thinkingExpanded == nil {
@@ -51,7 +51,7 @@ func (a *App) mouse(m tea.MouseMsg) tea.Cmd {
 		return nil
 	}
 
-	lines := a.transcript(max(10, a.mainWidth()-5))
+	lines := a.transcript(a.chatWidth())
 	start := min(a.offset, max(0, len(lines)-a.bodyHeight()))
 	if a.follow {
 		start = max(0, len(lines)-a.bodyHeight())

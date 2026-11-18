@@ -13,7 +13,7 @@ import (
 // moveChatText applies vim motions to transcript text and maps the cursor and yank range back to display cells.
 func (a *App) moveChatText(key string, count int) tea.Cmd {
 	a.ensureChatCursor()
-	lines := a.transcript(max(10, a.mainWidth()-5))
+	lines := a.transcript(a.chatWidth())
 	var plain []string
 	position := 0
 	for i, line := range lines {

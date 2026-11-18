@@ -52,39 +52,7 @@ func (a *App) View() string {
 	model := ink(p.Muted, "  ") + ink(p.FG, ansi.Truncate(clean(a.Session.Model), max(15, w-ansi.StringWidth(usage)-23), "…")) + ink(p.Second, "  think:"+a.Config.Thinking)
 	rows[1] = base(p, model+strings.Repeat(" ", max(1, w-ansi.StringWidth(model)-ansi.StringWidth(usage)-2))+usage, w)
 	rows[2] = base(p, ink(p.Border, strings.Repeat("─", w)), w)
-	transcript := a.transcript(max(10, mainW-5))
-	start := min(a.offset, max(0, len(transcript)-bodyH))
-	if a.follow {
-		start = max(0, len(transcript)-bodyH)
-	}
-	for y := 0; y < bodyH; y++ {
-		content := ""
-		if start+y < len(transcript) {
-			query := a.search
-			if a.searchMode {
-				query = a.command
-			}
-			content = highlightMatches(transcript[start+y].Text, query, p)
-			content = a.selectionLine(content, start+y, p, transcript)
-			if a.focus == "chat" && start+y == a.chatCursor {
-				content = cursorText(content, a.chatColumn, p)
-			}
-		}
-		rows[3+y] = base(p, "  "+content, mainW) + base(p, "", w-mainW)
-	}
-
-	if len(a.Session.Messages) == 0 && !a.busy {
-		welcome := a.welcome(mainW, bodyH, p)
-		y := 3 + max(0, (bodyH-len(welcome))/2)
-		for _, line := range welcome {
-			if y >= 3+bodyH {
-				break
-			}
-			pad := max(0, (mainW-ansi.StringWidth(line))/2)
-			rows[y] = base(p, strings.Repeat(" ", pad)+line, mainW) + base(p, "", w-mainW)
-			y++
-		}
-	}
+	a.drawConversations(rows, p)
 
 	inputY := 3 + bodyH
 	label := " prompt "

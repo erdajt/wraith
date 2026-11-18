@@ -9,11 +9,11 @@ import (
 
 // ensureChatCursor initializes and clamps the chat cursor, then brings it into view.
 func (a *App) ensureChatCursor() {
-	lines := a.transcript(max(10, a.mainWidth()-5))
+	lines := a.transcript(a.chatWidth())
 	if a.chatCursor < 0 {
 		a.chatCursor = a.offset
 		if a.follow {
-			a.chatCursor = max(0, len(lines)-a.bodyHeight())
+			a.chatCursor = max(0, len(lines)-a.chatHeight())
 			a.offset = a.chatCursor
 		}
 	}
@@ -30,10 +30,10 @@ func (a *App) revealCursor(count int) {
 	if a.chatCursor < a.offset {
 		a.offset = a.chatCursor
 	}
-	if a.chatCursor >= a.offset+a.bodyHeight() {
-		a.offset = a.chatCursor - a.bodyHeight() + 1
+	if a.chatCursor >= a.offset+a.chatHeight() {
+		a.offset = a.chatCursor - a.chatHeight() + 1
 	}
-	a.offset = max(0, min(a.offset, max(0, count-a.bodyHeight())))
+	a.offset = max(0, min(a.offset, max(0, count-a.chatHeight())))
 }
 
 // chatKey handles counted conversation motions, selection and message actions.
@@ -75,7 +75,7 @@ func (a *App) chatKey(k tea.KeyMsg) tea.Cmd {
 	}
 
 	a.ensureChatCursor()
-	lines := a.transcript(max(10, a.mainWidth()-5))
+	lines := a.transcript(a.chatWidth())
 	switch key {
 	case "v", "V":
 		mode := "visual"
@@ -113,9 +113,9 @@ func (a *App) chatKey(k tea.KeyMsg) tea.Cmd {
 			a.chatColumn = max(0, ansi.StringWidth(lines[a.chatCursor].Text)-1)
 		}
 	case "ctrl+d", "pgdown":
-		a.chatCursor += count * max(1, a.bodyHeight()/2)
+		a.chatCursor += count * max(1, a.chatHeight()/2)
 	case "ctrl+u", "pgup":
-		a.chatCursor -= count * max(1, a.bodyHeight()/2)
+		a.chatCursor -= count * max(1, a.chatHeight()/2)
 	case "g":
 		if a.chatG {
 			a.chatCursor = 0

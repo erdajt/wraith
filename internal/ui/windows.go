@@ -1,0 +1,102 @@
+package ui
+
+import "fmt"
+
+// windowPlaces measures conversation leaves inside the shared workspace body.
+func (a *App) windowPlaces() []windowPlace {
+	return a.windowTree.layout(windowRect{0, 3, a.mainWidth(), a.bodyHeight()}, a.windowID)
+}
+
+// chatSize returns the focused conversation leaf's current dimensions.
+func (a *App) chatSize() (int, int) {
+	for _, place := range a.windowPlaces() {
+		if place.id == a.windowID {
+			return place.width, place.height
+		}
+	}
+	return a.mainWidth(), a.bodyHeight()
+}
+
+// chatWidth reserves the focused leaf's transcript padding.
+func (a *App) chatWidth() int {
+	w, _ := a.chatSize()
+	return max(10, w-5)
+}
+
+// chatHeight returns the focused leaf's viewport height.
+func (a *App) chatHeight() int {
+	_, h := a.chatSize()
+	return h
+}
+
+// focusWindow switches views and cancels incomplete motions before accepting new input.
+func (a *App) focusWindow(id uint64) {
+	view, ok := a.windows[id]
+	if !ok {
+		a.notice = "conversation window is no longer available"
+		return
+	}
+	a.chatCount, a.chatMotionPending, a.chatMotionCount = "", "", ""
+	a.chatG, a.chatZ, a.windowPending = false, false, false
+	a.searchMode, a.commandMode = false, false
+	a.windowID, a.conversationView = id, view
+	a.focus = "chat"
+	a.notice = fmt.Sprintf("conversation window %d · %d open", id, len(a.windows))
+}
+
+// windowAction applies a split, focus, close or proportion change to conversation windows.
+func (a *App) windowAction(action string) {
+	places := a.windowPlaces()
+	switch action {
+	case "s", "v":
+		w, h := a.chatSize()
+		if action == "v" && w < 49 || action == "s" && h < 9 {
+			a.notice = "not enough space for another conversation window"
+			return
+		}
+		if len(a.windows) >= 32 {
+			a.notice = "conversation window limit reached"
+			return
+		}
+		a.transcript(a.chatWidth())
+		copy := *a.conversationView
+		copy.visualMode, copy.chatCount, copy.chatMotionPending, copy.chatMotionCount = "", "", "", ""
+		copy.chatG, copy.chatZ = false, false
+		a.nextWindowID++
+		a.windows[a.nextWindowID] = &copy
+		a.windowTree.split(a.windowID, a.nextWindowID, action == "v")
+		a.focusWindow(a.nextWindowID)
+	case "h", "j", "k", "l":
+		a.focusWindow(neighbor(places, a.windowID, action))
+	case "w":
+		for i, place := range places {
+			if place.id == a.windowID {
+				a.focusWindow(places[(i+1)%len(places)].id)
+				break
+			}
+		}
+	case "c":
+		if len(a.windows) == 1 {
+			a.notice = "last conversation window · :q quits wraith"
+			return
+		}
+		closed := a.windowID
+		a.windowTree.remove(closed)
+		delete(a.windows, closed)
+		a.focusWindow(a.windowPlaces()[0].id)
+	case "o":
+		a.windowTree = &windowNode{id: a.windowID}
+		a.windows = map[uint64]*conversationView{a.windowID: a.conversationView}
+	case "=":
+		a.windowTree.equalize()
+	case "+", "-", ">", "<":
+		delta := 0.05
+		if action == "-" || action == "<" {
+			delta = -delta
+		}
+		a.windowTree.resize(a.windowID, action == ">" || action == "<", delta)
+	}
+	for _, place := range a.windowPlaces() {
+		a.windowTranscript(a.windows[place.id], max(10, place.width-5), place.id == a.windowID && a.focus == "chat")
+	}
+}

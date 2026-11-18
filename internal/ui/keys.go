@@ -54,6 +54,19 @@ func (a *App) key(k tea.KeyMsg) tea.Cmd {
 		return a.terminalKey(k)
 	}
 
+	if a.windowPending {
+		a.windowPending = false
+		if key != "esc" {
+			a.windowAction(key)
+		}
+		return nil
+	}
+	if key == "ctrl+w" && a.focus == "chat" && !a.commandMode && !a.searchMode && a.chatMotionPending == "" {
+		a.windowPending = true
+		a.notice = "windows · s horizontal · v vertical · h/j/k/l focus · w cycle · c close · o only · = equalize"
+		return nil
+	}
+
 	if a.chatMotionPending == "" && a.Prompt.Pending == "" && !a.commandMode && !a.searchMode && (a.focus == "chat" || a.Prompt.Mode == "normal") && (key == a.Config.Leader || a.Config.Leader == "space" && key == " ") {
 		a.openLeader("")
 		return nil
