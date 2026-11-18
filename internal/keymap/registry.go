@@ -9,14 +9,15 @@ import (
 type Binding struct {
 	Mode        string `json:"mode" yaml:"mode"`
 	Keys        string `json:"keys" yaml:"keys"`
-	Action      string `json:"action" yaml:"action"`
+	Action      string `json:"action,omitempty" yaml:"action,omitempty"`
+	Input       string `json:"input,omitempty" yaml:"input,omitempty"`
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 }
 
 type Match struct {
-	Action, Description string
-	Exact, Pending      bool
-	Hints               []Binding
+	Action, Input, Description string
+	Exact, Pending             bool
+	Hints                      []Binding
 }
 
 type Registry struct {
@@ -28,15 +29,25 @@ type Registry struct {
 func New(bindings []Binding) (*Registry, error) {
 	r := &Registry{entries: map[string]map[string]Binding{}}
 	for _, binding := range bindings {
-		if !slices.Contains([]string{"*", "prompt.normal", "prompt.insert", "prompt.visual", "prompt.operator", "chat.normal", "chat.visual", "chat.operator", "command", "search", "picker", "output", "terminal", "terminal.copy"}, binding.Mode) {
+		valid := slices.Contains([]string{"*", "command", "search", "picker", "output", "terminal", "terminal.copy"}, binding.Mode)
+		for _, surface := range []string{"prompt", "chat", "output", "terminal.copy"} {
+			mode := strings.TrimPrefix(binding.Mode, surface+".")
+			valid = valid || mode != binding.Mode && slices.Contains([]string{"normal", "visual", "operator", "argument", "search"}, mode)
+		}
+		if !valid && binding.Mode != "prompt.insert" {
 			return nil, fmt.Errorf("keymap %q: unknown mode %q", binding.Keys, binding.Mode)
 		}
 		keys, err := Parse(binding.Keys)
 		if err != nil {
 			return nil, fmt.Errorf("keymap %q: %w", binding.Keys, err)
 		}
-		if binding.Action == "" || len(binding.Action) > 256 {
-			return nil, fmt.Errorf("keymap %q: action must contain 1-256 bytes", binding.Keys)
+		if (binding.Action == "") == (binding.Input == "") || len(binding.Action) > 256 {
+			return nil, fmt.Errorf("keymap %q: choose one action or native input sequence", binding.Keys)
+		}
+		if binding.Input != "" {
+			if _, err := Parse(binding.Input); err != nil {
+				return nil, fmt.Errorf("keymap %q input: %w", binding.Keys, err)
+			}
 		}
 		if r.entries[binding.Mode] == nil {
 			r.entries[binding.Mode] = map[string]Binding{}
@@ -76,16 +87,25 @@ func (r *Registry) Lookup(mode string, keys []string) Match {
 		return result
 	}
 	sequence := strings.Join(keys, "\x00")
-	entries := make(map[string]Binding, len(r.entries["*"])+len(r.entries[mode]))
-	for key, binding := range r.entries["*"] {
-		entries[key] = binding
+	entries := make(map[string]Binding)
+	layers := []string{"*"}
+	if strings.HasSuffix(mode, ".search") {
+		layers = append(layers, "search")
 	}
-	for key, binding := range r.entries[mode] {
-		entries[key] = binding
+	if strings.HasPrefix(mode, "terminal.copy.") {
+		layers = append(layers, "terminal.copy")
+	} else if strings.HasPrefix(mode, "output.") {
+		layers = append(layers, "output")
+	}
+	layers = append(layers, mode)
+	for _, layer := range layers {
+		for key, binding := range r.entries[layer] {
+			entries[key] = binding
+		}
 	}
 	for key, binding := range entries {
 		if key == sequence {
-			result.Action, result.Description, result.Exact = binding.Action, binding.Description, true
+			result.Action, result.Input, result.Description, result.Exact = binding.Action, binding.Input, binding.Description, true
 		} else if strings.HasPrefix(key, sequence+"\x00") {
 			result.Pending = true
 			result.Hints = append(result.Hints, binding)
