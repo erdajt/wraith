@@ -8,6 +8,7 @@ import (
 
 type packageRecord struct {
 	owner        string
+	loading      bool
 	dependencies []string
 }
 
@@ -27,7 +28,7 @@ func (e *engine) unloadPlugin(name string) error {
 	if !ok {
 		return fmt.Errorf("plugin is not loaded: %s", name)
 	}
-	if record.owner == e.owner {
+	if record.loading || record.owner == e.owner {
 		return fmt.Errorf("cannot unload the currently executing plugin: %s", name)
 	}
 	for _, dependent := range slices.Sorted(maps.Keys(e.packages)) {

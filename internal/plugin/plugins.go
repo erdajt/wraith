@@ -52,7 +52,7 @@ func (e *engine) loadPlugin(name string, options *lua.LTable) (err error) {
 	owner := fmt.Sprintf("plugin:%s:%d", name, e.serial)
 	e.owner = owner
 	e.loaded[name] = true
-	e.packages[name] = packageRecord{owner: owner}
+	e.packages[name] = packageRecord{owner: owner, loading: true}
 	defer func() { e.owner = parentOwner }()
 	defer func() {
 		var owned []cleanupHook
@@ -102,6 +102,9 @@ func (e *engine) loadPlugin(name string, options *lua.LTable) (err error) {
 			e.packages[parent] = record
 		}
 	}
+	record := e.packages[name]
+	record.loading = false
+	e.packages[name] = record
 	e.dirty = !e.setup
 	return nil
 }

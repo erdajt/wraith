@@ -156,3 +156,32 @@ func TestFailedParentSetupCleansParentBeforeDependency(t *testing.T) {
 		t.Fatalf("failed setup cleanup order: %q, %v", data, err)
 	}
 }
+
+func TestPackageCannotUnloadInitializingPackage(t *testing.T) {
+	r := openTestRuntime(t, `
+ package.preload.self = function() return { setup=function()
+   assert(not pcall(wraith.plugins.unload,"self"))
+   wraith.commands.create("owned",function() end)
+ end } end
+ wraith.plugins.load("self")
+ `)
+	if len(r.Manifest().Commands) != 1 {
+		t.Fatal("initializing package not retained")
+	}
+}
+
+func TestPackageChildCannotUnloadInitializingParent(t *testing.T) {
+	r := openTestRuntime(t, `
+ package.preload.child = function() return {setup=function()
+   assert(not pcall(wraith.plugins.unload,"parent"))
+ end} end
+ package.preload.parent = function() return {setup=function()
+   wraith.plugins.load("child")
+   wraith.commands.create("owned",function() end)
+ end} end
+ wraith.plugins.load("parent")
+ `)
+	if len(r.Manifest().Commands) != 1 {
+		t.Fatal("initializing parent lost")
+	}
+}
