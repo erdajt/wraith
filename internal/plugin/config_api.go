@@ -101,6 +101,9 @@ func mergeValue(current, update any) any {
 	old, oldMap := current.(map[string]any)
 	next, nextMap := update.(map[string]any)
 	if !oldMap || !nextMap {
+		if _, array := current.([]any); array && nextMap && len(next) == 0 {
+			return []any{}
+		}
 		return update
 	}
 	for key, value := range next {

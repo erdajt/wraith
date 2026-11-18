@@ -13,6 +13,7 @@ import (
 
 	"github.com/erdajt/wraith/internal/config"
 	lua "github.com/yuin/gopher-lua"
+	"golang.org/x/sys/unix"
 )
 
 var moduleName = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$`)
@@ -74,6 +75,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	e.installRegistration(api)
 	e.installWorkspace(api)
 	e.installPlugins(api)
+	e.installCoroutines()
 
 	fn, err := loadFile(L, root, "init.lua")
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -102,7 +104,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 
 // loadFile bounds source reads before compiling a text-only chunk with its path in errors.
 func loadFile(L *lua.LState, root *os.Root, path string) (*lua.LFunction, error) {
-	f, err := root.Open(path)
+	f, err := root.OpenFile(path, os.O_RDONLY|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return nil, err
 	}

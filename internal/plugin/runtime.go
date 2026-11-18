@@ -45,7 +45,7 @@ type Runtime struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	mu       sync.Mutex
-	pending  map[string]bool
+	pending  map[string]request
 	manifest Manifest
 }
 
@@ -74,7 +74,7 @@ func Open(parent context.Context, directory string, c config.Config, actions []s
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(parent)
-	r := &Runtime{queue: make(chan request, 128), done: make(chan struct{}), ctx: ctx, cancel: cancel, pending: map[string]bool{}}
+	r := &Runtime{queue: make(chan request, 128), done: make(chan struct{}), ctx: ctx, cancel: cancel, pending: map[string]request{}}
 	ready := make(chan error, 1)
 	go r.serve(directory, detached, actions, ready)
 	select {
@@ -117,14 +117,17 @@ func (r *Runtime) Submit(callback, event string, snapshot any, c config.Config) 
 	if err := r.ctx.Err(); err != nil {
 		return nil, err
 	}
-	if event != "" && r.pending[event] {
-		return nil, nil
-	}
 	result := make(chan Result, 1)
+	req := request{callback, event, data, copy, result}
+	if previous, ok := r.pending[event]; event != "" && ok {
+		previous.result <- Result{}
+		r.pending[event] = req
+		return result, nil
+	}
 	select {
-	case r.queue <- request{callback, event, data, copy, result}:
+	case r.queue <- req:
 		if event != "" {
-			r.pending[event] = true
+			r.pending[event] = req
 		}
 		return result, nil
 	default:
@@ -141,6 +144,7 @@ func (r *Runtime) Done() <-chan struct{} { return r.done }
 // serve owns every VM access from candidate loading through callback execution and teardown.
 func (r *Runtime) serve(directory string, c config.Config, actions []string, ready chan<- error) {
 	defer close(r.done)
+	defer r.cancelQueued()
 	e, closeFiles, err := load(r.ctx, directory, c, actions)
 	if err != nil {
 		ready <- err
@@ -164,11 +168,13 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 		case <-r.ctx.Done():
 			return
 		case req := <-r.queue:
-			result := e.invoke(r.ctx, req)
-			r.mu.Lock()
-			delete(r.pending, req.event)
-			r.mu.Unlock()
-			req.result <- result
+			if req.event != "" {
+				r.mu.Lock()
+				req = r.pending[req.event]
+				delete(r.pending, req.event)
+				r.mu.Unlock()
+			}
+			req.result <- e.invoke(r.ctx, req)
 		}
 	}
 }
@@ -197,4 +203,22 @@ func (e *engine) invoke(parent context.Context, req request) Result {
 		}
 	}
 	return Result{Effects: e.effects}
+}
+
+// cancelQueued releases every waiting caller after cancellation or failed setup.
+func (r *Runtime) cancelQueued() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for {
+		select {
+		case req := <-r.queue:
+			if req.event != "" {
+				req = r.pending[req.event]
+				delete(r.pending, req.event)
+			}
+			req.result <- Result{Err: context.Canceled}
+		default:
+			return
+		}
+	}
 }
