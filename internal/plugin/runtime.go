@@ -39,7 +39,17 @@ type request struct {
 	callback, event string
 	data            []byte
 	config          config.Config
-	result          chan Result
+	reply           *completion
+}
+
+type completion struct {
+	channel chan Result
+	once    sync.Once
+}
+
+// resolve releases a caller once, including cancellation during a blocking native call.
+func (c *completion) resolve(result Result) {
+	c.once.Do(func() { c.channel <- result })
 }
 
 type Runtime struct {
@@ -49,6 +59,7 @@ type Runtime struct {
 	cancel   context.CancelFunc
 	mu       sync.Mutex
 	pending  map[string]request
+	waiting  map[*completion]struct{}
 	manifest Manifest
 }
 
@@ -78,9 +89,13 @@ func Open(parent context.Context, directory string, c config.Config, actions []s
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(parent)
-	r := &Runtime{queue: make(chan request, 128), done: make(chan struct{}), ctx: ctx, cancel: cancel, pending: map[string]request{}}
+	r := &Runtime{queue: make(chan request, 128), done: make(chan struct{}), ctx: ctx, cancel: cancel, pending: map[string]request{}, waiting: map[*completion]struct{}{}}
 	ready := make(chan error, 1)
 	go r.serve(directory, detached, actions, ready)
+	go func() {
+		<-ctx.Done()
+		r.cancelWaiters()
+	}()
 	select {
 	case err := <-ready:
 		if err != nil {
@@ -121,26 +136,32 @@ func (r *Runtime) Submit(callback, event string, snapshot any, c config.Config) 
 	if err := r.ctx.Err(); err != nil {
 		return nil, err
 	}
-	result := make(chan Result, 1)
-	req := request{callback, event, data, copy, result}
+	reply := &completion{channel: make(chan Result, 1)}
+	req := request{callback, event, data, copy, reply}
 	if previous, ok := r.pending[event]; event != "" && ok {
-		previous.result <- Result{}
+		previous.reply.resolve(Result{})
+		delete(r.waiting, previous.reply)
+		r.waiting[reply] = struct{}{}
 		r.pending[event] = req
-		return result, nil
+		return reply.channel, nil
 	}
 	select {
 	case r.queue <- req:
+		r.waiting[reply] = struct{}{}
 		if event != "" {
 			r.pending[event] = req
 		}
-		return result, nil
+		return reply.channel, nil
 	default:
 		return nil, errors.New("plugin callback queue is full")
 	}
 }
 
 // Close cancels queued and running callbacks; bounded teardown continues on the VM owner.
-func (r *Runtime) Close() { r.cancel() }
+func (r *Runtime) Close() {
+	r.cancel()
+	r.cancelWaiters()
+}
 
 // Done closes after cleanup and VM destruction complete.
 func (r *Runtime) Done() <-chan struct{} { return r.done }
@@ -148,22 +169,16 @@ func (r *Runtime) Done() <-chan struct{} { return r.done }
 // serve owns every VM access from candidate loading through callback execution and teardown.
 func (r *Runtime) serve(directory string, c config.Config, actions []string, ready chan<- error) {
 	defer close(r.done)
-	defer r.cancelQueued()
+	defer r.cancel()
+	defer r.cancelWaiters()
 	e, err := load(r.ctx, directory, c, actions)
 	if err != nil {
 		ready <- err
 		return
 	}
 	defer e.L.Close()
-	defer func() {
-		e.closing = true
-		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-		defer cancel()
-		e.L.SetContext(ctx)
-		for i := len(e.cleanup) - 1; i >= 0 && ctx.Err() == nil; i-- {
-			_ = e.L.CallByParam(lua.P{Fn: e.cleanup[i], NRet: 0, Protect: true})
-		}
-	}()
+	defer e.teardown(0)
+
 	r.manifest = e.manifest
 	ready <- nil
 	for {
@@ -177,7 +192,11 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 				delete(r.pending, req.event)
 				r.mu.Unlock()
 			}
-			req.result <- e.invoke(r.ctx, req)
+			result := e.invoke(r.ctx, req)
+			r.mu.Lock()
+			req.reply.resolve(result)
+			delete(r.waiting, req.reply)
+			r.mu.Unlock()
 		}
 	}
 }
@@ -208,20 +227,24 @@ func (e *engine) invoke(parent context.Context, req request) Result {
 	return Result{Effects: e.effects}
 }
 
-// cancelQueued releases every waiting caller after cancellation or failed setup.
-func (r *Runtime) cancelQueued() {
+// cancelWaiters releases queued and running callers without waiting for native Lua calls.
+func (r *Runtime) cancelWaiters() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	for {
-		select {
-		case req := <-r.queue:
-			if req.event != "" {
-				req = r.pending[req.event]
-				delete(r.pending, req.event)
-			}
-			req.result <- Result{Err: context.Canceled}
-		default:
-			return
-		}
+	for reply := range r.waiting {
+		reply.resolve(Result{Err: context.Canceled})
+		delete(r.waiting, reply)
 	}
+}
+
+// teardown closes registered hooks in reverse order under a shared cleanup deadline.
+func (e *engine) teardown(start int) {
+	e.closing = true
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	e.L.SetContext(ctx)
+	for i := len(e.cleanup) - 1; i >= start && ctx.Err() == nil; i-- {
+		_ = e.L.CallByParam(lua.P{Fn: e.cleanup[i], NRet: 0, Protect: true})
+	}
+	e.cleanup = e.cleanup[:start]
 }

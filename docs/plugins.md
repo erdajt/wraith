@@ -170,7 +170,7 @@ callback deadlines interrupt Lua instructions, not blocking native operations su
 | `init.lua`, required source file or serialized snapshot | 1 mib |
 | retained callbacks / commands / loaded plugins | 512 / 128 / 128 |
 
-queue overflow is reported. cancellation releases waiting callers after the worker returns from its current call. a blocking native call can delay cancellation and teardown. one worker owns the VM; rendering does not wait for Lua execution. initial and required source files must be regular files; direct trusted loaders are unrestricted. these limits protect lifecycle and message handling, but in-process Lua allocation is not a hard memory sandbox. install only local code you trust.
+queue overflow is reported. cancellation releases waiting callers immediately. a blocking native call can still delay worker shutdown and teardown. one worker owns the VM; rendering does not wait for Lua execution. initial and required source files must be regular files; direct trusted loaders are unrestricted. these limits protect lifecycle and message handling, but in-process Lua allocation is not a hard memory sandbox. install only local code you trust.
 
 ## command overrides
 

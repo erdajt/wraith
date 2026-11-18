@@ -31,6 +31,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	ok := false
 	defer func() {
 		if !ok {
+			e.teardown(0)
 			L.Close()
 		}
 	}()
