@@ -85,11 +85,15 @@ func (a *App) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, a.finishCompact(m)
 	case editedMsg:
 		cmd := a.finishEdit(m)
-		pending := a.editorKeys
-		a.editorKeys = nil
+		pending := a.editorDeferred
+		a.editorDeferred = nil
 		cmds := []tea.Cmd{cmd}
-		for _, keys := range pending {
-			cmds = append(cmds, func() tea.Msg { return keys })
+		for _, message := range pending {
+			if effect, ok := message.(pluginResultMsg); ok {
+				effect.Draft, effect.Digest, effect.Target = a.Prompt.String(), configDigest(a.Config), a.pluginTarget()
+				message = effect
+			}
+			cmds = append(cmds, func() tea.Msg { return message })
 		}
 		return a, tea.Sequence(cmds...)
 	case providerModelsMsg:

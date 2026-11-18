@@ -9,8 +9,11 @@ import (
 
 // jumpSelected moves the viewport and cursor to the selected message's first row.
 func (a *App) jumpSelected() {
-	for i, line := range a.transcript(a.chatWidth()) {
-		if line.Message == a.selected {
+	selected := a.selected
+	lines := a.transcript(a.chatWidth())
+	a.selected = selected
+	for i, line := range lines {
+		if line.Message == selected {
 			a.offset = i
 			a.chatCursor = i
 			a.chatColumn = 0

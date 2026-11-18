@@ -87,13 +87,14 @@ type terminalMsg struct {
 }
 
 type App struct {
+	configEditBase   *config.Config
 	pluginLoadCancel context.CancelFunc
 	plugins          *plugin.Runtime
 	pluginManifest   plugin.Manifest
 	pluginSerial     uint64
 	pluginDepth      int
 
-	editorKeys      []queuedKeysMsg
+	editorDeferred  []tea.Msg
 	keyPending      []tea.KeyMsg
 	keyPendingScope string
 	keySerial       uint64

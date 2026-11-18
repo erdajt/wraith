@@ -86,6 +86,9 @@ func (a *App) builtinActions() map[string]action {
 			return nil
 		}}
 	}
+	for alias, target := range map[string]string{"command.q": "app.quit", "command.qa": "app.quit", "command.h": "command.help", "command.w": "prompt.send"} {
+		actions[alias] = actions[target]
+	}
 	return actions
 }
 

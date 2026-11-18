@@ -16,7 +16,6 @@ func PluginActions() []string {
 	for name := range catalog {
 		names = append(names, name)
 	}
-	names = append(names, "command.q", "command.qa", "command.h", "command.w")
 	slices.Sort(names)
 	return names
 }

@@ -47,9 +47,18 @@ func (e *engine) installConfig(api *lua.LTable) {
 			}
 			e.setConfig(L, "", mergeValue(configValue(e.manifest.Config), object))
 			if e.setup {
-				for key := range object {
-					e.manifest.Overridden = append(e.manifest.Overridden, key)
+				var mark func(map[string]any, string)
+				mark = func(fields map[string]any, prefix string) {
+					for key, value := range fields {
+						path := prefix + key
+						if child, ok := value.(map[string]any); ok && len(child) > 0 {
+							mark(child, path+".")
+						} else {
+							e.manifest.Overridden = append(e.manifest.Overridden, path)
+						}
+					}
 				}
+				mark(object, "")
 			}
 			return 0
 		},

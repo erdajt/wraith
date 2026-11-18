@@ -17,6 +17,7 @@ type pluginResultMsg struct {
 	Runtime      *plugin.Runtime
 	Owner, Draft string
 	Digest       [32]byte
+	Target       [32]byte
 	Depth        int
 	Result       plugin.Result
 }
@@ -63,7 +64,7 @@ func (a *App) callPlugin(callback, event, argument string) tea.Cmd {
 	}
 	slices.Reverse(messages)
 	snapshot := map[string]any{"argument": argument, "event": event, "prompt": a.Prompt.String(), "windows": windows, "session": map[string]any{"id": a.Session.ID, "model": a.Session.Model, "provider": a.Config.Provider, "directory": a.Directory, "messages": messages, "message_count": len(a.Session.Messages)}}
-	m := pluginResultMsg{Runtime: a.plugins, Owner: a.keyOwner(), Draft: a.Prompt.String(), Digest: configDigest(a.Config), Depth: a.pluginDepth + 1}
+	m := pluginResultMsg{Runtime: a.plugins, Owner: a.keyOwner(), Draft: a.Prompt.String(), Digest: configDigest(a.Config), Target: a.pluginTarget(), Depth: a.pluginDepth + 1}
 	result, err := a.plugins.Submit(callback, event, snapshot, a.Config)
 	if err != nil {
 		a.notice = "lua: " + err.Error()
@@ -86,7 +87,7 @@ func (a *App) applyPluginResult(m pluginResultMsg) tea.Cmd {
 	if m.Runtime != a.plugins || m.Result.Err == nil && len(m.Result.Effects) == 0 {
 		return nil
 	}
-	if m.Owner != a.keyOwner() || m.Draft != a.Prompt.String() || m.Digest != configDigest(a.Config) {
+	if m.Owner != a.keyOwner() || m.Draft != a.Prompt.String() || m.Digest != configDigest(a.Config) || m.Target != a.pluginTarget() {
 		a.notice = "lua callback discarded after workspace changed"
 		return nil
 	}
@@ -120,11 +121,25 @@ func (a *App) applyPluginResult(m pluginResultMsg) tea.Cmd {
 		if cmd != nil {
 			if i+1 < len(m.Result.Effects) {
 				m.Result.Effects = m.Result.Effects[i+1:]
-				m.Owner, m.Draft, m.Digest = a.keyOwner(), a.Prompt.String(), configDigest(a.Config)
+				m.Owner, m.Draft, m.Digest, m.Target = a.keyOwner(), a.Prompt.String(), configDigest(a.Config), a.pluginTarget()
+				if a.editing {
+					a.editorDeferred = append(a.editorDeferred, m)
+					return cmd
+				}
 				return tea.Sequence(cmd, func() tea.Msg { return m })
 			}
 			return cmd
 		}
 	}
 	return nil
+}
+
+// pluginTarget binds deferred operations to the selected message and navigation state.
+func (a *App) pluginTarget() [32]byte {
+	var message any
+	if a.selected >= 0 && a.selected < len(a.Session.Messages) {
+		message = a.Session.Messages[a.selected]
+	}
+	data, _ := json.Marshal([]any{a.selected, a.chatCursor, a.chatColumn, a.visualMode, a.inputMode(), message})
+	return sha256.Sum256(data)
 }

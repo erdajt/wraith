@@ -47,6 +47,7 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 				return nil
 			}
 		}
+		a.configEditBase = &candidate
 		b, _ := config.Encode(candidate, "config.yaml")
 		text = string(b) + "\n"
 		ext = ".yaml"
@@ -175,7 +176,15 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 			a.notice = "config unchanged: " + e.Error()
 			return nil
 		}
-		registry, e := a.buildKeymaps(c)
+		effective := c
+		if a.plugins != nil {
+			effective, e = a.mergeYamlEdit(c)
+			if e != nil {
+				a.notice = "config unchanged: " + e.Error()
+				return nil
+			}
+		}
+		registry, e := a.buildKeymaps(effective)
 		if e != nil {
 			a.notice = "config unchanged: " + e.Error()
 			return nil
@@ -185,6 +194,8 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 			return nil
 		}
 		applied = true
+		c = effective
+		a.configEditBase = nil
 		a.Config, a.keymaps, a.keyPending = c, registry, nil
 		a.Client = provider.New(c)
 		a.Session.Model = c.Model

@@ -20,7 +20,7 @@ func (a *App) dispatchKeys(m queuedKeysMsg) tea.Cmd {
 		return nil
 	}
 	if a.editing {
-		a.editorKeys = append(a.editorKeys, m)
+		a.editorDeferred = append(a.editorDeferred, m)
 		return nil
 	}
 

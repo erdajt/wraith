@@ -73,3 +73,31 @@ func mergeSettings(base, before, after map[string]any) {
 		}
 	}
 }
+
+// mergeYamlEdit applies only edited yaml leaves over the effective lua configuration.
+func (a *App) mergeYamlEdit(next config.Config) (config.Config, error) {
+	before, err := config.LoadDirectory(a.Paths.Config)
+	if err != nil {
+		return config.Config{}, err
+	}
+	if a.configEditBase != nil && !reflect.DeepEqual(before, *a.configEditBase) {
+		return config.Config{}, fmt.Errorf("config.yaml changed while the editor was open")
+	}
+	objects := make([]map[string]any, 3)
+	for i, c := range []config.Config{a.Config, before, next} {
+		data, _ := json.Marshal(c)
+		if err := json.Unmarshal(data, &objects[i]); err != nil {
+			return config.Config{}, err
+		}
+	}
+	mergeSettings(objects[0], objects[1], objects[2])
+	data, err := json.Marshal(objects[0])
+	if err != nil {
+		return config.Config{}, err
+	}
+	var effective config.Config
+	if err := json.Unmarshal(data, &effective); err != nil {
+		return config.Config{}, err
+	}
+	return effective, effective.Validate()
+}

@@ -52,7 +52,7 @@ func (a *App) settingsCategory(category string) {
 		}
 		detail := string(b)
 		for _, overridden := range a.pluginManifest.Overridden {
-			if key == overridden || strings.HasPrefix(key, overridden+".") {
+			if key == overridden || strings.HasPrefix(key, overridden+".") || strings.HasPrefix(overridden, key+".") {
 				detail += " · init.lua on reload"
 				break
 			}
