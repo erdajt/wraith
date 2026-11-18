@@ -17,7 +17,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.update(msg)
 	}
 	session, window, places := a.Session.ID, a.windowID, a.windowPlaces()
-	responding := a.busy && !a.compacting
+	stream, streaming := msg.(streamMsg)
+	finished := streaming && stream.Final && stream.Retry == 0 && stream.Serial == a.streamSerial && a.busy && !a.compacting && !a.executing
 	model, cmd := a.update(msg)
 	select {
 	case <-a.done:
@@ -31,7 +32,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if window != a.windowID || !reflect.DeepEqual(places, a.windowPlaces()) {
 		cmds = append(cmds, a.callPlugin("", "window_changed", ""))
 	}
-	if responding && !a.busy {
+	if finished {
 		cmds = append(cmds, a.callPlugin("", "response_finished", ""))
 	}
 	return model, tea.Batch(cmds...)
