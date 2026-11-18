@@ -94,6 +94,8 @@ type App struct {
 	pluginSerial     uint64
 	pluginDepth      int
 
+	editorFile        *editor.File
+	editorSucceeded   bool
 	editorDeferred    []tea.Msg
 	keyPending        []tea.KeyMsg
 	keyPendingDefault bool

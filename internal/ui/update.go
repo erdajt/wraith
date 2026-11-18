@@ -84,13 +84,29 @@ func (a *App) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case compactMsg:
 		return a, a.finishCompact(m)
 	case editedMsg:
-		cmd := a.finishEdit(m)
+		if !a.editing || a.editorFile != m.File {
+			return a, nil
+		}
+		a.editorFile = nil
 		pending := a.editorDeferred
 		a.editorDeferred = nil
+		for _, message := range pending {
+			if effect, ok := message.(pluginResultMsg); ok {
+				if !a.pluginOwns(effect) {
+					a.editing = false
+					a.notice = "editor result discarded after workspace changed · edit retained at " + m.File.Path
+					return a, nil
+				}
+			}
+		}
+		cmd := a.finishEdit(m)
 		cmds := []tea.Cmd{cmd}
 		for _, message := range pending {
 			if effect, ok := message.(pluginResultMsg); ok {
-				effect.Draft, effect.Digest, effect.Target = a.Prompt.String(), configDigest(a.Config), a.pluginTarget()
+				if !a.editorSucceeded {
+					continue
+				}
+				effect.Owner, effect.Draft, effect.Digest, effect.Target = a.keyOwner(), a.Prompt.String(), configDigest(a.Config), a.pluginTarget()
 				message = effect
 			}
 			cmds = append(cmds, func() tea.Msg { return message })

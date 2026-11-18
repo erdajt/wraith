@@ -80,10 +80,7 @@ func TestLuaEffectsWaitForExternalEditorCompletion(t *testing.T) {
 	if cmd == nil || !a.editing || len(a.editorDeferred) != 1 || a.Prompt.String() != "before editor" {
 		t.Fatal("editor continuation was not held")
 	}
-	f, err := editor.Prepare(filepath.Join(a.Paths.Cache, "edits"), ".md", "before editor")
-	if err != nil {
-		t.Fatal(err)
-	}
+	f := a.editorFile
 	if err := os.WriteFile(f.Path, []byte("saved edit"), 0600); err != nil {
 		t.Fatal(err)
 	}

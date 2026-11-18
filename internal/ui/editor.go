@@ -119,6 +119,7 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 		a.notice = err.Error()
 		return nil
 	}
+	a.editorFile = f
 	a.editing = true
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return editedMsg{Kind: kind, Language: language, File: f, Index: index, Err: err, Staged: staged}
@@ -146,7 +147,9 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 	a.editing = false
 	text, saved, err := m.File.Result(m.Err)
 	applied := false
+	a.editorSucceeded = false
 	defer func() {
+		a.editorSucceeded = applied
 		if applied || (!saved && err == nil) {
 			m.File.Remove()
 		} else {

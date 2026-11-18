@@ -35,6 +35,7 @@ func TestNestedCallbacksCompleteBeforeCallerEffects(t *testing.T) {
 		name, source, want, notice string
 	}{
 		{"draft", `wraith.commands.create("inner", function() wraith.prompt.set("inner") end)`, "after", "complete"},
+		{"async", `wraith.commands.create("inner", function() wraith.config.set("appearance.mouse", false); wraith.prompt.set("inner") end)`, "after", "complete"},
 		{"empty", `wraith.commands.create("inner", function() end)`, "after", "complete"},
 		{"nested", `
 			wraith.commands.create("leaf", function() wraith.prompt.set("leaf") end)

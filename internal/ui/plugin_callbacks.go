@@ -88,7 +88,7 @@ func (a *App) applyPluginResult(m pluginResultMsg) tea.Cmd {
 	if m.Runtime != a.plugins || m.Parent == nil && m.Result.Err == nil && len(m.Result.Effects) == 0 {
 		return nil
 	}
-	if m.Owner != a.keyOwner() || m.Draft != a.Prompt.String() || m.Digest != configDigest(a.Config) || m.Target != a.pluginTarget() {
+	if !a.pluginOwns(m) {
 		a.notice = "lua callback discarded after workspace changed"
 		return nil
 	}
@@ -118,6 +118,9 @@ func (a *App) applyPluginResult(m pluginResultMsg) tea.Cmd {
 			}
 		default:
 			cmd = a.runAction(effect.Name, effect.Argument)
+		}
+		if effect.Name == "editor.open" && !a.editing {
+			return nil
 		}
 		callback := slices.Contains(a.pluginManifest.Callbacks, effect.Name)
 		for _, command := range a.pluginManifest.Commands {
@@ -156,6 +159,11 @@ func (a *App) applyPluginResult(m pluginResultMsg) tea.Cmd {
 		return func() tea.Msg { return next }
 	}
 	return nil
+}
+
+// pluginOwns checks whether a callback still refers to the current workspace state.
+func (a *App) pluginOwns(m pluginResultMsg) bool {
+	return m.Runtime == a.plugins && m.Owner == a.keyOwner() && m.Draft == a.Prompt.String() && m.Digest == configDigest(a.Config) && m.Target == a.pluginTarget()
 }
 
 // pluginTarget binds deferred operations to the selected message and navigation state.
