@@ -14,6 +14,19 @@ type windowPlace struct {
 	windowRect
 }
 
+// swap exchanges leaf positions without changing their editor state.
+func (n *windowNode) swap(first, second uint64) {
+	if n.id == first {
+		n.id = second
+	} else if n.id == second {
+		n.id = first
+	}
+	if n.first != nil {
+		n.first.swap(first, second)
+		n.second.swap(first, second)
+	}
+}
+
 // contains reports whether a leaf belongs to this subtree.
 func (n *windowNode) contains(id uint64) bool {
 	return n != nil && (n.id == id || n.first.contains(id) || n.second.contains(id))

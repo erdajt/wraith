@@ -3,6 +3,7 @@ package ui
 import "github.com/charmbracelet/x/ansi"
 
 type conversationView struct {
+	surface                            *surfaceView
 	chatCursor, chatColumn             int
 	offset, selected                   int
 	follow                             bool
