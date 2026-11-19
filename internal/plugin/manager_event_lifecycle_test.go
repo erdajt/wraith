@@ -13,7 +13,7 @@ func TestManagerQueuedEventsStayWithinTheirActivationCohort(t *testing.T) {
   wraith.events.on("test.load",function(ctx) wraith.notify("unrelated:"..ctx.data.value) end)
  end} end
  local manager=require("wraith.manager")
- manager.setup({{name="app",dir="/tmp/app",event="test.load"},{name="unrelated",dir="/tmp/unrelated",lazy=true}})
+ manager.setup({{name="app",dir="/tmp/app",opts={},event="test.load"},{name="unrelated",dir="/tmp/unrelated",opts={},lazy=true}})
  wraith.commands.create("intervene",function(ctx)
   if ctx.argument=="retired" then manager.unload("app"); manager.load("app") else manager.load(ctx.argument) end
  end,"intervene",{arguments=true})
@@ -91,8 +91,8 @@ func TestManagerEagerChainPublishesBeforeTargetedReadyDelivery(t *testing.T) {
   end} end
  end
  require("wraith.manager").setup({
-  {name="lazy",dir="/tmp/lazy",lazy=true,priority=100,dependencies={{name="second",dir="/tmp/second",lazy=false,priority=0}}},
-  {name="first",dir="/tmp/first"},
+  {name="lazy",dir="/tmp/lazy",lazy=true,priority=100,dependencies={{name="second",dir="/tmp/second",opts={},lazy=false,priority=0}}},
+  {name="first",dir="/tmp/first",opts={}},
  })
  `)
 	pending, err := r.Submit("", "ready", nil, r.Manifest().Config)

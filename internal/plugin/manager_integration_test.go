@@ -120,7 +120,7 @@ func TestManagerPublicInstallAndUpdateKeepRunningCodeUntilFreshRuntime(t *testin
 	directory := t.TempDir()
 	root, lockfile := filepath.Join(directory, "packages"), filepath.Join(directory, "wraith-lock.json")
 	setup := fmt.Sprintf(`local manager=require("wraith.manager")
- manager.setup({{name="app",url=%q,main="plugin",cmd="version"}}, {storage={root=%q,lockfile=%q}})
+ manager.setup({{name="app",url=%q,main="plugin",opts={},cmd="version"}}, {storage={root=%q,lockfile=%q}})
  wraith.commands.create("operation",function(ctx)
   manager[ctx.argument]({"app"})
   local timer

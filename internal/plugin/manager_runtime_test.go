@@ -12,7 +12,7 @@ func TestManagerSetupCanRetryAfterHostRejectsPublication(t *testing.T) {
 	r := openManagerRuntime(t, managerLocalStore+`
  package.preload.app=function() return {setup=function() wraith.commands.create("app",function() wraith.notify("loaded") end) end} end
  wraith.commands.create("configure",function()
-  require("wraith.manager").setup({{name="app",dir="/tmp/app",cmd="app"}})
+  require("wraith.manager").setup({{name="app",dir="/tmp/app",opts={},cmd="app"}})
  end)
  `)
 	configure := r.Manifest().Commands[0].Callback
@@ -100,7 +100,7 @@ func TestManagerLazyEventsReplayOnlyNewListenersAfterPublication(t *testing.T) {
  package.preload.app=function() return {setup=function()
   wraith.events.on("test.load",function(ctx) wraith.notify("new:"..ctx.data.value) end)
  end} end
- require("wraith.manager").setup({{name="app",dir="/tmp/app",event="test.load"}})
+ require("wraith.manager").setup({{name="app",dir="/tmp/app",opts={},event="test.load"}})
  `)
 	pending, err := r.Submit("", "test.load", map[string]any{"data": map[string]any{"value": "original"}}, r.Manifest().Config)
 	if err != nil {

@@ -82,7 +82,7 @@ func TestManagerReloadKeepsOldAndNewCleanupClosuresSeparate(t *testing.T) {
  end,teardown=function() trace[#trace+1]="teardown" end} end
  package.preload.manager_test=function() return {setup=function() end,
   configure=function()
-   local graph=require("wraith.manager.spec").normalize({{name="app",dir="/tmp/app",lazy=true,init=function()
+   local graph=require("wraith.manager.spec").normalize({{name="app",dir="/tmp/app",opts={},lazy=true,init=function()
     return function() trace[#trace+1]="init" end
    end}})
    loader=require("wraith.manager.loader").new(graph,{app="/tmp/app"},"manager_test"); loader.initialize(); loader.load("app")
@@ -125,7 +125,7 @@ func TestManagerFailedAndRejectedSetupCleanEachActivationOnce(t *testing.T) {
  end,teardown=function() teardown=teardown+1 end} end
  package.preload.manager_test=function() return {setup=function() end,
   configure=function()
-   local graph=require("wraith.manager.spec").normalize({{name="app",dir="/tmp/app",lazy=true}})
+   local graph=require("wraith.manager.spec").normalize({{name="app",dir="/tmp/app",opts={},lazy=true}})
    loader=require("wraith.manager.loader").new(graph,{app="/tmp/app"},"manager_test"); loader.initialize()
   end,load=function() loader.load("app") end,remove=function() loader.unload_all() end,
   failed=function() assert(cleanup==0 and teardown==1) end,
