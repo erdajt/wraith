@@ -22,6 +22,10 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 		}
 	}
 
+	if effort, ok := request.Think.(string); ok && c.Variables.Contains(effort) {
+		return nil, request, errors.New("private variable collides with provider thinking metadata")
+	}
+
 	for name, value := range c.Profile.Headers {
 		if c.Variables.Contains(name) || c.Variables.Contains(value) {
 			return nil, request, errors.New("private variable collides with a provider header")

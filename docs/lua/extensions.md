@@ -34,6 +34,8 @@ return `nil` to leave the request unchanged. return `{ request = replacement }` 
 
 protected command evidence appears as an opaque `reference` with empty `content`. a hook may omit evidence; when keeping it, retain its original role and reference. references cannot be invented, duplicated or given replacement content. the host restores the original evidence and reapplies output-sharing rules, private-variable redaction, execution instructions and context limits after transformation. hooks cannot change the execution mode or the tool catalog through this DTO.
 
+`think` strings name provider/model thinking levels. private-value collisions in thinking metadata fail before transport; the host does not replace them with variable tokens. boolean and omitted values retain their types.
+
 ## command hooks
 
 ```lua

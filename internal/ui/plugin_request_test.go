@@ -4,7 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/provider"
+	"github.com/erdajt/wraith/internal/variables"
 )
 
 func TestRequestHooksCaptureIdentityAndFollowProviderRebuilds(t *testing.T) {
@@ -67,5 +69,20 @@ end)`)
 	result, err := a.Client.Transform(t.Context(), "chat", data)
 	if err != nil || result.Messages[0].Content != "transformed" {
 		t.Fatalf("published hook unavailable: %+v, %v", result, err)
+	}
+}
+
+func TestRequestHookCannotSendPrivateThinkingMetadata(t *testing.T) {
+	a := pluginFixture(t, `
+wraith.hooks.add("before_request", function(ctx)
+  ctx.request.think = "private.example"
+  return {request=ctx.request}
+end)`)
+	client := a.providerClient(a.Config)
+	client.Variables = variables.NewSnapshot([]variables.Entry{{Name: "TARGET", Value: "private.example"}}, nil)
+	client.Profile.Kind = "plugin"
+	_, err := client.Chat(t.Context(), ollama.Request{Model: "local"}, nil)
+	if err == nil || !strings.Contains(err.Error(), "thinking metadata") || strings.Contains(err.Error(), "private.example") {
+		t.Fatalf("lua hook bypassed thinking privacy: %v", err)
 	}
 }

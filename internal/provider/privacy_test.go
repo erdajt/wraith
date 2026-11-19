@@ -1,6 +1,8 @@
 package provider
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -284,5 +286,64 @@ func TestExecutionModeSwitchRebuildsOneSelfContainedPolicy(t *testing.T) {
 		if s.Messages[0].Content != "inspect private.example" {
 			t.Fatal("preparation mutated the conversation")
 		}
+	}
+}
+
+func TestThinkingPrivacyRejectsBeforeEveryTransport(t *testing.T) {
+	for _, kind := range []string{"ollama", "openai", "anthropic", "codex-cli", "claude-cli", "plugin"} {
+		for _, hooked := range []bool{false, true} {
+			for _, effort := range []string{"private.example", "prefix-private.example-suffix"} {
+				t.Run(fmt.Sprintf("%s/hooked=%t/%s", kind, hooked, effort), func(t *testing.T) {
+					client := New(config.Default())
+					client.Profile = config.Provider{Kind: kind, Command: []string{"must-not-launch"}}
+					client.Variables = variables.NewSnapshot([]variables.Entry{{Name: "TARGET", Value: "private.example"}}, nil)
+					client.HTTP.Transport = transport(func(*http.Request) (*http.Response, error) {
+						t.Fatal("private thinking reached http transport")
+						return nil, nil
+					})
+					client.Adapter = adapterFixture{chat: func(context.Context, ollama.Request, func(ollama.Response)) (ollama.Response, error) {
+						t.Fatal("private thinking reached plugin adapter")
+						return ollama.Response{}, nil
+					}}
+					request := ollama.Request{Model: "local", Think: effort}
+					if hooked {
+						request.Think = "high"
+						client.Transform = func(_ context.Context, _ string, data PromptData) (PromptData, error) {
+							data.Think = effort
+							return data, nil
+						}
+					}
+
+					for _, purpose := range []string{"", "extract", "audit"} {
+						request.CompactionTask = purpose
+						_, err := client.ChatWithRepair(t.Context(), request, nil)
+						if err == nil || !strings.Contains(err.Error(), "thinking metadata") || strings.Contains(err.Error(), "private.example") {
+							t.Fatalf("private thinking was not rejected safely: %v", err)
+						}
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestThinkingPrivacyPreservesPublicValues(t *testing.T) {
+	for _, effort := range []any{nil, false, true, "", "high", "custom-effort"} {
+		t.Run(fmt.Sprintf("%T/%v", effort, effort), func(t *testing.T) {
+			client := New(config.Default())
+			client.Profile.Kind = "plugin"
+			client.Variables = variables.NewSnapshot([]variables.Entry{{Name: "TARGET", Value: "private.example"}}, nil)
+			calls := 0
+			client.Adapter = adapterFixture{chat: func(_ context.Context, request ollama.Request, _ func(ollama.Response)) (ollama.Response, error) {
+				calls++
+				if request.Think != effort {
+					t.Fatalf("thinking changed: got %#v, want %#v", request.Think, effort)
+				}
+				return ollama.Response{Done: true}, nil
+			}}
+			if _, err := client.Chat(t.Context(), ollama.Request{Model: "local", Think: effort}, nil); err != nil || calls != 1 {
+				t.Fatalf("public thinking rejected: calls=%d error=%v", calls, err)
+			}
+		})
 	}
 }
