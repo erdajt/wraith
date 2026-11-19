@@ -84,3 +84,67 @@ end})`)
 		t.Fatal("finished invocation retained child resource")
 	}
 }
+
+func TestOwnerUnloadCancelsInvocationsOnlyAfterAcceptance(t *testing.T) {
+	r := openTestRuntime(t, `
+package.preload.extension=function() return {setup=function()
+ wraith.providers.register("custom",{models=function() end,show=function() end,chat=function() end})
+end} end
+wraith.plugins.load("extension")
+wraith.commands.create("unload",function() wraith.plugins.unload("extension") end)
+`)
+	call, _ := beginTestInvocation(t, r, `null`)
+	for _, accept := range []bool{false, true} {
+		manifest := r.Manifest()
+		pending, err := r.Submit(manifest.Commands[0].Callback, "", nil, manifest.Config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		result := receiveResult(t, pending)
+		if result.Err != nil || result.Manifest == nil || !r.InvocationValid(call.ID) {
+			t.Fatalf("candidate unload canceled accepted work: %+v", result)
+		}
+		if err := r.Acknowledge(result.Revision, accept); err != nil {
+			t.Fatal(err)
+		}
+		if r.InvocationValid(call.ID) == accept {
+			t.Fatalf("unload decision %v did not control call lifetime", accept)
+		}
+	}
+	terminal, err := call.Next(t.Context())
+	if err != nil || !terminal.Final || terminal.Error == "" {
+		t.Fatalf("unload lost terminal failure: %+v, %v", terminal, err)
+	}
+}
+
+func TestNestedInvocationEventsAreNotCoalesced(t *testing.T) {
+	r := openTestRuntime(t, `
+wraith.providers.register("custom",{models=function() end,show=function() end,chat=function() end})
+wraith.commands.create("hold",function() wraith.commands.create("registered",function() end) end)
+wraith.events.on("window_changed",function(ctx) wraith.invocation.emit(ctx.invocation.id,ctx.value) end)
+`)
+	call, _ := beginTestInvocation(t, r, `null`)
+	manifest := r.Manifest()
+	pending, err := r.Submit(manifest.Commands[0].Callback, "", nil, manifest.Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	held := receiveResult(t, pending)
+	var replies []<-chan Result
+	for _, value := range []string{"first", "second"} {
+		reply, err := r.SubmitWithinInvocation(call.ID, "", "window_changed", map[string]any{"value": value}, manifest.Config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		replies = append(replies, reply)
+	}
+	if held.Manifest == nil || r.Acknowledge(held.Revision, true) != nil {
+		t.Fatal("registration barrier failed")
+	}
+	for i, reply := range replies {
+		result := receiveResult(t, reply)
+		if result.Err != nil || len(result.Effects) != 1 || result.Invocation != call.ID {
+			t.Fatalf("nested event %d was coalesced or lost: %+v", i, result)
+		}
+	}
+}
