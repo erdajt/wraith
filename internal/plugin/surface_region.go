@@ -36,10 +36,10 @@ func (s *SurfaceStore) applyRegion(m SurfaceMutation) (SurfaceDelta, error) {
 	} else {
 		region.ID, region.Owner, region.Revision, region.Order = current.ID, current.Owner, current.Revision, current.Order
 	}
-	if !slices.Contains([]string{"header", "footer", "sidebar", "body"}, region.Slot) {
-		return delta, errors.New("region slot must be header, footer, sidebar or body")
+	if !slices.Contains([]string{"header", "footer", "sidebar", "body", "welcome", "prompt"}, region.Slot) {
+		return delta, errors.New("region slot must be header, footer, sidebar, body, welcome or prompt")
 	}
-	if len(region.Lines) > 200 || (region.Slot == "header" || region.Slot == "footer") && len(region.Lines) > 1 {
+	if region.Slot == "prompt" && len(region.Lines) > 4 || len(region.Lines) > 200 || (region.Slot == "header" || region.Slot == "footer") && len(region.Lines) > 1 {
 		return delta, errors.New("region exceeds its slot line limit")
 	}
 	if _, err := validateSurfaceLines(region.Lines, 256<<10); err != nil {
@@ -53,8 +53,8 @@ func (s *SurfaceStore) applyRegion(m SurfaceMutation) (SurfaceDelta, error) {
 			return delta, errors.New("region dimensions must be between zero and 10000")
 		}
 	}
-	if region.Slot == "sidebar" && region.Width == 0 {
-		return delta, errors.New("sidebar region requires a positive width")
+	if region.Slot == "sidebar" && (region.Width == 0 || region.Width > 120) {
+		return delta, errors.New("sidebar region width must be between 1 and 120")
 	}
 	if region.Slot == "body" && (region.Width == 0 || region.Height == 0) {
 		return delta, errors.New("body region requires positive width and height")
