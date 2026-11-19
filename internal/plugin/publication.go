@@ -37,6 +37,7 @@ func cloneManifest(m Manifest) Manifest {
 	data, _ := json.Marshal(m)
 	var copy Manifest
 	_ = json.Unmarshal(data, &copy)
+	copy.ToolCatalog = m.ToolCatalog
 	return copy
 }
 

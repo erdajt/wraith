@@ -21,13 +21,14 @@ type ToolDefinition struct {
 }
 
 type extensionState struct {
+	catalogDirty   bool
 	providerLayers map[string][]ProviderDefinition
 	toolLayers     map[string][]ToolDefinition
 }
 
 // cloneExtensions preserves covered definitions while a callback awaits host publication.
 func (e *engine) cloneExtensions() extensionState {
-	result := extensionState{providerLayers: maps.Clone(e.providerLayers), toolLayers: maps.Clone(e.toolLayers)}
+	result := extensionState{catalogDirty: e.catalogDirty, providerLayers: maps.Clone(e.providerLayers), toolLayers: maps.Clone(e.toolLayers)}
 	for name, layers := range result.providerLayers {
 		result.providerLayers[name] = slices.Clone(layers)
 	}
@@ -39,6 +40,7 @@ func (e *engine) cloneExtensions() extensionState {
 
 // refreshExtensions publishes visible definitions and restores covered owners after removal.
 func (e *engine) refreshExtensions() {
+	e.catalogDirty = true
 	e.manifest.Providers = nil
 	e.manifest.Tools = nil
 	for _, name := range slices.Sorted(maps.Keys(e.providerLayers)) {

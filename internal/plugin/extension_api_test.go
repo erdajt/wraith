@@ -1,8 +1,9 @@
 package plugin
 
 import (
-	"github.com/erdajt/wraith/internal/modeltool"
 	"testing"
+
+	"github.com/erdajt/wraith/internal/modeltool"
 )
 
 func TestProviderReplacementRestoresCoveredOwnerOnUnload(t *testing.T) {
@@ -88,5 +89,43 @@ wraith.tools.register("containers",{
 	}
 	if err := schema.Validate([]byte(`{"empty_array":{},"empty_object":[],"nullable":false}`)); err == nil {
 		t.Fatal("schema lost explicit container types")
+	}
+}
+
+func TestToolCatalogChangesOnlyWithAcceptedDefinitions(t *testing.T) {
+	r := openTestRuntime(t, `
+wraith.tools.register("metadata",{parameters={type="object"},run=function() end})
+wraith.commands.create("replace",function()
+ wraith.tools.register("metadata",{replace=true,parameters={type="object",required={"path"}},run=function() end})
+end)
+`)
+	original := r.Manifest()
+	if original.ToolCatalog == nil || original.ToolCatalog.Validate("metadata", []byte(`{}`)) != nil {
+		t.Fatal("startup registry did not compile its tool catalog")
+	}
+	if original.ToolCatalog != r.Manifest().ToolCatalog {
+		t.Fatal("manifest reads recompiled immutable schemas")
+	}
+	for _, accept := range []bool{false, true} {
+		pending, err := r.Submit(original.Commands[0].Callback, "", nil, original.Config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		candidate := receiveResult(t, pending)
+		if candidate.Err != nil || candidate.Manifest == nil || candidate.Manifest.ToolCatalog.Validate("metadata", []byte(`{}`)) == nil {
+			t.Fatalf("candidate schema was not compiled: %+v", candidate)
+		}
+		if r.Manifest().ToolCatalog != original.ToolCatalog {
+			t.Fatal("unaccepted catalog became visible")
+		}
+		if err := r.Acknowledge(candidate.Revision, accept); err != nil {
+			t.Fatal(err)
+		}
+		if (r.Manifest().ToolCatalog == original.ToolCatalog) == accept {
+			t.Fatal("catalog ignored publication decision")
+		}
+	}
+	if err := original.ToolCatalog.Validate("metadata", []byte(`{}`)); err != nil {
+		t.Fatal("replacement mutated the previously frozen catalog")
 	}
 }

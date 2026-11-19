@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/erdajt/wraith/internal/config"
+	"github.com/erdajt/wraith/internal/modeltool"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -21,6 +22,7 @@ type Command struct {
 var ErrQueueFull = errors.New("plugin callback queue is full")
 
 type Manifest struct {
+	ToolCatalog *modeltool.Catalog `json:"-"`
 	Providers   []ProviderDefinition
 	Tools       []ToolDefinition
 	Hooks       []HookDefinition

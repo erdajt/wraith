@@ -85,3 +85,11 @@ func ValidateArguments(arguments json.RawMessage) error {
 	}
 	return nil
 }
+
+// Schema returns the immutable validator bound to an advertised tool name.
+func (c *Catalog) Schema(name string) (*Schema, error) {
+	if c == nil || c.schemas[name] == nil {
+		return nil, errors.New("unknown extension tool; use an advertised function")
+	}
+	return c.schemas[name], nil
+}
