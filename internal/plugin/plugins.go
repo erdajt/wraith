@@ -23,6 +23,32 @@ func (e *engine) installPlugins(api *lua.LTable) {
 			L.Push(names)
 			return 1
 		},
+		"unload_many": func(L *lua.LState) int {
+			if e.closing {
+				L.RaiseError("plugin unload is disabled during teardown")
+			}
+			list := L.CheckTable(1)
+			if list.Len() > 128 {
+				L.RaiseError("plugins.unload_many accepts at most 128 names")
+			}
+			names, count := make([]string, list.Len()), 0
+			list.ForEach(func(key, value lua.LValue) {
+				index, numeric := key.(lua.LNumber)
+				name, text := value.(lua.LString)
+				if !numeric || index < 1 || index > lua.LNumber(len(names)) || index != lua.LNumber(int(index)) || !text {
+					L.RaiseError("plugins.unload_many requires a consecutive string array")
+				}
+				names[int(index)-1] = string(name)
+				count++
+			})
+			if count != len(names) {
+				L.RaiseError("plugins.unload_many requires a consecutive string array")
+			}
+			if err := e.unloadPlugins(names); err != nil {
+				L.RaiseError("plugins.unload_many: %v", err)
+			}
+			return 0
+		},
 		"unload": func(L *lua.LState) int {
 			e.registration(L)
 			if err := e.unloadPlugin(L.CheckString(1)); err != nil {
