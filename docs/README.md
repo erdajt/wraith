@@ -11,6 +11,13 @@
 | [sessions](sessions.md) | directory ownership, resume, forks, export and backups |
 | [providers](providers.md) | ollama, compatible apis, anthropic, deepseek and cli backends |
 | [plugins](plugins.md) | lua setup, API reference, commands, events, reload and runtime limits |
+| [lua packages](lua/packages.md) | modular specs, lazy loading, installation, pins, lockfiles and recovery |
+| [lua interfaces](lua/surfaces.md) | editable buffers, windows, regions, dialogs and local mappings |
+| [lua services](lua/services.md) | managed processes, http, filesystem, timers and json |
+| [lua workspace](lua/workspace.md) | bounded session, conversation, history and output queries |
+| [lua model extensions](lua/extensions.md) | request policies, custom providers and approved tools |
+| [lua examples](lua/examples.md) | executable plugins and configuration patterns |
+| [lua editor setup](lua/editor.md) | LuaLS completion, signatures and diagnostics |
 | [configuration](configuration.md) | settings categories, validation, defaults and storage |
 | [full default config](config.example.yaml) | every serialized setting, provider field and default binding |
 | [themes](themes.md) | built-in themes, custom palettes, hint colors and backgrounds |
@@ -31,7 +38,8 @@ start with [getting started](getting-started.md). use `/help` inside wraith for 
 | a value the model should refer to by name | `/env` |
 | a model's context capacity | `/set context NUMBER` |
 | an app default or binding | `/settings`, `config.yaml` or `init.lua` |
-| a custom command or lifecycle callback | a local Lua plugin |
+| a custom command or lifecycle callback | a [local lua plugin](plugins.md) |
+| installed extensions and their exact revisions | [package specs and lockfile](lua/packages.md) |
 | a command's output | `/history`; sharing is a separate choice |
 | the complete pre-compaction source | `/archives` |
 

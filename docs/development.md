@@ -7,7 +7,7 @@ make check
 make install
 ```
 
-`make check` enforces formatting, runs `go vet` and executes all tests with the race detector. `make build` produces `bin/wraith`; `make install` copies it into `~/.local/bin`. `make clean` removes local build output. module identity is `github.com/erdajt/wraith`; the development branch is `main`.
+`make check` enforces formatting, runs `go vet`, executes application tests with the race detector and shuffled order, then runs the bundled lua runtime's upstream tests. `make test` and `make race` also include that upstream suite. `make build` produces `bin/wraith`; `make install` copies it into `~/.local/bin`. `make clean` removes local build output. module identity is `github.com/erdajt/wraith`; the default branch is `main`.
 
 ## tests
 
@@ -29,9 +29,9 @@ fuzz corpus entries that reproduce bugs belong beside the affected package. test
 
 ## ci and releases
 
-[checks](../.github/workflows/ci.yml) runs on pushes and pull requests. it verifies modules, formatting and vet; runs race/integration tests; fuzzes both parsers; builds linux amd64 and arm64; and uploads coverage. it can also be called by the release workflow.
+[checks](../.github/workflows/ci.yml) runs on pushes and pull requests. it installs checksum-pinned LuaLS 3.19.1, verifies modules, formatting and vet; runs race/integration tests; fuzzes terminal parsing, modal editing and lua json validation; builds linux amd64 and arm64; and uploads coverage. it can also be called by the release workflow.
 
-[release](../.github/workflows/release.yml) handles version tags matching `v*`, then validates a semantic version before packaging. it runs the reusable checks first, builds both linux binaries with the version embedded, bundles the documentation, license and copyright notice, and writes sha256 checksums. it creates a draft github release for review. nothing is published by a local build.
+[release](../.github/workflows/release.yml) handles version tags matching `v*`, then validates a semantic version before packaging. it runs the reusable checks first, builds both linux binaries with the version embedded, bundles the documentation, license, copyright notice and bundled lua runtime notice, and writes sha256 checksums. it creates a draft github release for review. nothing is published by a local build.
 
 actions are pinned to commit hashes, dependency updates are scheduled through dependabot, and only the packaging job has repository write permission. the workflow files require a github remote and a push before github can execute them; local tests do not establish that a hosted run passed.
 
@@ -47,4 +47,25 @@ the execution suites run real short shell jobs for approval, cancellation, timeo
 
 CI runs the complete race suite with shuffled order and coverage on every push to `main` and on pull requests. it also verifies module checksums, formatting and vet, installs neovim for editor integration, fuzzes terminal parsing and modal editing, and builds Linux amd64/arm64 binaries. release tags call the same workflow before packaging. local success does not establish that a hosted run passed; inspect the corresponding Actions run when validating a deployment.
 
-Lua tests execute real scripts, including the documented configuration and plugin. they cover module confinement, FIFO rejection, retained coroutines, cancellation, reload rollback, YAML layering, actual slash completion, callback targeting, editor continuations and action guards. native Go tests remain beside their packages; example configuration lives under `docs/examples/lua`.
+lua tests execute real scripts, including the documented configuration and plugins. they cover module confinement, FIFO rejection, retained coroutines, cancellation, reload rollback, YAML layering, actual slash completion, callback targeting, editor continuations and action guards. native Go tests remain beside their packages; example configuration lives under `docs/examples/lua`.
+
+
+## extension regressions
+
+extension tests use the real lua VM and app publication handshake. rejection cases verify that commands, mappings, resources and owned cleanup retain their previous state. protected-call tests cover live upvalues, escaped closures, nested error handlers, go panics, coroutine failures and VM reuse. the upstream suite is separate from the root module:
+
+```sh
+go test -count=1 -timeout=2m github.com/yuin/gopher-lua
+go test -race ./internal/plugin -run 'TestProtectedCall|TestManager'
+GOMAXPROCS=2 go test ./internal/plugin -run '^$' -fuzz '^FuzzJSONSurrogateValidation$' -fuzztime=30s -parallel=2
+```
+
+package tests create local git repositories and exercise the public manager API. they cover initial install, update, exact restore, dirty checkouts, dependency activation, lazy first-input delivery, lock contention, rejected publication, cancellation, cleanup failure and fresh-runtime activation. they require `git`, `flock`, `sh`, `cmp`, `mv` and `mktemp`; no remote repository is needed. managed-service tests cover actual child processes and local http servers, bounded output, cancellation and handle release.
+
+[editor setup](lua/editor.md) documents the LuaLS library. an unconditional test compares its executable export declarations with the real runtime. a second test uses the actual language server to check valid calls and required errors for invalid calls. CI installs the pinned server; locally set `WRAITH_LUALS` to its executable or install `lua-language-server` on `PATH`. without either, the diagnostic test reports a skip. keep public signatures, option tables, callback payloads and result types aligned with the runtime. test documented modules as executable examples; do not replace behavioral checks with source-text assertions. [package examples](lua/packages.md) and [extension examples](lua/examples.md) use the same public APIs available to user code.
+
+## changes and review
+
+group related statements by purpose. keep lookup, validation and assignment together; separate the next logical operation with a blank line. use function comments where they explain the API or lifecycle contract. keep unit tests beside the package they exercise, with integration fixtures in temporary directories or `testdata` when they need files.
+
+change one behavior per reviewable commit. verify the affected recovery paths before broadening to the full suite. API changes need matching types, examples and reference documentation. runtime changes also need rejection, cancellation and unload cases; package changes need real filesystem and git evidence. do not claim a cross-built target was executed or a hosted workflow passed from local results.

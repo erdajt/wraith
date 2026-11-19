@@ -8,7 +8,7 @@
 
 a terminal workspace for cybersecurity research, code review and lab work.
 
-[install](docs/getting-started.md) · [docs](docs/README.md) · [configuration](docs/configuration.md) · [screenshots](docs/screenshots.md)
+[install](docs/getting-started.md) · [docs](docs/README.md) · [lua](docs/plugins.md) · [packages](docs/lua/packages.md) · [screenshots](docs/screenshots.md)
 
 </div>
 
@@ -54,7 +54,11 @@ edit prompts with vim motions or your own editor. search and yank conversations.
 | shells | centered and side panes, configurable dimensions, real ptys, persistent shell state and vim scrollback copy mode |
 | providers | ollama, openai-compatible apis, anthropic, deepseek, codex cli and claude cli; configurable profiles and model catalogs |
 | sessions | compressed storage, directory-scoped resume/search, saved draft recovery, interrupted-response retry, archive restore and markdown export |
-| extensibility | trusted Lua configuration, local plugins, custom Ex/slash commands, native vim mappings, input modes, workspace APIs, lifecycle events and validated configuration reload |
+| lua | trusted configuration, modular plugins, command overrides, native vim mappings, lifecycle events, owned cleanup and validated reload |
+| custom interfaces | shared editable buffers, independent tiled/floating windows, local mappings, styled text, presentation regions and searchable dialogs |
+| extension services | managed processes, http, filesystem, timers, json and paged conversation/job/output queries |
+| model extensions | request and command hooks, custom providers, streamed replies and schema-validated tools through native approval |
+| packages | bundled Lua manager, modular specs, dependency ordering, lazy commands/events/keys, frozen plans, pinned revisions and atomic lock publication |
 | appearance | ten themes, custom palettes, inherited backgrounds, themed cursors, an animated hooded mark and reduced motion |
 
 </details>
@@ -177,15 +181,17 @@ keys:
 
 an explicit `bindings` map replaces default leader sequences. direct action keys live under `keys`. quit hints are red, refresh blue, and cancel yellow; custom palettes can override them. [configuration reference](docs/configuration.md) · [complete default yaml](docs/config.example.yaml)
 
-## make it yours with lua
+## build your workspace with lua
 
-`~/.config/wraith/init.lua` loads after YAML. use real Lua functions and local modules to add commands, remap actions, register themes and react to workspace events.
+`~/.config/wraith/init.lua` loads after YAML. split configuration into `require(...)` modules, override commands, remap vim modes, register themes and build interfaces on the same buffers and windows as the app.
 
 ```lua
 wraith.config.setup({ theme = "rose-pine", key_timeout = 500 })
 
-for key, direction in pairs({ h = "left", j = "down", k = "up", l = "right" }) do
-  wraith.keymap.set("chat.normal", "<C-" .. key .. ">", "window." .. direction)
+for _, mode in ipairs({ "prompt.normal", "prompt.insert", "chat.normal", "buffer.normal" }) do
+  for key, direction in pairs({ h = "left", j = "down", k = "up", l = "right" }) do
+    wraith.keymap.set(mode, "<C-" .. key .. ">", "window." .. direction)
+  end
 end
 
 wraith.commands.create("review", function(ctx)
@@ -195,7 +201,37 @@ end, "prepare a review prompt")
 
 `ctrl+w s` splits above/below; `ctrl+w v` splits side by side. each view navigates the same conversation independently. `/review this package` prepares the example prompt. `/keymaps` lists active bindings. `/reload` replaces a valid configuration and keeps the previous runtime when loading fails.
 
-[API reference](docs/plugins.md) · [complete configuration](docs/examples/lua/init.lua) · [tested plugin](docs/examples/lua/plugins/review.lua) · [window controls](docs/keybindings.md#conversation-windows)
+plugins can build a task picker that prepares prompts, a searchable command-history view, a changed-files pane or a policy that reviews native commands. [working examples](docs/lua/examples.md) use the public APIs and run in the test suite.
+
+| build | API guide |
+| --- | --- |
+| custom panes, shared editors and dialogs | [buffers, windows and presentation](docs/lua/surfaces.md) |
+| background work with owned cancellation | [processes, http, files and timers](docs/lua/services.md) |
+| history, output and session browsers | [paged workspace queries](docs/lua/workspace.md) |
+| prompt policies, providers and approved model tools | [model extensions](docs/lua/extensions.md) |
+| typed configuration and completion in your editor | [LuaLS setup](docs/lua/editor.md) |
+
+Lua runs with your account's authority, including `io`, `os` and `debug`. install code you trust. managed services add cancellation, ownership and bounds; they do not sandbox plugins. this is a Wraith API with Lua 5.1-style syntax, not compatibility with Neovim plugins, LuaJIT or native C modules. [trust and limits](docs/plugins.md#runtime-boundaries)
+
+### manage packages in lua
+
+the package manager is shipped Lua using the same public APIs available to your plugins. copy the [review module](docs/examples/lua/plugins/review.lua) to `~/.config/wraith/plugins/review.lua`, then load it on its first command:
+
+```lua
+require("wraith.manager").setup({
+  {
+    name = "review",
+    dir = wraith.paths.stdpath("config"),
+    main = "plugins.review",
+    cmd = { "review.draft", "review.layout" },
+    opts = { subject = "the current package" },
+  },
+})
+```
+
+`/packages` opens the manager. inspect a package, review its install/update/restore plan, confirm it, and follow progress or search the operation log. specs can use local directories or Git sources, imports, dependencies, pins and lazy triggers. startup never fetches packages. updates preserve running code until `/reload`; dirty checkouts are not overwritten.
+
+[package guide and lockfile recovery](docs/lua/packages.md) · [modular package example](docs/examples/lua/packages/init.lua) · [API reference](docs/plugins.md) · [window controls](docs/keybindings.md#conversation-windows)
 
 ## choose your colors
 
@@ -256,7 +292,7 @@ make build
 make check
 ```
 
-checks cover formatting, vet and race tests. suites exercise real ptys, editor handoff, privacy, approval, concurrent jobs, output queries, provider streams, compaction, recovery, search and modal editing. fixtures need no model credentials or gpu.
+checks cover formatting, vet, race tests and the bundled Lua runtime's upstream tests. suites exercise real ptys, editor handoff, privacy, approval, concurrent jobs, output queries, provider streams, compaction, recovery, search and modal editing. extension tests use real Lua, local Git repositories, rejected UI updates, cancellation and reload. fixtures need no model credentials or gpu.
 
 [ci](.github/workflows/ci.yml) runs on pushes to `main` and pull requests, fuzzes parsers and cross-builds linux amd64/arm64. [release checks](.github/workflows/release.yml) precede checksummed draft packages. [architecture](docs/architecture.md) · [development](docs/development.md) · [documentation index](docs/README.md)
 
