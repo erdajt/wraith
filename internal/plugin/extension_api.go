@@ -43,7 +43,14 @@ func (e *engine) installExtensions(api *lua.LTable) {
 						if kind != "tools" {
 							L.RaiseError("provider does not accept parameters")
 						}
-						decodeTypedValue(L, value, &parameters)
+						decoded, err := e.jsonCodec.toGo(value, 0, &jsonBudget{active: map[*lua.LTable]bool{}})
+						if err != nil {
+							L.RaiseError("tool parameters: %v", err)
+						}
+						parameters, err = json.Marshal(decoded)
+						if err != nil {
+							L.RaiseError("tool parameters: %v", err)
+						}
 					case "models", "show", "chat", "run":
 						fn, ok := value.(*lua.LFunction)
 						if !ok || kind == "providers" && key.String() == "run" || kind == "tools" && key.String() != "run" {

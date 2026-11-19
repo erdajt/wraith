@@ -25,6 +25,7 @@ type jsonBudget struct {
 func (e *engine) installJSON(api *lua.LTable) {
 	L := e.L
 	codec := jsonCodec{L: L, null: L.NewUserData(), array: L.NewTable(), object: L.NewTable()}
+	e.jsonCodec = codec
 	codec.array.RawSetString("__metatable", lua.LFalse)
 	codec.object.RawSetString("__metatable", lua.LFalse)
 	methods := L.SetFuncs(L.NewTable(), map[string]lua.LGFunction{

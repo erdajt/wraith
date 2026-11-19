@@ -1,6 +1,9 @@
 package plugin
 
-import "testing"
+import (
+	"github.com/erdajt/wraith/internal/modeltool"
+	"testing"
+)
 
 func TestProviderReplacementRestoresCoveredOwnerOnUnload(t *testing.T) {
 	r := openTestRuntime(t, `
@@ -64,5 +67,26 @@ end)
 	manifest.Tools[0].Parameters[0] = 'x'
 	if r.Manifest().Tools[0].Parameters[0] != '{' {
 		t.Fatal("manifest retained mutable tool schema")
+	}
+}
+
+func TestToolSchemasPreserveExplicitJSONContainersAndNull(t *testing.T) {
+	r := openTestRuntime(t, `
+wraith.json.encode=function() error("must not invoke mutable public codec") end
+wraith.tools.register("containers",{
+ parameters={type="object",required=wraith.json.array({}),properties={
+  empty_array={const=wraith.json.array({})},empty_object={const=wraith.json.object({})},nullable={enum={wraith.json.null,"value"}}
+ }},run=function() end
+})
+`)
+	schema, err := modeltool.Compile(r.Manifest().Tools[0].Parameters)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := schema.Validate([]byte(`{"empty_array":[],"empty_object":{},"nullable":null}`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := schema.Validate([]byte(`{"empty_array":{},"empty_object":[],"nullable":false}`)); err == nil {
+		t.Fatal("schema lost explicit container types")
 	}
 }

@@ -15,6 +15,9 @@ func invocationPayload(data json.RawMessage) (json.RawMessage, error) {
 	if len(data) > 1<<20 || !utf8.Valid(data) {
 		return nil, errors.New("invocation payload exceeds 1 mib or contains invalid utf8")
 	}
+	if err := validateJSONEscapes(string(data)); err != nil {
+		return nil, err
+	}
 	var value any
 	if err := json.Unmarshal(data, &value); err != nil {
 		return nil, errors.New("invalid invocation json payload")

@@ -90,6 +90,7 @@ type Runtime struct {
 }
 
 type engine struct {
+	jsonCodec jsonCodec
 	extensionState
 	pureHook      bool
 	hookViolation error
