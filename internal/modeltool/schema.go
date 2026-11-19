@@ -144,6 +144,10 @@ func countPattern(pattern string, total *regexSize) error {
 	if err != nil {
 		return errors.New("tool schema contains an invalid regex")
 	}
+	estimate := regexCost(expression) + 2
+	if estimate > 4096 || total.instructions+estimate > 8192 {
+		return errors.New("tool schema exceeds expanded regex limit")
+	}
 	program, err := syntax.Compile(expression.Simplify())
 	if err != nil {
 		return errors.New("tool schema contains an invalid regex")
@@ -153,4 +157,41 @@ func countPattern(pattern string, total *regexSize) error {
 		return errors.New("tool schema exceeds expanded regex limit")
 	}
 	return nil
+}
+
+// regexCost bounds expanded instructions before counted repetitions allocate copies.
+func regexCost(expression *syntax.Regexp) int {
+	const overflow = 4097
+	cost := 0
+	for _, child := range expression.Sub {
+		cost += regexCost(child)
+		if cost >= overflow {
+			return overflow
+		}
+	}
+	switch expression.Op {
+	case syntax.OpLiteral:
+		return len(expression.Rune)
+	case syntax.OpConcat:
+		return max(1, cost)
+	case syntax.OpAlternate:
+		cost += len(expression.Sub) - 1
+	case syntax.OpCapture:
+		cost += 2
+	case syntax.OpStar:
+		cost += 2
+	case syntax.OpPlus, syntax.OpQuest:
+		cost++
+	case syntax.OpRepeat:
+		if expression.Max < 0 {
+			cost = cost*max(1, expression.Min) + 2
+		} else if expression.Max == 0 {
+			cost = 1
+		} else {
+			cost = cost*expression.Max + expression.Max - expression.Min
+		}
+	default:
+		return 1
+	}
+	return min(cost, overflow)
 }

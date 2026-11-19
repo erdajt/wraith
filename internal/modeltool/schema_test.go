@@ -2,6 +2,7 @@ package modeltool
 
 import (
 	"fmt"
+	"regexp/syntax"
 	"strings"
 	"testing"
 )
@@ -75,6 +76,7 @@ func TestSchemaRejectsUnsupportedOrUnboundedDefinitions(t *testing.T) {
 		"invalid keyword value": `{"type":"object","required":true}`,
 		"invalid regex":         `{"type":"object","patternProperties":{"[":true}}`,
 		"regex bytes":           fmt.Sprintf(`{"type":"object","patternProperties":{%q:true}}`, strings.Repeat("a", 1025)),
+		"large repeated group":  fmt.Sprintf(`{"type":"object","patternProperties":{%q:true}}`, "("+strings.Repeat("a", 900)+"){1000}"),
 		"expanded regex":        `{"type":"object","patternProperties":{"a{1000}b{1000}c{1000}d{1000}e{1000}":true}}`,
 		"aggregate regex":       `{"type":"object","allOf":[` + strings.TrimSuffix(strings.Repeat(fmt.Sprintf(`{"pattern":%q},`, strings.Repeat("a", 1024)), 5), ",") + `]}`,
 		"nodes":                 `{"type":"object","allOf":[` + strings.Repeat(`{},`, 510) + `{}]}`,
@@ -154,6 +156,35 @@ func BenchmarkSchemaValidation(b *testing.B) {
 				if err := schema.Validate(arguments); err != nil {
 					b.Fatal(err)
 				}
+			}
+		})
+	}
+}
+
+func BenchmarkSchemaRejectsRegexExpansion(b *testing.B) {
+	definition := []byte(fmt.Sprintf(`{"type":"object","patternProperties":{%q:true}}`, "("+strings.Repeat("a", 900)+"){1000}"))
+	b.ReportAllocs()
+	for b.Loop() {
+		if _, err := Compile(definition); err == nil {
+			b.Fatal("oversized expanded regex accepted")
+		}
+	}
+}
+
+func TestRegexExpansionEstimateBoundsCompiledPrograms(t *testing.T) {
+	for _, pattern := range []string{"", "abc", "(a|b)*", "(a?)*", "(a?){0,}", "(a?){4,}", "(a|bc){2,5}", "(?i)été", "[a-z]+", "a{0}", "(?:a?b?){3,8}"} {
+		t.Run(pattern, func(t *testing.T) {
+			expression, err := syntax.Parse(pattern, syntax.Perl)
+			if err != nil {
+				t.Fatal(err)
+			}
+			estimate := regexCost(expression) + 2
+			program, err := syntax.Compile(expression.Simplify())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if estimate < len(program.Inst) {
+				t.Fatalf("estimate %d below actual %d", estimate, len(program.Inst))
 			}
 		})
 	}
