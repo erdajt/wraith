@@ -6,9 +6,12 @@ import (
 	"maps"
 	"slices"
 	"strings"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 type packageRecord struct {
+	module       *lua.LTable
 	owner        string
 	loading      bool
 	dependencies []string
@@ -30,7 +33,7 @@ func (e *engine) unloadPlugin(name string) error {
 	if !ok {
 		return fmt.Errorf("plugin is not loaded: %s", name)
 	}
-	if record.loading || record.owner == e.owner {
+	if record.loading || record.owner == e.owner || slices.Contains(e.packageCalls, record.owner) {
 		return fmt.Errorf("cannot unload the currently executing plugin: %s", name)
 	}
 	for _, dependent := range slices.Sorted(maps.Keys(e.packages)) {

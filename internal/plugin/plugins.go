@@ -30,6 +30,22 @@ func (e *engine) installPlugins(api *lua.LTable) {
 			}
 			return 0
 		},
+		"call": func(L *lua.LState) int {
+			e.registration(L)
+			if L.GetTop() > 18 {
+				L.RaiseError("plugins.call accepts at most 16 arguments")
+			}
+			args := make([]lua.LValue, max(0, L.GetTop()-2))
+			for i := range args {
+				args[i] = L.Get(i + 3)
+			}
+			value, err := e.callPackage(L.CheckString(1), L.CheckString(2), args)
+			if err != nil {
+				L.RaiseError("plugins.call: %v", err)
+			}
+			L.Push(value)
+			return 1
+		},
 		"depend": func(L *lua.LState) int {
 			e.registration(L)
 			if err := e.dependOnPackage(e.owner, L.CheckString(1)); err != nil {
@@ -86,6 +102,9 @@ func (e *engine) loadPlugin(name string, options *lua.LTable, dependency bool) (
 	if !ok {
 		return errors.New("module must return a table with setup")
 	}
+	record := e.packages[name]
+	record.module = module
+	e.packages[name] = record
 	setup, ok := module.RawGetString("setup").(*lua.LFunction)
 	if !ok {
 		return errors.New("module has no setup function")
@@ -104,7 +123,7 @@ func (e *engine) loadPlugin(name string, options *lua.LTable, dependency bool) (
 		e.addCleanup(cleanup)
 	}
 	L.Pop(1)
-	record := e.packages[name]
+	record = e.packages[name]
 	record.loading = false
 	e.packages[name] = record
 	if dependency {

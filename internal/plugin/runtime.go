@@ -127,6 +127,7 @@ type engine struct {
 	rollback       *registryState
 	loaded         map[string]bool
 	packages       map[string]packageRecord
+	packageCalls   []string
 	observerErrors []error
 }
 
