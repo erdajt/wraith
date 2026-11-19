@@ -125,3 +125,62 @@ end}`, marker)
 		t.Fatalf("cleanup result: %q, %v", content, err)
 	}
 }
+
+func TestFailedResourceCancelsBeforeNativeRollbackCleanup(t *testing.T) {
+	fifo := filepath.Join(t.TempDir(), "cleanup-pipe")
+	if err := syscall.Mkfifo(fifo, 0600); err != nil {
+		t.Fatal(err)
+	}
+	r := openTestRuntime(t, fmt.Sprintf(`
+ package.preload.cleanup=function() return {
+  setup=function() end,
+  teardown=function()
+   local f=assert(io.open(%q,"r")); f:read("*l"); f:close()
+  end
+ } end
+ wraith.timer.start(1,function()
+  wraith.plugins.load("cleanup")
+  error("consumer failed")
+ end,{repeat_ms=1})
+ `, fifo))
+	m := r.Manifest()
+	if err := r.Activate(m.Resources); err != nil {
+		t.Fatal(err)
+	}
+	var event ResourceEvent
+	select {
+	case event = <-r.Events():
+	case <-time.After(time.Second):
+		t.Fatal("timer did not start")
+	}
+	result, err := r.SubmitResource(event, nil, m.Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deadline := time.After(time.Second)
+	tick := time.NewTicker(time.Millisecond)
+	defer tick.Stop()
+	var writer *os.File
+	for {
+		writer, err = os.OpenFile(fifo, os.O_WRONLY|syscall.O_NONBLOCK, 0600)
+		if err == nil {
+			break
+		}
+		select {
+		case <-tick.C:
+		case <-deadline:
+			t.Fatal("native rollback cleanup did not start")
+		}
+	}
+	t.Cleanup(func() { _ = writer.Close() })
+	status, err := r.services.Status(event.ID, "config")
+	if err != nil || status["state"] != "cancelled" || status["callback_error"] == nil {
+		t.Fatalf("source kept running during native cleanup: %v, %v", status, err)
+	}
+	_, _ = writer.WriteString("done\n")
+	_ = writer.Close()
+	if got := receiveResult(t, result); got.Err == nil {
+		t.Fatal("callback failure disappeared after cleanup")
+	}
+}

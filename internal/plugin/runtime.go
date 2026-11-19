@@ -296,13 +296,13 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 	defer func() {
 		if result.Err != nil {
 			hooks := e.restoreRegistry(before)
-			result.Err = errors.Join(result.Err, e.disposeHooks(hooks))
 			if req.resource != nil {
 				callback := e.resources[req.resource.ID]
 				callback.function = nil
 				e.resources[req.resource.ID] = callback
 				result.Err = errors.Join(result.Err, e.services.failConsumer(req.resource.ID, resource.owner, result.Err))
 			}
+			result.Err = errors.Join(result.Err, e.disposeHooks(hooks))
 		}
 	}()
 	e.L.SetContext(parent)
