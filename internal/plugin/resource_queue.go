@@ -2,12 +2,14 @@ package plugin
 
 import (
 	"context"
+	"errors"
 	"slices"
 )
 
 type queuedResourceEvent struct {
 	event    ResourceEvent
 	lossless bool
+	bytes    int
 }
 
 // Emit either preserves a protocol event through backpressure or coalesces capture notifications.
@@ -16,6 +18,10 @@ func (s *resourceSink) Emit(kind string, data map[string]any, lossless bool) err
 	if err != nil {
 		return err
 	}
+	size := resourceValueSize(detached) + len(kind) + len(s.ID)
+	if size > 8<<20 {
+		return errors.New("resource progress event exceeds 8 mib")
+	}
 	for {
 		s.manager.mu.Lock()
 		record := s.manager.records[s.ID]
@@ -23,7 +29,7 @@ func (s *resourceSink) Emit(kind string, data map[string]any, lossless bool) err
 			s.manager.mu.Unlock()
 			return context.Canceled
 		}
-		if s.manager.progress >= 256 && lossless {
+		if (s.manager.progress >= 256 || s.manager.progressBytes+size > 8<<20) && lossless {
 			changed := s.manager.changed
 			s.manager.mu.Unlock()
 			select {
@@ -38,20 +44,28 @@ func (s *resourceSink) Emit(kind string, data map[string]any, lossless bool) err
 		if !lossless {
 			for i, queued := range s.manager.queue {
 				if !queued.lossless && !queued.event.Final && queued.event.ID == s.ID && queued.event.Kind == kind {
+					if s.manager.progressBytes-queued.bytes+size > 8<<20 {
+						record.dropped++
+						s.manager.mu.Unlock()
+						return nil
+					}
+					s.manager.progressBytes += size - queued.bytes
 					s.manager.queue = slices.Delete(s.manager.queue, i, i+1)
-					s.manager.queue = append(s.manager.queue, queuedResourceEvent{event: event})
+					s.manager.queue = append(s.manager.queue, queuedResourceEvent{event: event, bytes: size})
+					s.manager.signalChanged()
 					s.manager.mu.Unlock()
 					return nil
 				}
 			}
-			if s.manager.progress >= 256 {
+			if s.manager.progress >= 256 || s.manager.progressBytes+size > 8<<20 {
 				record.dropped++
 				s.manager.mu.Unlock()
 				return nil
 			}
 		}
-		s.manager.queue = append(s.manager.queue, queuedResourceEvent{event: event, lossless: lossless})
+		s.manager.queue = append(s.manager.queue, queuedResourceEvent{event: event, lossless: lossless, bytes: size})
 		s.manager.progress++
+		s.manager.progressBytes += size
 		s.manager.signalDelivery()
 		s.manager.mu.Unlock()
 		return nil
@@ -99,6 +113,7 @@ func (m *resourceManager) deliver() {
 		m.queue = m.queue[1:]
 		if !queued.event.Final {
 			m.progress--
+			m.progressBytes -= queued.bytes
 		}
 		m.signalChanged()
 		m.mu.Unlock()
@@ -130,6 +145,7 @@ func (m *resourceManager) removeQueued(ids []string) {
 		removed := slices.Contains(ids, queued.event.ID)
 		if removed && !queued.event.Final {
 			m.progress--
+			m.progressBytes -= queued.bytes
 		}
 		return removed
 	})
@@ -142,4 +158,24 @@ func (m *resourceManager) valid(event ResourceEvent) bool {
 	defer m.mu.Unlock()
 	record := m.records[event.ID]
 	return !m.closed && record != nil && event.Revision == 1 && event.Sequence > 0 && event.Sequence <= record.sequence
+}
+
+// resourceValueSize charges detached payload bytes and fixed overhead for each retained value.
+func resourceValueSize(value any) int {
+	size := 32
+	switch value := value.(type) {
+	case string:
+		size += len(value)
+	case []byte:
+		size += len(value)
+	case []any:
+		for _, item := range value {
+			size += resourceValueSize(item)
+		}
+	case map[string]any:
+		for key, item := range value {
+			size += len(key) + resourceValueSize(item)
+		}
+	}
+	return size
 }

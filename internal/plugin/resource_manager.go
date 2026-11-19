@@ -39,19 +39,20 @@ type managedResource struct {
 }
 
 type resourceManager struct {
-	mu       sync.Mutex
-	ctx      context.Context
-	cancel   context.CancelFunc
-	records  map[string]*managedResource
-	prefix   string
-	serial   uint64
-	closed   bool
-	events   chan ResourceEvent
-	wake     chan struct{}
-	changed  chan struct{}
-	queue    []queuedResourceEvent
-	progress int
-	running  int
+	mu            sync.Mutex
+	ctx           context.Context
+	cancel        context.CancelFunc
+	records       map[string]*managedResource
+	prefix        string
+	serial        uint64
+	closed        bool
+	events        chan ResourceEvent
+	wake          chan struct{}
+	changed       chan struct{}
+	queue         []queuedResourceEvent
+	progress      int
+	progressBytes int
+	running       int
 }
 
 type resourceSink struct {
@@ -236,6 +237,7 @@ func (m *resourceManager) close() {
 	}
 	m.records = map[string]*managedResource{}
 	m.queue = nil
+	m.progress, m.progressBytes = 0, 0
 	m.signalChanged()
 }
 

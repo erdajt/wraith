@@ -89,6 +89,12 @@ func TestResourceCancellationUnblocksProtocolPressure(t *testing.T) {
 				if event.Data["state"] != "cancelled" {
 					t.Fatalf("terminal state: %+v", event)
 				}
+				m.mu.Lock()
+				remaining := m.progressBytes
+				m.mu.Unlock()
+				if remaining != 0 {
+					t.Fatalf("delivered progress retained byte charge: %d", remaining)
+				}
 			}
 		case <-deadline:
 			t.Fatal("terminal event was dropped behind progress pressure")
