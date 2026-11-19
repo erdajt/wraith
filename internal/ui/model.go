@@ -100,6 +100,7 @@ type App struct {
 	surfaceWindows    map[string]uint64
 	surfaceRuntime    *plugin.Runtime
 	pluginDialog      *pluginDialog
+	nativeProjection  *nativeProjection
 
 	editorFile        *editor.File
 	editorSucceeded   bool

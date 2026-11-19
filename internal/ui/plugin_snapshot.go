@@ -7,6 +7,7 @@ import (
 
 // pluginSnapshot detaches bounded workspace state for commands, events and service callbacks.
 func (a *App) pluginSnapshot(argument, event string, data any) map[string]any {
+	a.syncNativeSurfaces()
 	var windows []map[string]any
 	ids := make([]uint64, 0, len(a.windows))
 	for id := range a.windows {

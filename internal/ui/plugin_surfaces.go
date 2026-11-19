@@ -93,6 +93,7 @@ func (a *App) applySurfaceDelta(delta plugin.SurfaceDelta, external bool) {
 // cacheSurfaceBuffer synchronizes shared document text without borrowing another view's cursor.
 func (a *App) cacheSurfaceBuffer(buffer plugin.SurfaceBuffer, external bool) {
 	a.surfaceBuffers[buffer.ID] = buffer
+	a.adoptNativeSurface(buffer)
 	text := strings.Join(buffer.Lines, "\n")
 	for _, view := range a.windows {
 		if view.surface == nil || view.surface.window.BufferID != buffer.ID {

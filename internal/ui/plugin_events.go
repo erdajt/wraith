@@ -16,6 +16,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if a.plugins == nil {
 		return a.update(msg)
 	}
+	a.reconcileSurfaces()
+	dialogCommand := a.reconcilePluginDialog()
 	session, window, places := a.Session.ID, a.windowID, a.windowPlaces()
 	stream, streaming := msg.(streamMsg)
 	finished := streaming && stream.Final && stream.Retry == 0 && stream.Serial == a.streamSerial && a.busy && !a.compacting && !a.executing
@@ -25,7 +27,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return model, cmd
 	default:
 	}
-	cmds := []tea.Cmd{cmd}
+	a.reconcileSurfaces()
+	a.syncNativeSurfaces()
+	cmds := []tea.Cmd{cmd, dialogCommand, a.reconcilePluginDialog()}
 	if session != a.Session.ID {
 		cmds = append(cmds, a.callPlugin("", "session_changed", ""))
 	}
