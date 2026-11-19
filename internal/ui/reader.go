@@ -3,11 +3,12 @@ package ui
 import (
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/erdajt/wraith/internal/vim"
-	"github.com/mattn/go-runewidth"
+	"github.com/rivo/uniseg"
 )
 
 type reader struct {
@@ -89,17 +90,24 @@ func (r *reader) key(k tea.KeyMsg, height int) (string, bool) {
 
 // lines renders the cursor's viewport with search and visual-selection highlights.
 func (r *reader) lines(width, height int, p palette) []string {
+	return r.styledLines(width, height, p, true, nil)
+}
+
+// styledLines applies cached line styles beneath the reader's search, selection and cursor.
+func (r *reader) styledLines(width, height int, p palette, focused bool, style func(int, string) string) []string {
+	if width <= 0 || height <= 0 {
+		return nil
+	}
 	b := r.Buffer
 	text := strings.Split(string(b.Text), "\n")
-	row, column, position := 0, 0, 0
-	for _, ch := range b.Text[:min(b.Pos, len(b.Text))] {
+	row, lineStart, position := 0, 0, 0
+	for i, ch := range b.Text[:min(b.Pos, len(b.Text))] {
 		if ch == '\n' {
 			row++
-			column = 0
-		} else {
-			column += runewidth.RuneWidth(ch)
+			lineStart = i + 1
 		}
 	}
+	column, _ := runeDisplayRange(text[row], b.Pos-lineStart, b.Pos-lineStart)
 
 	if row < r.Offset {
 		r.Offset = row
@@ -113,17 +121,22 @@ func (r *reader) lines(width, height int, p palette) []string {
 	for i, line := range text {
 		size := len([]rune(line))
 		if i >= r.Offset && i < r.Offset+height {
-			styled := highlightMatches(ink(p.FG, line), b.SearchQuery(), p)
+			styled := ink(p.FG, line)
+			if style != nil {
+				styled = style(i, line)
+			}
+			styled = highlightMatches(styled, b.SearchQuery(), p)
 			if left >= 0 && right > position && left <= position+size {
 				runes := []rune(line)
 				start := max(0, left-position)
 				end := min(size, right-position)
 				if start <= end {
-					styled = highlightRange(styled, runewidth.StringWidth(string(runes[:start])), runewidth.StringWidth(string(runes[:end])), p.Second, p)
+					from, to := runeDisplayRange(string(runes), start, end)
+					styled = highlightRange(styled, from, to, p.Second, p)
 				}
 			}
 
-			if i == row {
+			if focused && i == row {
 				if b.Mode == "insert" && column == ansi.StringWidth(styled) {
 					styled += " "
 				}
@@ -142,4 +155,30 @@ func (r *reader) lines(width, height int, p palette) []string {
 		out = append(out, strings.Repeat(" ", width))
 	}
 	return out
+}
+
+// runeDisplayRange expands rune bounds to complete grapheme cells for cursor and selection rendering.
+func runeDisplayRange(text string, start, end int) (int, int) {
+	left, right, position, cells := -1, -1, 0, 0
+	clusters := uniseg.NewGraphemes(text)
+	for clusters.Next() {
+		next := position + utf8.RuneCountInString(clusters.Str())
+		if left < 0 && start < next {
+			left = cells
+		}
+		if right < 0 && end <= next {
+			right = cells
+			if end > position {
+				right += clusters.Width()
+			}
+		}
+		position, cells = next, cells+clusters.Width()
+	}
+	if left < 0 {
+		left = cells
+	}
+	if right < 0 {
+		right = cells
+	}
+	return left, right
 }
