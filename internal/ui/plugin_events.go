@@ -10,6 +10,7 @@ import (
 
 // Update records lifecycle transitions and queues plugin events after normal state handling.
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	a.reconcileWorkspaceQueries(false)
 	depth := a.pluginDepth
 	if result, ok := msg.(pluginResultMsg); ok {
 		a.pluginDepth = result.Depth
@@ -19,12 +20,15 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.update(msg)
 	}
 	before := a.plugins.Surfaces().Index()
+	a.observeWorkspaceServices()
 	a.reconcileSurfaces()
 	dialogCommand := a.reconcilePluginDialog()
 	session, window, places := a.Session.ID, a.windowID, a.windowPlaces()
 	stream, streaming := msg.(streamMsg)
 	finished := streaming && stream.Final && stream.Retry == 0 && stream.Serial == a.streamSerial && a.busy && !a.compacting && !a.executing
 	model, cmd := a.update(msg)
+	a.observeWorkspaceServices()
+	a.reconcileWorkspaceQueries(false)
 	select {
 	case <-a.done:
 		return model, cmd
@@ -33,6 +37,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	a.reconcileSurfaces()
 	a.syncNativeSurfaces()
 	cmds := []tea.Cmd{cmd, dialogCommand, a.reconcilePluginDialog()}
+	cmds = append(cmds, a.flushWorkspaceEvents())
 	if session != a.Session.ID {
 		cmds = append(cmds, a.callPlugin("", "session_changed", ""))
 	}
