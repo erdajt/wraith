@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "packages": [
+    {
+      "name": "shroud",
+      "source": "https://github.com/erdajt/shroud.wraith.git",
+      "commit": "c8f46932acb659cfb59054698ea4e090ab7c42f0",
+      "object_format": "sha1",
+      "artifact": "seeds/shroud-8df733c74a6d3b3852f3a5054df9321cd18ad8b8b1f5dd18caafc067d11a73c4.bundle",
+      "sha256": "8df733c74a6d3b3852f3a5054df9321cd18ad8b8b1f5dd18caafc067d11a73c4",
+      "size": 52976,
+      "module": "shroud",
+      "api_min": 2,
+      "api_max": 2,
+      "license": "LICENSE"
+    }
+  ]
+}
