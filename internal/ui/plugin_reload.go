@@ -91,6 +91,17 @@ func (a *App) finishPluginReload(m pluginReloadMsg) tea.Cmd {
 		return nil
 	}
 	manifest := m.Runtime.Manifest()
+	nativeWindows := 0
+	for _, view := range a.windows {
+		if view.surface == nil {
+			nativeWindows++
+		}
+	}
+	surfaces, err := preparePluginSurfaces(m.Runtime, max(1, nativeWindows))
+	if err != nil {
+		a.PluginError(err)
+		return nil
+	}
 	oldActions := a.actions
 	a.actions = a.pluginActions(manifest)
 	cmd, err := a.applyPluginConfig(manifest.Config)
@@ -105,6 +116,7 @@ func (a *App) finishPluginReload(m pluginReloadMsg) tea.Cmd {
 	if old != nil {
 		old.Close()
 	}
+	a.installPluginSurfaces(surfaces)
 	a.notice = "init.lua reloaded · pending key sequences cleared"
 	if len(manifest.Diagnostics) > 0 {
 		a.notice += " · lua: " + strings.ReplaceAll(clean(strings.Join(manifest.Diagnostics, " · ")), "\n", " ")

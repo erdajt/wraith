@@ -88,20 +88,22 @@ type terminalMsg struct {
 }
 
 type App struct {
-	configEditBase    *config.Config
-	pluginLoadCancel  context.CancelFunc
-	plugins           *plugin.Runtime
-	pluginManifest    plugin.Manifest
-	pluginDiagnostics []string
-	pluginSerial      uint64
-	pluginDepth       int
-	surfaceKeymaps    map[string]surfaceKeymapCache
-	surfaceBuffers    map[string]plugin.SurfaceBuffer
-	surfaceRegions    map[string]plugin.SurfaceRegion
-	surfaceWindows    map[string]uint64
-	surfaceRuntime    *plugin.Runtime
-	pluginDialog      *pluginDialog
-	nativeProjection  *nativeProjection
+	configEditBase     *config.Config
+	pluginLoadCancel   context.CancelFunc
+	plugins            *plugin.Runtime
+	pluginManifest     plugin.Manifest
+	pluginDiagnostics  []string
+	pluginSerial       uint64
+	bufferEventPending bool
+	bufferEventRuntime *plugin.Runtime
+	pluginDepth        int
+	surfaceKeymaps     map[string]surfaceKeymapCache
+	surfaceBuffers     map[string]plugin.SurfaceBuffer
+	surfaceRegions     map[string]plugin.SurfaceRegion
+	surfaceWindows     map[string]uint64
+	surfaceRuntime     *plugin.Runtime
+	pluginDialog       *pluginDialog
+	nativeProjection   *nativeProjection
 
 	editorFile        *editor.File
 	editorSucceeded   bool
@@ -272,6 +274,12 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool, extensio
 	if len(a.pluginManifest.Diagnostics) > 0 {
 		a.notice += " · lua: " + strings.ReplaceAll(clean(strings.Join(a.pluginManifest.Diagnostics, " · ")), "\n", " ")
 	}
+	surfaces, err := preparePluginSurfaces(a.plugins, 1)
+	if err != nil {
+		a.Close()
+		return nil, err
+	}
+	a.installPluginSurfaces(surfaces)
 	return a, nil
 }
 
