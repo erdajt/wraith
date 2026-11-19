@@ -2,7 +2,7 @@
 
 wraith embeds gopher-lua and exposes API version 2. `init.lua` is real lua 5.1-style code, with functions, loops, tables, closures and local modules. luaJIT and neovim's `vim` module are not included.
 
-[service APIs](lua/services.md) cover JSON, filesystem operations, HTTP, timers and managed resource lifetimes.
+[service APIs](lua/services.md) cover JSON, filesystem operations, HTTP, timers and managed resource lifetimes. [surface APIs](lua/surfaces.md) cover shared buffers, floating and tiled views, presentation regions and modal dialogs.
 
 ## start
 
@@ -118,7 +118,7 @@ operations run after the callback returns successfully. snapshot reads within th
 
 effects retain order. a nested custom command finishes its effects before its caller resumes. an empty callback also returns control to its caller; a failed or stale callback stops the chain. editor actions hold the chain until their own saved edit is applied; closing without saving, editor errors and workspace changes stop it. workspace ownership is checked before dispatch. approval dialogs, editors and raw shell input retain control of their surfaces. a later effect can be refused if an earlier operation opened a dialog. plugin effects cannot approve a proposed model command. model requests and approved jobs retain the normal privacy, context and execution paths.
 
-callback results are discarded after runtime replacement or changes to the captured focus, selection, navigation, mode, draft or settings. ids from closed windows are rejected. nested custom-command callbacks stop after eight levels. queued host actions follow these guards even from event hooks. trusted code can execute programs directly through Lua libraries; those operations are outside model-command approval.
+implicit workspace effects are discarded after runtime replacement or changes to the captured focus, selection, navigation, mode, draft or settings. [explicit surface effects](lua/surfaces.md#lifecycle-errors-and-limits) instead check their owner, target id and revision, so unrelated typing does not discard a background buffer update. ids from closed windows are rejected. nested custom-command callbacks stop after eight levels. queued host actions follow these guards even from event hooks. trusted code can execute programs directly through Lua libraries; those operations are outside model-command approval.
 
 ## events and plugin lifecycle
 
