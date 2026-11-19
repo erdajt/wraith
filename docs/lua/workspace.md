@@ -1,6 +1,6 @@
 # workspace services
 
-[Lua configuration](../plugins.md) · [buffers and views](surfaces.md) · [managed services](services.md) · [example packages](examples.md)
+[Lua configuration](../plugins.md) · [buffers and views](surfaces.md) · [managed services](services.md) · [example packages](examples.md) · [package manager](packages.md)
 
 workspace queries read native conversations, commands and metadata without blocking the interface. callbacks run on the Lua worker with a fresh workspace snapshot. these APIs are for trusted local plugins. reading command output does not share it with the model.
 

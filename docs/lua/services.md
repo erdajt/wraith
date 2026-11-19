@@ -1,6 +1,6 @@
 # lua services
 
-[configuration and plugins](../plugins.md) explains loading, mappings, commands and trust. these services use the same runtime and package ownership.
+[configuration and plugins](../plugins.md) explains loading, mappings, commands and trust. these services use the same runtime and package ownership. the [package manager](packages.md) uses them for git processes, private staging files and atomic publication.
 
 ## resource lifecycle
 
@@ -215,7 +215,7 @@ local page = wraith.process.output(id, {
 })
 ```
 
-`stream` defaults to `stdout`. `offset` defaults to zero. `max_bytes` defaults to 64 kib and accepts 1 through 1,048,576. results contain exact `data`, actual `offset`, `next_offset`, `earliest_offset`, `observed_bytes`, `truncated` and `more`. `truncated=true` means the requested prefix was already evicted. querying a completed process remains valid until release.
+`stream` defaults to `stdout`. `offset` defaults to zero. `max_bytes` defaults to 64 kib and accepts 1 through 1,048,576. results contain exact `data`, actual `offset`, `next_offset`, `earliest_offset`, `observed_bytes`, `truncated` and `more`. `truncated=true` means the requested prefix was already evicted. querying a completed process remains valid until release. cancellation before activation can finish without creating output streams; `process.output` then reports that the process has not started. use terminal status to distinguish this case from a running process with an empty output page.
 
 protocol mode includes exact `ctx.data.data` bytes in each stream event. it preserves nul, invalid utf-8, partial Unicode sequences and framing bytes. operating-system reads can split or combine protocol frames. chunks are at most 32 kib. backpressure pauses producers when the event queue fills; it does not silently drop protocol bytes. parse protocol state in the event callback before deferring UI actions. callbacks dispatch in event order, but a nested UI action or editor can finish after a later event callback.
 

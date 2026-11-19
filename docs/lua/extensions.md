@@ -1,6 +1,6 @@
 # request hooks, providers and model tools
 
-[plugin setup](../plugins.md) · [managed services](services.md) · [buffers and views](surfaces.md) · [providers](../providers.md) · [execution](../execution.md) · [workspace queries](workspace.md) · [example packages](examples.md)
+[plugin setup](../plugins.md) · [managed services](services.md) · [buffers and views](surfaces.md) · [providers](../providers.md) · [execution](../execution.md) · [workspace queries](workspace.md) · [example packages](examples.md) · [package manager](packages.md)
 
 `wraith.capabilities.hooks`, `providers`, `model_tools`, `invocations` and `workspace_queries` report these API families.
 

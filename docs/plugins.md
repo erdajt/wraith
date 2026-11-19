@@ -2,7 +2,7 @@
 
 wraith embeds gopher-lua and exposes API version 2. `init.lua` is real lua 5.1-style code, with functions, loops, tables, closures and local modules. luaJIT and neovim's `vim` module are not included.
 
-[service APIs](lua/services.md) cover JSON, filesystem operations, HTTP, timers and managed resource lifetimes. [surface APIs](lua/surfaces.md) cover shared buffers, floating and tiled views, presentation regions and modal dialogs. [workspace APIs](lua/workspace.md) page conversations, jobs and local output. [example packages](lua/examples.md) compose these APIs into task selectors, history, Git views and native command policies.
+[service APIs](lua/services.md) cover JSON, filesystem operations, HTTP, timers and managed resource lifetimes. [surface APIs](lua/surfaces.md) cover shared buffers, floating and tiled views, presentation regions and modal dialogs. [workspace APIs](lua/workspace.md) page conversations, jobs and local output. [package manager](lua/packages.md) installs locked git revisions and loads modular local configurations. [editor completion](lua/editor.md) documents the LuaLS definitions. [example packages](lua/examples.md) compose these APIs into task selectors, history, Git views and native command policies.
 
 ## start
 
@@ -90,6 +90,8 @@ end, "prepare a review prompt")
 
 `keymap.set(mode, sequence, action_or_function_or_keys, description)` registers an override. descriptions are optional. use `/keymaps` to inspect active mappings. [keybindings](keybindings.md#mode-specific-mappings) lists notation and modes. numeric prefixes retain the current normal/visual mappings. pending operators and literal arguments have separate modes.
 
+`keymap.parse(sequence)` returns canonical key tokens without registering a binding. `keymap.validate(mode, sequence)` returns true for a valid mode and sequence, otherwise raises an error. validation checks mode and notation, not action availability or host-specific binding conflicts. these APIs let a plugin validate configurable bindings before changing the registry.
+
 `keymap.del(mode, sequence)` hides configured overrides for that sequence; built-in defaults become available again. the deletion belongs to the calling configuration or plugin, so user configuration can disable a mapping installed by a plugin. map to `noop` to consume a default key. mappings and commands can be registered during setup or inside callbacks. runtime registrations are validated and installed before their callback effects run. rejected registrations leave the previous host registry active.
 
 `commands.create(name, callback, description)` registers a slash command and a `command.NAME` action. command names use lowercase letters, digits and hyphens, with optional dotted children. built-in names and namespaces are reserved unless an existing command is explicitly replaced with `{replace = true}`. a trailing `!` is accepted. `commands.delete(name)` hides a custom command and restores any builtin it replaced. command definitions and deletions belong to their configuration or plugin owner. custom commands appear in slash completion and `/help`. a virtual parent expands to its dotted children when selected.
@@ -149,11 +151,17 @@ end
 
 custom events use dotted lowercase names, such as `review.selected`. `wraith.events.emit("review.selected", {id = "task-1"})` queues delivery after the emitting callback succeeds. listeners read the payload from `ctx.data`. a callback can register a listener and emit its event in the same batch; host registration finishes before delivery. emission cannot impersonate built-in lifecycle events. each observer has its own deadline and registration transaction. a failing observer reports its event and owner, loses its own staged changes, and leaves healthy observers running. removed listeners are skipped; newly registered listeners start with the next event. host-only validation can still reject the final publication.
 
+`events.listeners(name)` returns the currently registered listener ids in dispatch order. `events.dispatch(name, data, {listeners = ids})` delivers to an explicit, unique list of at most 32 current subscribers. it supports native and custom event names, preserves the requested order and does not add later subscribers. removed listeners are skipped. this supports lazy activation without broadcasting a second native event to every observer; it does not change the actual workspace state. ordinary `events.emit` remains restricted to custom names.
+
 `wraith.plugins.load("plugins.review", options)` uses `require` to load a local module once. it must return a table with `setup(options)`. setup may return a cleanup function; the table may also provide `teardown()`. successful runtimes release dependents before their dependencies when replaced or closed, with reverse registration order within each owner. `init.lua` may itself return a cleanup function. failed candidates are closed without running their runtime actions. failed plugin setup restores its staged registrations even if Lua catches the failure with `pcall`; cleanup releases resources registered by that failed setup. arbitrary Lua globals, module-cache changes and external effects are not rolled back.
 
 `plugins.list()` returns loaded module names in sorted order. `plugins.unload(name)` removes that plugin's commands, mappings and subscriptions, restores covered definitions, and releases its owned resources after the UI accepts the new registry. rejected unloads leave those resources active. callbacks copied from the unloaded plugin are removed too. reloading a module uses Lua's existing `package.loaded` cache; unload does not clear it.
 
-a plugin that calls `plugins.load` owns a runtime dependency on the loaded plugin. unload dependents before their dependencies. unloading an initializing plugin or the currently executing plugin is rejected. these runtime edges describe loaded instances; package installation and version resolution are separate.
+a plugin that calls `plugins.load` owns a runtime dependency on the loaded plugin. `plugins.load(name, options, {dependency = false})` suppresses that automatic edge when a loader manages dependency order explicitly. `plugins.depend(name)` adds an edge to an already loaded plugin. unload dependents before their dependencies. unloading an initializing plugin or the currently executing plugin is rejected.
+
+`plugins.call(name, method, ...)` invokes a loaded module method under that plugin's owner, returning one Lua value. it accepts at most 16 arguments and does not introduce a method-style `self` argument. registrations and managed work created inside the call belong to the called plugin. calls restore the previous owner on success or error; unloaded plugins and nonfunction methods fail. calls share the current callback deadline and do not provide an asynchronous wait. nesting is limited to 16 calls; `setup` and `teardown` cannot be invoked as exports. a failed export restores its staged registry changes even when the caller catches its error. arbitrary Lua state and external effects remain outside rollback.
+
+these runtime edges describe loaded instances. the [package manager](lua/packages.md) handles installed revisions, dependency specifications and lazy activation through these same APIs.
 
 setup can register APIs and change candidate configuration. runtime workspace actions and snapshot inspection are unavailable during initial configuration setup. teardown runs with runtime actions and configuration changes disabled. cleanup errors do not prevent VM closure. asynchronous failures appear as notices, including errors from the previous configuration after reload. host registry publication does not wait for arbitrary teardown code.
 
@@ -174,9 +182,9 @@ callbacks scheduled during initial setup wait for the workspace's first `ready` 
 
 ## module paths
 
-`wraith.paths.stdpath(name)` returns the effective `config`, `data`, `cache` or `state` directory. data, cache and state follow XDG paths; `config` honors `--config-dir`. paths are not created by this call.
+`wraith.paths.stdpath(name)` returns the effective `config`, `data`, `cache` or `state` directory. data and cache honor `--data-dir` and `--cache-dir`, falling back to XDG paths; state follows XDG paths and config honors `--config-dir`. paths are not created by this call.
 
-`wraith.runtimepath.prepend(path)`, `append(path)`, `remove(path)` and `list()` manage ordered roots. each root searches `lua/?.lua`, `lua/?/init.lua`, `?.lua` and `?/init.lua`. paths become absolute; symlinks remain usable. empty paths and paths containing `;`, `?` or nul are rejected because those characters have module-path syntax.
+`wraith.runtimepath.prepend(path)`, `append(path)`, `remove(path)` and `list()` manage ordered roots. each root searches `lua/?.lua`, `lua/?/init.lua`, `?.lua` and `?/init.lua`. paths become absolute; symlinks remain usable. adding an existing root in its current position is idempotent; prepend or append moves it when needed. empty paths and paths containing `;`, `?` or nul are rejected because those characters have module-path syntax.
 
 changing roots preserves explicitly added `package.path` patterns after the managed roots. `list()` returns a copy. `require` retains Lua's module cache: moving or removing a root does not unload modules already in `package.loaded`. clear the module entry explicitly or reload the configuration to resolve it again.
 

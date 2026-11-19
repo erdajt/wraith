@@ -186,21 +186,8 @@ release unused objects explicitly. surface storage does not consume managed proc
 
 ## text change events
 
-`wraith.events.on("buffer_changed", callback)` receives `ctx.data.buffers`, the
-complete current metadata index. Compare `id` and `text_revision` with your previous
-index. Missing ids were removed. This is a resynchronization event, not an edit log;
-several edits may become one delivery. Styling and mappings do not trigger text events.
-The host retains the latest index when the callback queue is full and retries on the
-next update. There is no source attribution or promise to deliver each intermediate edit.
+`wraith.events.on("buffer_changed", callback)` receives `ctx.data.buffers`, the complete current metadata index. compare `id` and `text_revision` with your previous index. missing ids were removed. this is a resynchronization event, not an edit log; several edits may become one delivery. styling and mappings do not trigger text events. the host retains the latest index when the callback queue is full and retries on the next update. there is no source attribution or promise to deliver each intermediate edit.
 
-`ctx.surfaces` contains the current buffer, window and region metadata indexes.
-The compatibility `ctx.prompt` mirror is limited to 32 kib, with
-`ctx.prompt_truncated` marking an incomplete prefix. `ctx.argument` is limited to
-8 kib with `ctx.argument_truncated`. Recent message content shares a 64 kib budget.
-Native buffers provide paged access to their bounded projections. An explicit prompt
-replacement over 1 mib is rejected before the actual draft changes.
+`ctx.surfaces` contains the current buffer, window and region metadata indexes. the compatibility `ctx.prompt` mirror is limited to 32 kib, with `ctx.prompt_truncated` marking an incomplete prefix. `ctx.argument` is limited to 8 kib with `ctx.argument_truncated`. recent message content shares a 64 kib budget. native buffers provide paged access to their bounded projections. an explicit prompt replacement over 1 mib is rejected before the actual draft changes.
 
-Startup registration accepts at most 128 surface mutations and 8 mib of encoded
-mutation data in total, including metadata and repeated replacements. Accepted
-startup records and their preview are released after installation, including when
-the plugin registers no callbacks. Live buffers and windows remain available.
+startup registration accepts at most 128 surface mutations and 8 mib of encoded mutation data in total, including metadata and repeated replacements. accepted startup records and their preview are released after installation, including when the plugin registers no callbacks. live buffers and windows remain available.

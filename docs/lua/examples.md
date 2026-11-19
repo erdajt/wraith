@@ -1,6 +1,6 @@
 # example packages
 
-[Lua configuration](../plugins.md) · [workspace queries](workspace.md) · [buffers and views](surfaces.md) · [managed services](services.md) · [hooks, providers and tools](extensions.md)
+[lua configuration](../plugins.md) · [package manager](packages.md) · [workspace queries](workspace.md) · [buffers and views](surfaces.md) · [managed services](services.md) · [hooks, providers and tools](extensions.md)
 
 these packages exercise the same public APIs available to your own plugins. their tests load the shipped Lua files, use real host callbacks and verify unload behavior. the git example runs `git` against a temporary repository in tests. no network or model account is required.
 
@@ -18,6 +18,8 @@ wraith.plugins.load("plugins.scope", {
 ```
 
 check [standard paths](../plugins.md#module-paths) for the configured root. plugins use ordinary `require` lookup. unload with `wraith.plugins.unload("plugins.tasks")`; reload by loading it again. unloading removes owned commands, hooks, views and pending callbacks. only load code you trust; plugins have Lua filesystem and process access.
+
+for modular imports and lazy activation, use the [complete local package configuration](../examples/lua/packages/) from the [manager guide](packages.md#start-with-a-local-package). it exercises the same command and prompt APIs through managed package owners.
 
 ## task context
 
