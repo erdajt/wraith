@@ -86,3 +86,10 @@ if the model sends an output query through the command channel, wraith rejects i
 wraith builds each request with one execution policy selected from the current setting. switching modes replaces that policy on the next request, including in an existing conversation. both policies include their own command-request format. only agent mode includes the output-query and polling protocol.
 
 agent mode tells the model to request approval when the user asks it to perform a task. requests to explain or show a command still produce suggestions. blocks mode favors inspectable shell blocks and permits explicit approval requests, without autonomous output polling. configured private references count as available inputs in either mode.
+
+
+## lua tools and command policies
+
+plugins can register schema-validated model tools through `wraith.tools.register`. tool calls use native approval and tracked background execution; their output follows the selected sharing decision. [tool contracts](lua/extensions.md#model-tools) cover arguments, progress, cancellation and completion. [schema limits](lua/tool-schemas.md) define supported validation rules.
+
+`before_command` hooks can inspect or transform native command proposals before approval and again before launch. a changed execution tuple needs a new approval, and policy failure stops execution. the [scope example](lua/examples.md#native-command-scope) demonstrates an exact-command policy. these hooks do not constrain a trusted plugin's direct process or network access.

@@ -47,7 +47,7 @@ the execution suites run real short shell jobs for approval, cancellation, timeo
 
 CI runs the complete race suite with shuffled order and coverage on every push to `main` and on pull requests. it also verifies module checksums, formatting and vet, installs neovim for editor integration, fuzzes terminal parsing and modal editing, and builds Linux amd64/arm64 binaries. release tags call the same workflow before packaging. local success does not establish that a hosted run passed; inspect the corresponding Actions run when validating a deployment.
 
-lua tests execute real scripts, including the documented configuration and plugins. they cover module confinement, FIFO rejection, retained coroutines, cancellation, reload rollback, YAML layering, actual slash completion, callback targeting, editor continuations and action guards. native Go tests remain beside their packages; example configuration lives under `docs/examples/lua`.
+lua tests execute real scripts, including the documented configuration and plugins. they cover explicit module-path precedence, regular-file validation, FIFO rejection, retained coroutines, cancellation, reload rollback, YAML layering, actual slash completion, callback targeting, editor continuations and action guards. native Go tests remain beside their packages; example configuration lives under `docs/examples/lua`.
 
 
 ## extension regressions

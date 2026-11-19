@@ -76,7 +76,7 @@ keys:
 
 `init.lua` loads after YAML and before CLI overrides. use it for functions, local plugins, custom commands, modal mappings, palettes and lifecycle hooks. `/reload` validates a fresh candidate before replacing the current runtime. settings show which values Lua overrides on reload; editing YAML preserves unrelated active Lua values.
 
-[Lua API and lifecycle](plugins.md) · [tested init.lua](examples/lua/init.lua) · [example plugin](examples/lua/plugins/review.lua)
+[lua API and lifecycle](plugins.md) · [packages and modular imports](lua/packages.md) · [editor completion](lua/editor.md) · [tested init.lua](examples/lua/init.lua) · [example plugin](examples/lua/plugins/review.lua)
 
 ## storage
 
@@ -84,6 +84,8 @@ keys:
 | --- | --- |
 | config: `config.yaml`, `init.lua`, `instructions.md` | settings and global user preferences |
 | data: `sessions/`, `archives/` | compressed active sessions and immutable originals |
+| config: `wraith-lock.json`, `.wraith-packages.lock` | selected git package revisions and persistent publication guard |
+| data: `packages/objects/`, `packages/staging/` | immutable package checkouts and private transaction workspaces; [recovery](lua/packages.md#status-and-recovery) |
 | config: `variables/` | conversation/directory/global bindings and retained-value redaction journal |
 | data: `commands/` | compressed tracked command metadata/output and live recovery journals |
 | data: `input/` | bounded compressed prompt/command history per directory |

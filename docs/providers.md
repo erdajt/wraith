@@ -4,6 +4,7 @@
 
 | kind | transport | model discovery |
 | --- | --- | --- |
+| `plugin` | registered lua callbacks and streamed invocation replies | extension-defined model catalog |
 | `ollama` | native streaming chat | installed models from `/api/tags` |
 | `openai` | openai-compatible chat completions and sse | `/models`, or configured ids |
 | `anthropic` | messages api and sse | `/models`, or configured ids |
@@ -51,8 +52,8 @@ wraith --provider codex
 
 `providers.<name>.action_protocol` accepts `auto`, `native` or `text`; an omitted value means `auto`.
 
-- `auto` uses native function calls for ollama models that advertise tools. other providers keep the text request protocol.
-- `native` enables function calls for ollama, openai-compatible or anthropic endpoints. select a model that supports tools; unsupported endpoints report their error without a silent fallback.
+- `auto` uses native function calls for ollama and plugin models that advertise tools. other providers keep the text request protocol.
+- `native` enables function calls for ollama, openai-compatible, anthropic or plugin providers. select a model that supports tools; unsupported endpoints report their error without a silent fallback.
 - `text` uses the existing fenced request protocol. cli providers always use this transport and reject `native`.
 
 both transports use the same approval window. agent mode offers command requests and bounded output reads. blocks mode offers command requests only. compaction and structured extraction requests offer no tools. tool schemas count toward the request budget.
@@ -91,7 +92,7 @@ for compatible APIs, `reasoning_effort` mode maps `off` to `none` and `on` to `m
 
 | field | purpose |
 | --- | --- |
-| `kind` | `ollama`, `openai`, `anthropic`, `codex-cli` or `claude-cli` |
+| `kind` | `ollama`, `openai`, `anthropic`, `codex-cli`, `claude-cli` or `plugin` |
 | `base_url` | endpoint for http backends; ollama falls back to the root `host` |
 | `model` | saved default selected when activating this profile |
 | `models` | explicit model ids; a nonempty list replaces discovery |
@@ -114,3 +115,10 @@ profile names are local labels. for example, two compatible endpoints can use di
 `/think` lists values supported by the active model/profile. `auto` leaves the backend default intact. `/thinking` and `appearance.thinking` control visibility, independently of generation effort. `za` or a click expands a returned thinking section. reasoning streams separately from the answer and is saved for local display; it is not replayed as ordinary conversation text.
 
 local startup and model switches run discovery/capability checks and preload the selected ollama model. api and cli profiles check their configured backend without downloading local weights. authenticated provider calls are not exercised by the offline fixture tests.
+
+
+## lua providers
+
+register `models`, `show` and `chat` callbacks with `wraith.providers.register`, then select a profile with `kind: plugin`. the host keeps model selection, thinking options, context checks, privacy filtering and tool approval in the native workflow. streaming replies use owned invocation ids; cancellation and reload retire them. provider discovery does not call a model generation callback.
+
+[the provider extension guide](lua/extensions.md#custom-providers) covers callback payloads, streamed deltas, errors and saved profile behavior. [request hooks](lua/extensions.md#request-hooks) transform native request data before final validation. trusted plugins can also access files and make independent network requests, so install only code you trust.
