@@ -139,6 +139,7 @@ func TestCanceledWorkersKeepCapacityUntilTheyFinish(t *testing.T) {
 		if err := m.Cancel(id, "config"); err != nil {
 			t.Fatal(err)
 		}
+		m.discard([]string{id})
 	}
 	if _, err := m.reserve("config", "fixture", func(context.Context, *resourceSink) resourceResult { return resourceResult{} }); err == nil {
 		t.Fatal("canceling unfinished workers released their capacity")

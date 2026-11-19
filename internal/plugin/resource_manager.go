@@ -50,6 +50,7 @@ type resourceManager struct {
 	changed  chan struct{}
 	queue    []queuedResourceEvent
 	progress int
+	running  int
 }
 
 type resourceSink struct {
@@ -80,9 +81,9 @@ func (m *resourceManager) reserve(owner, kind string, work resourceWork) (string
 	if m.closed || m.ctx.Err() != nil {
 		return "", context.Canceled
 	}
-	active := 0
+	active := m.running
 	for _, record := range m.records {
-		if record.state == "reserved" || record.activated && !record.done {
+		if record.state == "reserved" {
 			active++
 		}
 	}
@@ -114,6 +115,7 @@ func (m *resourceManager) activate(id string) error {
 		return fmt.Errorf("resource cannot start in state %s", record.state)
 	}
 	record.activated, record.state = true, "running"
+	m.running++
 	go m.run(record)
 	return nil
 }
@@ -140,6 +142,7 @@ func (m *resourceManager) finish(record *managedResource, result resourceResult)
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	m.running--
 	record.done = true
 	if m.records[record.id] != record || m.closed {
 		return
