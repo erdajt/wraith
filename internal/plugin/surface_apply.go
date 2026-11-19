@@ -136,7 +136,11 @@ func (s *SurfaceStore) apply(m SurfaceMutation) (SurfaceDelta, error) {
 		if len(lines) == 0 {
 			lines = []string{""}
 		}
-		size, err := validateSurfaceLines(lines, 4<<20)
+		limit := 4 << 20
+		if current.Projection == "prompt" {
+			limit = 1 << 20
+		}
+		size, err := validateSurfaceLines(lines, limit)
 		if err != nil {
 			return delta, err
 		}

@@ -1,6 +1,9 @@
 package plugin
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // TestNativeProjectionRevisionsAndWriteGuards protects canonical conversation and incomplete drafts.
 func TestNativeProjectionRevisionsAndWriteGuards(t *testing.T) {
@@ -50,5 +53,24 @@ func TestNativeProjectionRevisionsAndWriteGuards(t *testing.T) {
 		if _, err := s.Apply(mutation); err != nil {
 			t.Fatalf("native decoration rejected: %v", err)
 		}
+	}
+}
+
+// TestExplicitPromptEditPreservesNativeMirrorLimit rejects an oversized replacement before changing the draft projection.
+func TestExplicitPromptEditPreservesNativeMirrorLimit(t *testing.T) {
+	store := newSurfaceStore("native-bound")
+	initial, err := store.HostUpsert("prompt", []string{"draft"}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := make([]string, 20)
+	for i := range lines {
+		lines[i] = strings.Repeat("x", 60000)
+	}
+	buffer := initial.Buffer
+	_, err = store.Apply(SurfaceMutation{Operation: "buffer.set_lines", ID: buffer.ID, Owner: "config", Lease: store.OwnerLease("config"), Expected: buffer.Revision, End: 1, Lines: lines})
+	current, readErr := store.Buffer(buffer.ID)
+	if err == nil || readErr != nil || current.Revision != buffer.Revision || current.Lines[0] != "draft" {
+		t.Fatal("oversized native replacement changed the projection")
 	}
 }

@@ -182,3 +182,19 @@ objects belong to their creating package instance. unloading it closes its windo
 | pending callbacks | 128 shared with scheduled callbacks |
 
 release unused objects explicitly. surface storage does not consume managed process, HTTP or timer worker slots.
+
+## text change events
+
+`wraith.events.on("buffer_changed", callback)` receives `ctx.data.buffers`, the
+complete current metadata index. Compare `id` and `text_revision` with your previous
+index. Missing ids were removed. This is a resynchronization event, not an edit log;
+several edits may become one delivery. Styling and mappings do not trigger text events.
+The host retains the latest index when the callback queue is full and retries on the
+next update. There is no source attribution or promise to deliver each intermediate edit.
+
+`ctx.surfaces` contains the current buffer, window and region metadata indexes.
+The compatibility `ctx.prompt` mirror is limited to 32 kib, with
+`ctx.prompt_truncated` marking an incomplete prefix. `ctx.argument` is limited to
+8 kib with `ctx.argument_truncated`. Recent message content shares a 64 kib budget.
+Native buffers provide paged access to their bounded projections. An explicit prompt
+replacement over 1 mib is rejected before the actual draft changes.
