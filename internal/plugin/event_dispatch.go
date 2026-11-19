@@ -50,8 +50,8 @@ func (e *engine) invokeObservers(parent context.Context, event string, listeners
 			err = e.validateRegistry()
 		}
 		if err != nil {
-			hooks := e.restoreRegistry(before)
-			err = errors.Join(err, e.disposeHooks(hooks))
+			disposal := e.restoreRegistry(before)
+			err = errors.Join(err, e.disposeRegistry(disposal))
 			e.observerErrors = append(e.observerErrors, fmt.Errorf("event %s observer %s: %w", event, owner, err))
 		}
 	}

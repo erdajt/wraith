@@ -91,8 +91,8 @@ func (e *engine) loadPlugin(name string, options *lua.LTable, dependency bool) (
 	defer func() { e.owner = parentOwner }()
 	defer func() {
 		if err != nil {
-			hooks := e.restoreRegistry(before)
-			err = errors.Join(err, e.disposeHooks(hooks))
+			disposal := e.restoreRegistry(before)
+			err = errors.Join(err, e.disposeRegistry(disposal))
 		}
 	}()
 	L := e.L

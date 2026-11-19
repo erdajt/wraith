@@ -35,8 +35,8 @@ func (e *engine) callPackage(name, method string, args []lua.LValue) (value lua.
 	}()
 	defer func() {
 		if err != nil {
-			hooks := e.restoreRegistry(before)
-			err = errors.Join(err, e.disposeHooks(hooks))
+			disposal := e.restoreRegistry(before)
+			err = errors.Join(err, e.disposeRegistry(disposal))
 		}
 	}()
 	if err = e.L.CallByParam(lua.P{Fn: fn, NRet: 1, Protect: true}, args...); err != nil {

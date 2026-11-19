@@ -17,6 +17,7 @@ type publicationDecision struct {
 
 type registryState struct {
 	moduleProviders []moduleProvider
+	moduleSerial    uint64
 	extensionState
 	ownershipLayers
 	schedulerState
@@ -50,6 +51,7 @@ func (e *engine) captureRegistry() registryState {
 	}
 	return registryState{
 		moduleProviders: slices.Clone(e.moduleProviders),
+		moduleSerial:    e.serial,
 		extensionState:  e.cloneExtensions(),
 		ownershipLayers: e.cloneOwnership(), schedulerState: e.cloneScheduler(), resourceState: e.cloneResources(), surfaceState: e.cloneSurfaces(),
 		manifest: cloneManifest(e.manifest), functions: maps.Clone(e.functions), events: events,
@@ -60,7 +62,7 @@ func (e *engine) captureRegistry() registryState {
 }
 
 // restoreRegistry drops staged registrations without pretending to roll back arbitrary Lua state.
-func (e *engine) restoreRegistry(s registryState) []cleanupHook {
+func (e *engine) restoreRegistry(s registryState) registryDisposal {
 	retained := map[uint64]bool{}
 	for _, hook := range append(slices.Clone(s.cleanup), s.disposing...) {
 		retained[hook.id] = true
@@ -94,7 +96,9 @@ func (e *engine) restoreRegistry(s registryState) []cleanupHook {
 	e.actions, e.loaded, e.cleanup = s.actions, s.loaded, s.cleanup
 	e.disposing, e.effects, e.dirty = s.disposing, s.effects, s.dirty
 	e.rollback = nil
-	return discarded
+	return registryDisposal{hooks: discarded, modules: e.takeModuleExecutions(func(execution moduleExecution) bool {
+		return execution.serial > s.moduleSerial
+	})}
 }
 
 // refreshManifest rebuilds event subscriptions after a successful structural change.
@@ -144,14 +148,14 @@ func (r *Runtime) Acknowledge(revision uint64, accepted bool) error {
 func (r *Runtime) publish(e *engine, revision uint64) bool {
 	select {
 	case <-r.ctx.Done():
-		hooks := e.restoreRegistry(*e.rollback)
-		r.reportCleanup(e.disposeHooks(hooks))
+		disposal := e.restoreRegistry(*e.rollback)
+		r.reportCleanup(e.disposeRegistry(disposal))
 		return false
 	case decision := <-r.ack:
 		if decision.revision != revision || !decision.accepted {
-			hooks := e.restoreRegistry(*e.rollback)
+			disposal := e.restoreRegistry(*e.rollback)
 			close(decision.done)
-			r.reportCleanup(e.disposeHooks(hooks))
+			r.reportCleanup(e.disposeRegistry(disposal))
 			return true
 		}
 		e.rollback = nil
@@ -169,7 +173,7 @@ func (r *Runtime) publish(e *engine, revision uint64) bool {
 		hooks := e.disposing
 		e.disposing = nil
 		close(decision.done)
-		r.reportCleanup(e.disposeHooks(hooks))
+		r.reportCleanup(e.disposeRegistry(registryDisposal{hooks: hooks, modules: e.retiredModuleExecutions()}))
 		return true
 	}
 }

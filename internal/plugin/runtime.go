@@ -99,6 +99,7 @@ type Runtime struct {
 
 type engine struct {
 	moduleProviders    []moduleProvider
+	moduleExecutions   map[string]moduleExecution
 	moduleSources      map[string]moduleSource
 	moduleNamespaces   []string
 	runtimeRoots       []string
@@ -394,14 +395,14 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 			if e.invocationID != "" {
 				e.invocations.finish(e.invocationID, nil, result.Err)
 			}
-			hooks := e.restoreRegistry(before)
+			disposal := e.restoreRegistry(before)
 			if req.resource != nil {
 				callback := e.resources[req.resource.ID]
 				callback.function = nil
 				e.resources[req.resource.ID] = callback
 				result.Err = errors.Join(result.Err, e.services.failConsumer(req.resource.ID, resource.owner, result.Err))
 			}
-			result.Err = errors.Join(result.Err, e.disposeHooks(hooks))
+			result.Err = errors.Join(result.Err, e.disposeRegistry(disposal))
 		}
 	}()
 	e.L.SetContext(parent)

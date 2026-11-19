@@ -137,7 +137,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	e.surfaceReleased = nil
 	hooks := e.disposing
 	e.disposing = nil
-	if err := e.disposeHooks(hooks); err != nil {
+	if err := e.disposeRegistry(registryDisposal{hooks: hooks, modules: e.retiredModuleExecutions()}); err != nil {
 		return nil, err
 	}
 	e.acceptExtensions()
