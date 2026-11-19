@@ -50,6 +50,8 @@ wraith.plugins.load("plugins.tasks", {
 
 reopen `/command-history` to restore its view. output uses a reusable split. these mappings are buffer-local. split copies retain independent cursors; Enter selects the record under the focused cursor.
 
+list commands use short UTF-8 previews with `...` when clipped. output detail retains up to 64 KiB of command text and marks clipping.
+
 `max_records` defaults to 200 and accepts integers from 1 through 1000. this limits loaded records, not the underlying history. a limited view is not guaranteed to contain the globally newest commands because source pages follow directory enumeration. active jobs are merged by ID. stopped scans release their continuation instead of retaining an open directory.
 
 output is local and may include captures hidden from the model. opening it does not grant sharing or add model evidence. the view displays a bounded output page and its next line when more is available; [workspace queries](workspace.md#commands-and-output) expose search and further pages for larger viewers.
