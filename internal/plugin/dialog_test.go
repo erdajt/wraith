@@ -20,6 +20,7 @@ func TestDialogOptions(t *testing.T) {
 		{"control", "select", `return {"\027[31m"}, {}`, "control"},
 		{"initial control", "input", `return {initial="\000"}`, "control"},
 		{"unknown", "input", `return {mystery=true}`, "unknown"},
+		{"empty item field", "select", `return {{label="first", [""]="ignored"}}, {}`, `unknown item field: ""`},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			L := lua.NewState()

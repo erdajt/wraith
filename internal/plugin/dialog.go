@@ -55,14 +55,14 @@ func parseDialog(L *lua.LState, kind string) (Dialog, error) {
 			item := DialogItem{ID: strconv.Itoa(i)}
 			value := items.RawGetInt(i)
 			if fields, ok := value.(*lua.LTable); ok {
-				var unknown string
+				var invalid error
 				fields.ForEach(func(key, _ lua.LValue) {
 					if key != lua.LString("id") && key != lua.LString("label") && key != lua.LString("detail") {
-						unknown = key.String()
+						invalid = fmt.Errorf("unknown item field: %q", key.String())
 					}
 				})
-				if unknown != "" {
-					return dialog, fmt.Errorf("unknown item field: %s", unknown)
+				if invalid != nil {
+					return dialog, invalid
 				}
 				value = fields.RawGetString("label")
 				if id := fields.RawGetString("id"); id != lua.LNil {
