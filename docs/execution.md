@@ -57,6 +57,10 @@ in scratch copy mode, `ctrl+g` shares the selection or snapshot. `execution.auto
 
 ## limits and recovery
 
+output searches merge retained prefix and tail lines without indexing the entire capture. context windows keep at most ten preceding lines; result pages contain at most 200 lines and 16 kib. overlapping tail lines replace the corresponding prefix lines. coverage and match counts still cover all retained complete lines.
+
+searches stop on cancellation or after ten seconds. regex patterns accept at most 4,096 source bytes and 4,096 expanded program instructions. total regex work is limited to 67,108,864 instruction-times-text units; exceeding it returns an error rather than incomplete search results. use a literal pattern when a complex regex exceeds the work limit. these limits apply to local extension queries and model-facing searches; output-sharing rules remain separate.
+
 | setting | default | accepted values |
 | --- | --- | --- |
 | `execution.max_jobs` | `4` | 1–32 concurrent jobs |
