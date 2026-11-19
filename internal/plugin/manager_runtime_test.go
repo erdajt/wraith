@@ -51,8 +51,10 @@ func TestManagerValidatesViewBeforeInitializingPackages(t *testing.T) {
  local initialized=0
  local specs={{name="app",dir="/tmp/app",lazy=true,init=function() initialized=initialized+1 end}}
  local manager=require("wraith.manager")
- assert(not pcall(manager.setup,specs,{ui={keys={refresh="<InvalidKey>"}}}))
- assert(initialized==0 and #wraith.plugins.list()==0)
+ for _,ui in ipairs({false,{position=false},{keys=false},{keys={refresh="<InvalidKey>"}}}) do
+  assert(not pcall(manager.setup,specs,{ui=ui}))
+  assert(initialized==0 and #wraith.plugins.list()==0)
+ end
  manager.setup(specs)
  assert(initialized==1,"initialized="..initialized)
  assert(not pcall(manager.setup,specs))
@@ -62,6 +64,34 @@ func TestManagerValidatesViewBeforeInitializingPackages(t *testing.T) {
  manager.setup(specs)
  assert(initialized==2)
  `)
+}
+
+func TestManagerRejectsInvalidOptionsWithoutPublishingPartialSetup(t *testing.T) {
+	r := openTestRuntime(t, managerLocalStore+`
+ local attempts=0
+ package.preload.app=function() return {setup=function(opts)
+  assert(opts.value=="ready")
+  wraith.commands.create("app.ready",function() end)
+ end} end
+ local manager=require("wraith.manager")
+ manager.setup({{name="app",dir="/tmp/app",lazy=true,opts=function(_,opts)
+  attempts=attempts+1
+  if attempts==1 then
+   wraith.commands.create("partial",function() end)
+   return false
+  end
+  opts.value="ready"
+ end}})
+ assert(not pcall(manager.load,"app"))
+ assert(not manager.status().packages[1].loaded)
+ manager.load("app")
+ assert(manager.status().packages[1].loaded and attempts==2)
+ `)
+	for _, command := range r.Manifest().Commands {
+		if command.Name == "partial" {
+			t.Fatal("invalid options left a partial command registered")
+		}
+	}
 }
 
 func TestManagerLazyEventsReplayOnlyNewListenersAfterPublication(t *testing.T) {
