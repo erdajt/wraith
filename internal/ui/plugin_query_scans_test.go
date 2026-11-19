@@ -119,3 +119,39 @@ func TestWorkspaceSourceBudgetCancelsWaitingReaders(t *testing.T) {
 		t.Fatalf("failed source read retained slot: %v", err)
 	}
 }
+
+// TestWorkspaceCursorCancellationTracksLatestPage prevents stale queries from closing newer work.
+func TestWorkspaceCursorCancellationTracksLatestPage(t *testing.T) {
+	root := t.TempDir()
+	for index := range 3 {
+		if err := os.WriteFile(filepath.Join(root, fmt.Sprintf("%024x.json.gz", index)), nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	store := &workspaceScanStore{}
+	t.Cleanup(func() { store.reconcile(nil, true) })
+	query := plugin.WorkspaceQuery{ID: "first", Owner: "owner", Lease: "lease", Options: plugin.WorkspaceOptions{Limit: 1}}
+	read := func(id string) (any, error) { return id, nil }
+	page, err := store.page(t.Context(), nil, query, root, "filter", 4, read)
+	if err != nil {
+		t.Fatal(err)
+	}
+	query.ID, query.Options.Cursor = "second", page.Next
+	page, err = store.page(t.Context(), nil, query, root, "filter", 4, read)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.cancel(nil, "owner", "lease", "first")
+	store.cancel(nil, "foreign", "lease", "second")
+	if len(store.entries) != 1 {
+		t.Fatal("old or foreign query cancelled the current continuation")
+	}
+	store.cancel(nil, "owner", "lease", "second")
+	if len(store.entries) != 0 {
+		t.Fatal("completed query retained its continuation")
+	}
+	query.Options.Cursor = page.Next
+	if _, err := store.page(t.Context(), nil, query, root, "filter", 4, read); err == nil {
+		t.Fatal("cancelled continuation remained usable")
+	}
+}

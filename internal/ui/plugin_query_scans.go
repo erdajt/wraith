@@ -21,6 +21,7 @@ type workspaceScan struct {
 	owner      string
 	lease      string
 	invocation string
+	queryID    string
 	filter     string
 	expires    time.Time
 	busy       bool
@@ -94,6 +95,7 @@ func (s *workspaceScanStore) page(ctx context.Context, runtime *plugin.Runtime, 
 		token = session.ID()
 		s.entries[token] = scan
 	}
+	scan.queryID = query.ID
 	scan.busy = true
 	s.mu.Unlock()
 
@@ -192,5 +194,17 @@ func (s *workspaceScanStore) readSource(ctx context.Context, read func() error) 
 		return read()
 	case <-ctx.Done():
 		return ctx.Err()
+	}
+}
+
+// cancel closes the continuation owned by the latest query without affecting a later consumer.
+func (s *workspaceScanStore) cancel(runtime *plugin.Runtime, owner, lease, id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for token, scan := range s.entries {
+		if scan.runtime == runtime && scan.owner == owner && scan.lease == lease && scan.queryID == id {
+			_ = scan.file.Close()
+			delete(s.entries, token)
+		}
 	}
 }

@@ -178,8 +178,11 @@ func (a *App) deliverWorkspaceQuery(message workspaceQueryMsg) tea.Cmd {
 	}
 }
 
-// cancelWorkspaceQuery affects only the requesting package's pending host read.
+// cancelWorkspaceQuery closes owned reads and their unconsumed scan continuations.
 func (a *App) cancelWorkspaceQuery(runtime *plugin.Runtime, owner, lease, id string) {
+	if a.workspaceScans != nil {
+		a.workspaceScans.cancel(runtime, owner, lease, id)
+	}
 	if state := a.pluginQueries[id]; state != nil && state.runtime == runtime && state.query.Owner == owner && state.query.Lease == lease {
 		state.cancelled = true
 		state.cancel()
