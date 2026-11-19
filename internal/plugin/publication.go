@@ -17,6 +17,7 @@ type publicationDecision struct {
 
 type registryState struct {
 	ownershipLayers
+	schedulerState
 	manifest        Manifest
 	functions       map[string]*lua.LFunction
 	events          map[string][]string
@@ -42,7 +43,7 @@ func (e *engine) captureRegistry() registryState {
 	for name, ids := range e.events {
 		events[name] = slices.Clone(ids)
 	}
-	return registryState{e.cloneOwnership(), cloneManifest(e.manifest), maps.Clone(e.functions), events, maps.Clone(e.actions), maps.Clone(e.loaded), slices.Clone(e.cleanup), slices.Clone(e.disposing), slices.Clone(e.effects), e.dirty, e.clonePackages()}
+	return registryState{e.cloneOwnership(), e.cloneScheduler(), cloneManifest(e.manifest), maps.Clone(e.functions), events, maps.Clone(e.actions), maps.Clone(e.loaded), slices.Clone(e.cleanup), slices.Clone(e.disposing), slices.Clone(e.effects), e.dirty, e.clonePackages()}
 }
 
 // restoreRegistry drops staged registrations without pretending to roll back arbitrary Lua state.
@@ -57,6 +58,7 @@ func (e *engine) restoreRegistry(s registryState) []cleanupHook {
 			discarded = append(discarded, hook)
 		}
 	}
+	e.schedulerState = s.schedulerState
 	e.packages = s.packages
 	e.ownershipLayers = s.ownershipLayers
 	e.manifest, e.functions, e.events = s.manifest, s.functions, s.events

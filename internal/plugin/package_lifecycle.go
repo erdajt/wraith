@@ -37,6 +37,11 @@ func (e *engine) unloadPlugin(name string) error {
 			return fmt.Errorf("plugin %s is required by %s", name, dependent)
 		}
 	}
+	for id, call := range e.scheduled {
+		if call.owner == record.owner {
+			delete(e.scheduled, id)
+		}
+	}
 	e.removeOwnerRegistrations(record.owner)
 	for key, layers := range e.bindingLayers {
 		e.bindingLayers[key] = slices.DeleteFunc(layers, func(layer ownedBinding) bool {

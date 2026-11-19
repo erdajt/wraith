@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -58,6 +59,7 @@ func (c *completion) resolve(result Result) {
 }
 
 type Runtime struct {
+	discarded                               map[string]bool
 	diagnostics                             []string
 	notices                                 chan string
 	queue                                   chan request
@@ -74,6 +76,7 @@ type Runtime struct {
 
 type engine struct {
 	ownershipLayers
+	schedulerState
 	L              *lua.LState
 	manifest       Manifest
 	functions      map[string]*lua.LFunction
@@ -105,7 +108,7 @@ func Open(parent context.Context, directory string, c config.Config, actions []s
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(parent)
-	r := &Runtime{notices: make(chan string, 64), queue: make(chan request, 128), ack: make(chan publicationDecision, 1), done: make(chan struct{}), ctx: ctx, cancel: cancel, pending: map[string]request{}, waiting: map[*completion]struct{}{}}
+	r := &Runtime{discarded: map[string]bool{}, notices: make(chan string, 64), queue: make(chan request, 128), ack: make(chan publicationDecision, 1), done: make(chan struct{}), ctx: ctx, cancel: cancel, pending: map[string]request{}, waiting: map[*completion]struct{}{}}
 	ready := make(chan error, 1)
 	go r.serve(directory, detached, actions, ready)
 	go func() {
@@ -205,13 +208,15 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 		case <-r.ctx.Done():
 			return
 		case req := <-r.queue:
+			r.discardScheduled(e)
 			r.mu.Lock()
 			if req.event == "window_changed" || req.event == "session_changed" {
 				req = r.pending[req.event]
 				delete(r.pending, req.event)
 			}
-			stale := req.event == "" && req.revision != r.revision
-			if req.event != "" {
+			scheduled := strings.HasPrefix(req.callback, "lua.schedule.")
+			stale := req.event == "" && !scheduled && req.revision != r.revision
+			if req.event != "" || scheduled {
 				req.config.Keymaps = slices.Clone(r.manifest.Config.Keymaps)
 			}
 			r.mu.Unlock()
@@ -236,14 +241,24 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 			if result.Manifest != nil && !r.publish(e, result.Revision) {
 				return
 			}
+			r.discardScheduled(e)
 		}
 	}
 }
 
 // invoke stages command or isolated observer changes for host publication.
 func (e *engine) invoke(parent context.Context, req request) (result Result) {
-	before := e.captureRegistry()
 	e.observerErrors = nil
+	var deferred scheduledCall
+	if strings.HasPrefix(req.callback, "lua.schedule.") {
+		var exists bool
+		deferred, exists = e.scheduled[req.callback]
+		if !exists {
+			return Result{}
+		}
+		delete(e.scheduled, req.callback)
+	}
+	before := e.captureRegistry()
 	e.dirty = false
 	defer func() {
 		if result.Err != nil {
@@ -264,13 +279,17 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 		}
 	} else {
 		fn := e.functions[req.callback]
+		owner := e.callbackOwners[req.callback]
+		if deferred.function != nil {
+			fn, owner = deferred.function, deferred.owner
+		}
 		if fn == nil {
 			return Result{Err: errors.New("plugin callback no longer exists")}
 		}
 		ctx, cancel := context.WithTimeout(parent, 250*time.Millisecond)
 		defer cancel()
 		e.L.SetContext(ctx)
-		e.owner = e.callbackOwners[req.callback]
+		e.owner = owner
 		if err := e.L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true}, encodeValue(e.L, e.snapshot)); err != nil {
 			return Result{Err: err}
 		}
@@ -278,7 +297,7 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 	e.owner = "config"
 	if e.dirty {
 		e.refreshManifest()
-		if err := e.manifest.Config.Validate(); err != nil {
+		if err := e.validateRegistry(); err != nil {
 			return Result{Err: err}
 		}
 		for i := range e.effects {
