@@ -26,6 +26,9 @@ end)`)
 		t.Fatal(err)
 	}
 	a.installPluginSurfaces(deltas)
+	if len(a.pluginManifest.Surface) != 0 || len(a.plugins.Manifest().Surface) != 0 {
+		t.Fatal("installed workspace retained startup text payloads")
+	}
 	if len(a.windows) != 13 || a.focusedSurfaceView() == nil {
 		t.Fatal("startup views or focus missing")
 	}

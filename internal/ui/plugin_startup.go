@@ -57,4 +57,8 @@ func (a *App) installPluginSurfaces(deltas []plugin.SurfaceDelta) {
 		}
 	}
 	a.syncNativeSurfaces()
+	if a.plugins != nil {
+		a.plugins.CommitStartup()
+		a.pluginManifest.Surface = nil
+	}
 }
