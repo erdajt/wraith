@@ -98,6 +98,9 @@ type Runtime struct {
 }
 
 type engine struct {
+	moduleSources      map[string]moduleSource
+	moduleNamespaces   []string
+	runtimeRoots       []string
 	invocations        *invocationManager
 	invocationID       string
 	acceptedExtensions map[string]bool

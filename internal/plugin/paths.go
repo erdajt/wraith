@@ -52,14 +52,14 @@ func (e *engine) installPaths(api *lua.LTable, directory string, overrides confi
 		},
 	}))
 
-	roots := []string{directory}
-	managed := runtimePatterns(roots)
+	e.runtimeRoots = []string{directory}
+	managed := runtimePatterns(e.runtimeRoots)
 	pkg := L.GetGlobal("package")
 	L.SetField(pkg, "path", lua.LString(strings.Join(managed, ";")))
 	methods := map[string]lua.LGFunction{
 		"list": func(L *lua.LState) int {
 			list := L.NewTable()
-			for _, root := range roots {
+			for _, root := range e.runtimeRoots {
 				list.Append(lua.LString(root))
 			}
 			L.Push(list)
@@ -83,14 +83,14 @@ func (e *engine) installPaths(api *lua.LTable, directory string, overrides confi
 			unmanaged := slices.DeleteFunc(strings.Split(string(path), ";"), func(pattern string) bool {
 				return pattern == "" || slices.Contains(managed, pattern)
 			})
-			roots = slices.DeleteFunc(roots, func(value string) bool { return value == root })
+			e.runtimeRoots = slices.DeleteFunc(e.runtimeRoots, func(value string) bool { return value == root })
 			switch operation {
 			case "prepend":
-				roots = append([]string{root}, roots...)
+				e.runtimeRoots = append([]string{root}, e.runtimeRoots...)
 			case "append":
-				roots = append(roots, root)
+				e.runtimeRoots = append(e.runtimeRoots, root)
 			}
-			managed = runtimePatterns(roots)
+			managed = runtimePatterns(e.runtimeRoots)
 			patterns := append(slices.Clone(managed), unmanaged...)
 			L.SetField(pkg, "path", lua.LString(strings.Join(patterns, ";")))
 			return 0

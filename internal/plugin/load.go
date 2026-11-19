@@ -105,6 +105,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 		}
 	}
 
+	e.installModuleDiscovery(api)
 	e.guardHookAPIs(api)
 	fn, err := loadFile(L, filepath.Join(directory, "init.lua"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {

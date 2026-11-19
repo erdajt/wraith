@@ -31,7 +31,7 @@ func (e *engine) installPackageModules(roots []PackageRoot) error {
 		return errors.New("package roots exceed 32")
 	}
 	namespaces := []string{}
-	modules := map[string]string{}
+	modules := map[string]moduleSource{}
 	visited := 0
 	for _, root := range roots {
 		if !filepath.IsAbs(root.Directory) || strings.ContainsAny(root.Directory, ";?\x00") || len(root.Namespaces) == 0 || len(root.Namespaces) > 32 {
@@ -83,10 +83,10 @@ func (e *engine) installPackageModules(roots []PackageRoot) error {
 			if !selected {
 				return nil
 			}
-			if modules[name] != "" {
+			if modules[name].path != "" {
 				return fmt.Errorf("ambiguous package module %s", name)
 			}
-			modules[name] = path
+			modules[name] = moduleSource{name: name, path: path, root: root.Directory}
 			if len(modules) > 4096 {
 				return errors.New("package modules exceed 4096")
 			}
@@ -128,9 +128,9 @@ func (e *engine) installPackageModules(roots []PackageRoot) error {
 		return 0
 	}))
 	preload := e.L.GetField(pkg, "preload").(*lua.LTable)
-	for name, path := range modules {
-		preload.RawSetString(name, e.L.NewFunction(func(L *lua.LState) int {
-			chunk, err := loadFile(L, path)
+	for name, source := range modules {
+		source.preload = e.L.NewFunction(func(L *lua.LState) int {
+			chunk, err := loadFile(L, source.path)
 			if err != nil {
 				L.RaiseError("module %s: %v", name, err)
 			}
@@ -138,7 +138,10 @@ func (e *engine) installPackageModules(roots []PackageRoot) error {
 				L.RaiseError("module %s: %v", name, err)
 			}
 			return 1
-		}))
+		})
+		modules[name] = source
+		preload.RawSetString(name, source.preload)
 	}
+	e.moduleSources, e.moduleNamespaces = modules, namespaces
 	return nil
 }

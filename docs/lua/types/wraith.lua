@@ -18,6 +18,7 @@
 ---@field plugins Wraith.PluginsAPI
 ---@field paths Wraith.PathsAPI
 ---@field runtimepath Wraith.RuntimepathAPI
+---@field modules Wraith.ModulesAPI
 ---@field json Wraith.JSONAPI
 ---@field fs Wraith.FSAPI
 ---@field http Wraith.HTTPAPI
@@ -43,7 +44,7 @@
 wraith = wraith or {}
 wraith.api_version = 2
 wraith.capabilities = {
-  trusted_lua = true, runtimepath = true, stdpath = true,
+  trusted_lua = true, runtimepath = true, stdpath = true, modules = true,
   live_registration = true, custom_events = true, plugin_lifecycle = true,
   scheduling = true, json = true, filesystem = true, http = true,
   timers = true, managed_resources = true, process = true,
@@ -163,3 +164,16 @@ function wraith.runtimepath.prepend(path) end
 function wraith.runtimepath.append(path) end
 ---@param path string
 function wraith.runtimepath.remove(path) end
+
+---@class Wraith.ModuleSource
+---@field name string normalized module name
+---@field kind 'file'|'preload'
+---@field path? string absolute source path for files
+---@field identity string opaque source identity, stable within this runtime
+---@field load fun(): ... runs the bound source afresh and preserves all return values
+---@class Wraith.ModulesAPI
+wraith.modules = wraith.modules or {}
+-- discovers an exact module and immediate children from the first selected source root.
+---@param name string dotted module name, at most 128 bytes
+---@return Wraith.ModuleSource[] sources sorted by name, at most 256
+function wraith.modules.discover(name) end
