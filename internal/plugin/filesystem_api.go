@@ -35,6 +35,20 @@ func (e *engine) installFilesystem(api *lua.LTable) {
 			L.Push(value)
 			return 1
 		}))
+		methods.RawSetString(kind+"_async", L.NewFunction(func(L *lua.LState) int {
+			op, options := parseFileOperation(L, kind)
+			index := options + 1
+			if L.Get(options).Type() == lua.LTFunction {
+				index = options
+			}
+			callback := L.CheckFunction(index)
+			id := e.reserveResource(L, "fs."+kind, callback, func(ctx context.Context, sink *resourceSink) resourceResult {
+				data, err := op.run(ctx)
+				return resourceResult{Data: data, Err: err}
+			})
+			L.Push(lua.LString(id))
+			return 1
+		}))
 	}
 	api.RawSetString("fs", methods)
 }
