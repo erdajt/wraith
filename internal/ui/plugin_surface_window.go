@@ -8,7 +8,10 @@ import (
 
 // surfaceWindowAction keeps user splits, closes and floating resizes visible to Lua.
 func (a *App) surfaceWindowAction(action string) bool {
-	view := a.focusedSurfaceView()
+	var view *surfaceView
+	if a.conversationView != nil {
+		view = a.conversationView.surface
+	}
 	if action == "o" {
 		for handle, id := range a.surfaceWindows {
 			if id != a.windowID {

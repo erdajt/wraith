@@ -109,9 +109,10 @@ window options:
 | `title` | frame label; otherwise use the buffer name |
 | `focus` | request focus for this operation |
 | `cursor` | `{line = 0, column = 0}` in rune coordinates |
+| `mode` | `normal` or `insert`; insertion requires an editable buffer |
 | `buffer_id` | change the displayed buffer with `configure` |
 
-changing kind or placement moves the existing view. requested split sizes adjust the nearest matching divider and respect minimum visible sizes. terminal resize clips floats and may hide split branches until space returns. user divider changes update owned window geometry. `focus` is an operation request, not persistent focus state.
+changing kind or placement moves the existing view. requested split sizes adjust the nearest matching divider and respect minimum visible sizes. terminal resize clips floats and may hide split branches until space returns. user divider changes update owned window geometry. `focus` is an operation request, not persistent focus state. window `mode` records normal versus insertion cursor behavior; visual selection and search remain transient state in each view.
 
 native approvals, editors and modal dialogs retain input ownership. focus requests that would replace them fail. passive regions never capture input.
 

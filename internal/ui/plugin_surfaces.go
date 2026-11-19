@@ -181,6 +181,10 @@ func (a *App) cacheSurfaceWindow(window plugin.SurfaceWindow, focus bool) {
 	if window.Cursor != view.surface.window.Cursor || view.surface.window.ID == "" {
 		view.surface.reader.Buffer.Pos = surfaceCursorOffset(a.surfaceBuffers[window.BufferID].Lines, window.Cursor)
 	}
+	if window.Mode != old.Mode {
+		b := view.surface.reader.Buffer
+		b.Mode, b.Pending, b.Count, b.OperatorCount = window.Mode, "", "", ""
+	}
 	focus = focus || window.Focus
 	window.Focus = false
 	view.surface.window = window
@@ -241,6 +245,9 @@ func (a *App) ensureSurfaceFallback() {
 
 // reconcileSurfaces drops revoked owners and refreshes changed snapshots outside rendering.
 func (a *App) reconcileSurfaces() {
+	paused := a.surfaceReplay
+	a.surfaceReplay = true
+	defer func() { a.surfaceReplay = paused }()
 	if a.surfaceRuntime != a.plugins {
 		for id := range a.surfaceWindows {
 			a.removeSurfaceWindow(id)

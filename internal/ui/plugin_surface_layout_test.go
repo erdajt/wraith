@@ -95,3 +95,55 @@ func TestSurfaceWindowSizesUseNativeDividers(t *testing.T) {
 		}
 	}
 }
+
+func TestOrderedTextEditThenWindowConfigurationKeepsRevisionFlow(t *testing.T) {
+	a := pluginFixture(t, `wraith.commands.create("ordered",function()
+ local buffer=wraith.buffers.create({lines={"first","second"},editable=true})
+ local window=wraith.windows.open(buffer,{focus=true,cursor={line=1,column=2}})
+ wraith.buffers.set_lines(buffer,0,0,{"prefix"})
+ wraith.windows.configure(window,{title="final",cursor={line=0,column=1}})
+end)`)
+	a.Update(a.runCommand("ordered")())
+	view := a.focusedSurfaceView()
+	if view == nil || view.window.Title != "final" || view.reader.Buffer.Pos != 1 {
+		t.Fatalf("ordered configuration was invalidated by host rebase: %s, view=%#v", a.notice, view)
+	}
+}
+
+func TestSplitFromPromptKeepsPluginViewStateIndependent(t *testing.T) {
+	a := pluginFixture(t, "")
+	a.width, a.height = 140, 40
+	buffer := surfaceFixture(t, a, true)
+	first := surfaceWindowFixture(t, a, buffer.ID, true)
+	a.focus = "prompt"
+	a.windowAction("v")
+	second := a.windowID
+	if first == second || a.windows[first].surface == a.windows[second].surface || a.windows[first].surface.reader == a.windows[second].surface.reader {
+		t.Fatal("split from prompt borrowed the original plugin editor")
+	}
+	if len(a.plugins.Surfaces().Index().Windows) != 2 {
+		t.Fatal("split from prompt was not published as an owned window")
+	}
+	a.feedInput("j")
+	if a.windows[first].surface.reader.Buffer.Pos != 0 {
+		t.Fatal("new pane moved the original cursor")
+	}
+}
+
+func TestSurfaceReconciliationDoesNotWriteIntermediateCursors(t *testing.T) {
+	a := pluginFixture(t, "")
+	buffer := surfaceFixture(t, a, true)
+	surfaceWindowFixture(t, a, buffer.ID, true)
+	a.feedInput("jl")
+	view := a.focusedSurfaceView()
+	if _, err := a.plugins.Surfaces().HostApply(plugin.SurfaceMutation{Operation: "buffer.set_lines", ID: buffer.ID, Owner: buffer.Owner, Expected: buffer.Revision, Start: 0, End: 0, Lines: []string{"prefix"}}); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := a.plugins.Surfaces().Window(view.window.ID)
+	a.notice = "unchanged"
+	a.reconcileSurfaces()
+	after, _ := a.plugins.Surfaces().Window(view.window.ID)
+	if a.notice != "unchanged" || before.Revision != after.Revision || view.window.Revision != after.Revision || view.reader.Buffer.Pos != 14 {
+		t.Fatalf("reconcile changed canonical state: before=%#v after=%#v cursor=%d notice=%q", before, after, view.reader.Buffer.Pos, a.notice)
+	}
+}

@@ -73,11 +73,15 @@ func (a *App) syncSurfaceCursor(view *surfaceView) {
 			position.Column++
 		}
 	}
-	if position == view.window.Cursor {
+	mode := "normal"
+	if view.reader.Buffer.Mode == "insert" {
+		mode = "insert"
+	}
+	if position == view.window.Cursor && mode == view.window.Mode {
 		return
 	}
 	window := view.window
-	window.Cursor = position
+	window.Cursor, window.Mode = position, mode
 	delta, err := a.plugins.Surfaces().HostApply(plugin.SurfaceMutation{Operation: "window.configure", ID: window.ID, Owner: window.Owner, Expected: window.Revision, Window: &window})
 	if err == nil && delta.Window != nil {
 		view.window = *delta.Window
