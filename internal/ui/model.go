@@ -231,6 +231,7 @@ func New(c config.Config, p config.Paths, s session.Session, demo bool, extensio
 		a.pluginManifest = a.plugins.Manifest()
 		a.actions = a.pluginActions(a.pluginManifest)
 	}
+	a.Client = a.providerClient(c)
 	if a.keymaps, err = a.buildKeymaps(c); err != nil {
 		return nil, err
 	}

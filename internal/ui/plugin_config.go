@@ -6,11 +6,11 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/config"
-	"github.com/erdajt/wraith/internal/provider"
+	"github.com/erdajt/wraith/internal/plugin"
 )
 
 // applyPluginConfig validates live changes before updating session identity and runtime services.
-func (a *App) applyPluginConfig(c config.Config) (tea.Cmd, error) {
+func (a *App) applyPluginConfig(c config.Config, runtimes ...*plugin.Runtime) (tea.Cmd, error) {
 	if a.busy || a.loading || a.editing || a.popup != nil || a.proposal != nil || a.pluginDialog != nil {
 		return nil, errors.New("finish the current operation before applying lua configuration")
 	}
@@ -34,7 +34,7 @@ func (a *App) applyPluginConfig(c config.Config) (tea.Cmd, error) {
 		a.Session = next
 	}
 	a.Config, a.keymaps, a.keyPending = c, registry, nil
-	a.Client = provider.New(c)
+	a.Client = a.providerClient(c, runtimes...)
 	a.Client.Variables = a.Variables
 	a.jobs.SetLimit(c.Execution.MaxJobs)
 	a.showThinking = c.Appearance.Thinking

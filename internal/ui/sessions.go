@@ -8,7 +8,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/contextual"
 	"github.com/erdajt/wraith/internal/ollama"
-	"github.com/erdajt/wraith/internal/provider"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/vim"
 )
@@ -36,7 +35,7 @@ func (a *App) resume(id string) tea.Cmd {
 		return nil
 	}
 	a.Config.Provider = s.Provider
-	a.Client = provider.New(a.Config)
+	a.Client = a.providerClient(a.Config)
 	a.Session = s
 	draft := s.Draft
 	if override != nil {

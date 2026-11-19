@@ -104,7 +104,7 @@ func (a *App) finishPluginReload(m pluginReloadMsg) tea.Cmd {
 	}
 	oldActions := a.actions
 	a.actions = a.pluginActions(manifest)
-	cmd, err := a.applyPluginConfig(manifest.Config)
+	cmd, err := a.applyPluginConfig(manifest.Config, m.Runtime)
 	if err != nil {
 		a.actions = oldActions
 		a.PluginError(err)

@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
+	"strings"
 
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/session"
@@ -59,6 +61,14 @@ func (c *Client) transformRequest(ctx context.Context, request ollama.Request) (
 	}
 	if err := ctx.Err(); err != nil {
 		return request, err
+	}
+	if strings.TrimSpace(data.Model) == "" || data.Options.Context < 0 || data.Options.Predict < 0 || data.Options.Threads < 0 || math.IsNaN(data.Options.Temperature) || math.IsInf(data.Options.Temperature, 0) || data.Options.Temperature < 0 || data.Options.Temperature > 2 {
+		return request, errors.New("request hook returned invalid model options")
+	}
+	switch data.Think.(type) {
+	case nil, bool, string:
+	default:
+		return request, errors.New("request hook thinking must be a boolean or string")
 	}
 
 	messages := make([]session.Message, 0, len(data.Messages))

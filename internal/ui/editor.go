@@ -8,7 +8,6 @@ import (
 	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/editor"
 	"github.com/erdajt/wraith/internal/fsutil"
-	"github.com/erdajt/wraith/internal/provider"
 	"github.com/erdajt/wraith/internal/terminal"
 )
 
@@ -223,7 +222,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 		c = effective
 		a.configEditBase = nil
 		a.Config, a.keymaps, a.keyPending = c, registry, nil
-		a.Client = provider.New(c)
+		a.Client = a.providerClient(c)
 		a.Session.Model = c.Model
 		a.Session.Provider = c.Provider
 		a.resizePanes()

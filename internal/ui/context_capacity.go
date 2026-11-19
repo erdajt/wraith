@@ -6,7 +6,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/config"
-	"github.com/erdajt/wraith/internal/provider"
 )
 
 // contextLimit resolves the selected model's effective context capacity.
@@ -39,7 +38,7 @@ func (a *App) setContext(value string) tea.Cmd {
 		return nil
 	}
 	a.Config = c
-	a.Client = provider.New(c)
+	a.Client = a.providerClient(c)
 	a.notice = "saved context = " + value + " for " + c.Provider + " / " + a.Session.Model
 	return a.probe()
 }

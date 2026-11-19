@@ -25,6 +25,9 @@ func (a *App) installPluginRegistry(m pluginResultMsg) error {
 		a.Config, a.pluginManifest, a.keymaps, a.actions = previousConfig, previousManifest, previousRegistry, previousActions
 		return err
 	}
+	client := a.providerClient(a.Config)
+	client.Client = a.Client.Client
+	a.Client = client
 	a.keyPending = nil
 	return nil
 }

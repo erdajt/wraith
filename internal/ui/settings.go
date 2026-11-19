@@ -7,7 +7,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/ollama"
-	"github.com/erdajt/wraith/internal/provider"
 )
 
 // set validates and persists a setting before applying runtime effects.
@@ -102,12 +101,12 @@ func (a *App) set(key, value string) tea.Cmd {
 
 	if strings.HasPrefix(key, "providers") {
 		a.notice = "saved provider settings"
-		a.Client = provider.New(c)
+		a.Client = a.providerClient(c)
 		return a.probe()
 	}
 
 	if key == "host" {
-		a.Client = provider.New(c)
+		a.Client = a.providerClient(c)
 		a.connected = false
 		return a.probe()
 	}

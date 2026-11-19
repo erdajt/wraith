@@ -8,7 +8,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/ollama"
-	"github.com/erdajt/wraith/internal/provider"
 )
 
 type providerModelsMsg struct {
@@ -42,7 +41,7 @@ func (a *App) selectProvider(name string) tea.Cmd {
 
 	c := a.Config
 	c.Provider = name
-	client := provider.New(c)
+	client := a.providerClient(c)
 	a.catalogSerial++
 	serial := a.catalogSerial
 	a.popup = &menu{Kind: "provider-loading", Title: "loading " + name + " models", Hints: "esc closes"}
@@ -80,7 +79,7 @@ func (a *App) activateProvider(name, model string) tea.Cmd {
 	}
 	a.Config = c
 	a.Session.Provider, a.Session.Model = name, model
-	a.Client = provider.New(c)
+	a.Client = a.providerClient(c)
 	a.Info = ollama.Info{}
 	a.persist("provider selected · " + name)
 	return a.probe()

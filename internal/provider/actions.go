@@ -44,7 +44,7 @@ func CheckContext(input, output, capacity int) error {
 	return nil
 }
 
-// Estimate prepares the same private request used by chat before counting messages and tool schemas.
+// Estimate previews privacy-filtered usage without running request transformations.
 func (c *Client) Estimate(request ollama.Request) (int, error) {
 	_, prepared, err := c.privateRequest(request)
 	if err != nil {
