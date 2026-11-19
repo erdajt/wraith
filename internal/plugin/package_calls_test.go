@@ -167,3 +167,22 @@ func TestPureHooksRejectCapturedPackageLifecycleMethods(t *testing.T) {
 		})
 	}
 }
+
+func TestReadOnlyPackageMethodsDoNotPublishUnchangedRegistry(t *testing.T) {
+	r := openTestRuntime(t, `package.preload.metadata=function() return {
+ setup=function() end, inspect=function() return {name="metadata"} end
+ } end
+ wraith.plugins.load("metadata")
+ wraith.commands.create("inspect",function()
+  assert(wraith.plugins.call("metadata","inspect").name=="metadata")
+ end)`)
+	m := r.Manifest()
+	pending, err := r.Submit(m.Commands[0].Callback, "", nil, m.Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := receiveResult(t, pending)
+	if result.Err != nil || result.Manifest != nil || len(result.Effects) != 0 {
+		t.Fatalf("read-only method changed registry: %+v", result)
+	}
+}

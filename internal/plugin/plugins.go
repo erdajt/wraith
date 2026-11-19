@@ -31,7 +31,9 @@ func (e *engine) installPlugins(api *lua.LTable) {
 			return 0
 		},
 		"call": func(L *lua.LState) int {
-			e.registration(L)
+			if e.closing {
+				L.RaiseError("package calls are disabled during teardown")
+			}
 			if L.GetTop() > 18 {
 				L.RaiseError("plugins.call accepts at most 16 arguments")
 			}
