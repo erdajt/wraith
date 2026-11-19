@@ -46,7 +46,7 @@ func TestHookErrorsDenyWithoutBreakingLaterCallbacks(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			r := openTestRuntime(t, `wraith.hooks.add("before_command",function(ctx) `+body+` end)
 wraith.commands.create("healthy",function() wraith.notify("alive") end)`)
-			input := HookRequest{Kind: "before_command", Phase: "preview", Command: &CommandData{Command: "true", Directory: "/tmp", Shell: "/bin/sh", TimeoutMS: 1000}}
+			input := HookRequest{Kind: "before_command", Phase: "preview", Command: &CommandData{Command: "true", Directory: "/tmp", Shell: "/bin/sh", Timeout: "1s"}}
 			if _, err := r.Transform(t.Context(), input); err == nil {
 				t.Fatal("invalid hook succeeded")
 			}
@@ -68,7 +68,7 @@ func TestCommandHookDenialStopsLaterPolicies(t *testing.T) {
 wraith.hooks.add("before_command",function() return {decision="deny",reason="outside scope"} end)
 wraith.hooks.add("before_command",function() error("must not run") end)
 `)
-	input := HookRequest{Kind: "before_command", Phase: "execute", Command: &CommandData{Command: "true", Directory: "/tmp", Shell: "/bin/sh", TimeoutMS: 1000}}
+	input := HookRequest{Kind: "before_command", Phase: "execute", Command: &CommandData{Command: "true", Directory: "/tmp", Shell: "/bin/sh", Timeout: "1s"}}
 	result, err := r.Transform(t.Context(), input)
 	if err != nil || result.Decision != "deny" || result.Reason != "outside scope" {
 		t.Fatalf("policy denial failed: %+v %v", result, err)
@@ -77,7 +77,7 @@ wraith.hooks.add("before_command",function() error("must not run") end)
 
 func TestTransformCancellationReleasesWaiterDuringTrustedNativeCall(t *testing.T) {
 	r := openTestRuntime(t, `wraith.hooks.add("before_command",function() os.execute("sleep 0.2") end)`)
-	input := HookRequest{Kind: "before_command", Phase: "preview", Command: &CommandData{Command: "true", Directory: "/tmp", Shell: "/bin/sh", TimeoutMS: 1000}}
+	input := HookRequest{Kind: "before_command", Phase: "preview", Command: &CommandData{Command: "true", Directory: "/tmp", Shell: "/bin/sh", Timeout: "1s"}}
 	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
 	defer cancel()
 	started := time.Now()
@@ -114,5 +114,16 @@ wraith.hooks.add("before_request",function() error("invalid data reached next ho
 				t.Fatalf("intermediate payload was not validated: %v", err)
 			}
 		})
+	}
+}
+
+func TestCommandHooksPreserveDurationPrecision(t *testing.T) {
+	r := openTestRuntime(t, `wraith.hooks.add("before_command",function(ctx) return {command=ctx.command} end)`)
+	for _, timeout := range []string{"1ns", "1.5ms", "2562047h47m16.854775807s"} {
+		input := HookRequest{Kind: "before_command", Phase: "preview", Command: &CommandData{Command: "true", Directory: "/tmp", Shell: "/bin/sh", Timeout: timeout}}
+		result, err := r.Transform(t.Context(), input)
+		if err != nil || result.Command.Timeout != timeout {
+			t.Fatalf("command duration lost precision: %+v %v", result, err)
+		}
 	}
 }

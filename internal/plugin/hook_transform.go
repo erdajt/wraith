@@ -197,7 +197,11 @@ func validateHookRequest(input HookRequest) error {
 		command := input.Command
 		text = append(text, command.Command, command.Directory, command.Shell)
 		text = append(text, command.Environment...)
-		if command.Command == "" || command.Shell == "" || command.Directory == "" || command.TimeoutMS <= 0 || len(command.Environment) > 4096 {
+		timeout, err := time.ParseDuration(command.Timeout)
+		if err != nil {
+			return errors.New("invalid command timeout")
+		}
+		if command.Command == "" || command.Shell == "" || command.Directory == "" || timeout <= 0 || len(command.Environment) > 4096 {
 			return errors.New("invalid transformed command tuple")
 		}
 	} else {

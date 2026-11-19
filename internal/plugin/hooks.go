@@ -28,7 +28,7 @@ type CommandData struct {
 	Directory   string   `json:"directory"`
 	Shell       string   `json:"shell"`
 	Environment []string `json:"environment"`
-	TimeoutMS   int64    `json:"timeout_ms"`
+	Timeout     string   `json:"timeout"`
 	Background  bool     `json:"background"`
 }
 
