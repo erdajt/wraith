@@ -1,4 +1,5 @@
 local copy = require("wraith.manager.spec_fields").copy
+local sources = require("wraith.manager.loader_sources")
 local M = {}
 local wrappers = {}
 
@@ -8,8 +9,9 @@ local function loaded()
   return result
 end
 
-function M.new(graph, paths, runtime)
+function M.new(graph, paths, runtime, selected)
   local self, names, generation = {}, {}, 0
+  selected = selected or {}
   local watched, event_names = {ready=true}, {"ready"}
   for _, spec in ipairs(graph.ordered) do
     for _, event in ipairs(spec.event) do
@@ -17,6 +19,9 @@ function M.new(graph, paths, runtime)
     end
   end
   table.sort(event_names)
+  for _, spec in ipairs(graph.ordered) do
+    sources.check(spec, paths[spec.name], selected[spec.name] and selected[spec.name].commit)
+  end
   local active = loaded()
   assert(#graph.ordered * 2 + #wraith.plugins.list() <= 128, "managed packages exceed available lifecycle capacity")
   for name in pairs(wrappers) do
@@ -187,6 +192,7 @@ function M.new(graph, paths, runtime)
       wraith.plugins.load(names[name].init, {}, {dependency=false})
     end
     for _, dependency in ipairs(spec.dependencies) do self.load(dependency) end
+    sources.reserve(spec, path, selected[name] and selected[name].commit)
     wraith.runtimepath.append(path)
     wraith.plugins.call(names[name].init, "disarm")
     package.loaded[names[name].activation] = nil

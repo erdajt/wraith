@@ -26,7 +26,7 @@ function M.configure(graph, options)
   for _, row in ipairs(rows) do
     paths[row.name], selected[row.name] = row.path, copy(row)
   end
-  local loader = require("wraith.manager.loader").new(graph, paths, runtime)
+  local loader = require("wraith.manager.loader").new(graph, paths, runtime, selected)
   local facade = {}
   for _, method in ipairs({"status", "plan", "execute", "cancel", "load", "unload"}) do
     facade[method] = function(...) return wraith.plugins.call(runtime, method, ...) end
