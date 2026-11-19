@@ -20,6 +20,7 @@ type runtimeHosts struct {
 	services    *resourceManager
 	surfaces    *SurfaceStore
 	invocations *invocationManager
+	paths       config.Paths
 }
 
 // load initializes trusted user code without sourcing project files or environment module paths.
@@ -88,7 +89,11 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	e.installProcess(api)
 	e.installCoroutines()
 	e.installDiagnostics(api)
-	if err := e.installPaths(api, directory); err != nil {
+	var paths config.Paths
+	if len(hosts) > 0 {
+		paths = hosts[0].paths
+	}
+	if err := e.installPaths(api, directory, paths); err != nil {
 		return nil, err
 	}
 

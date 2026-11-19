@@ -80,3 +80,25 @@ assert(not pcall(wraith.paths.stdpath, "unknown"))
 	}
 	r.Close()
 }
+
+func TestStandardPathsHonorHostOverrides(t *testing.T) {
+	dir, data, cache := t.TempDir(), t.TempDir(), t.TempDir()
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	source := fmt.Sprintf(`
+assert(wraith.paths.stdpath("config") == %q)
+assert(wraith.paths.stdpath("data") == %q)
+assert(wraith.paths.stdpath("cache") == %q)
+`, dir, data, cache)
+	if err := os.WriteFile(filepath.Join(dir, "init.lua"), []byte(source), 0600); err != nil {
+		t.Fatal(err)
+	}
+	r, err := Open(t.Context(), dir, config.Default(), nil, config.Paths{Config: t.TempDir(), Data: data, Cache: cache})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Close()
+	if _, err := Open(t.Context(), dir, config.Default(), nil, config.Paths{Data: "bad\x00path"}); err == nil {
+		t.Fatal("invalid host path accepted")
+	}
+}

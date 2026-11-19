@@ -131,7 +131,15 @@ type engine struct {
 }
 
 // Open loads one candidate on its VM owner; callers install it only after validating its manifest.
-func Open(parent context.Context, directory string, c config.Config, actions []string) (*Runtime, error) {
+// locations overrides data and cache paths; directory remains the configuration root.
+func Open(parent context.Context, directory string, c config.Config, actions []string, locations ...config.Paths) (*Runtime, error) {
+	if len(locations) > 1 {
+		return nil, errors.New("plugin runtime accepts one location override")
+	}
+	var paths config.Paths
+	if len(locations) == 1 {
+		paths = locations[0]
+	}
 	encoded, err := json.Marshal(c)
 	if err != nil {
 		return nil, err
@@ -153,7 +161,7 @@ func Open(parent context.Context, directory string, c config.Config, actions []s
 	r.surfaces = newSurfaceStore(r.services.prefix)
 	r.invocations = newInvocationManager(r.services.prefix, r.services.discard)
 	ready := make(chan error, 1)
-	go r.serve(directory, detached, actions, ready)
+	go r.serve(directory, detached, actions, paths, ready)
 	go func() {
 		<-ctx.Done()
 		r.invocations.close()
@@ -239,12 +247,12 @@ func (r *Runtime) Close() {
 func (r *Runtime) Done() <-chan struct{} { return r.done }
 
 // serve owns every VM access from candidate loading through callback execution and teardown.
-func (r *Runtime) serve(directory string, c config.Config, actions []string, ready chan<- error) {
+func (r *Runtime) serve(directory string, c config.Config, actions []string, paths config.Paths, ready chan<- error) {
 	defer close(r.done)
 	defer close(r.notices)
 	defer r.cancel()
 	defer r.cancelWaiters()
-	e, err := load(r.ctx, directory, c, actions, runtimeHosts{r.services, r.surfaces, r.invocations})
+	e, err := load(r.ctx, directory, c, actions, runtimeHosts{services: r.services, surfaces: r.surfaces, invocations: r.invocations, paths: paths})
 	if err != nil {
 		ready <- err
 		return

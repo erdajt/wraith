@@ -18,8 +18,8 @@ type pluginReloadMsg struct {
 }
 
 // LoadPlugin prepares and validates a candidate without replacing an active runtime.
-func LoadPlugin(ctx context.Context, directory string, c config.Config) (*plugin.Runtime, error) {
-	r, err := plugin.Open(ctx, directory, c, PluginActions())
+func LoadPlugin(ctx context.Context, directory string, c config.Config, locations ...config.Paths) (*plugin.Runtime, error) {
+	r, err := plugin.Open(ctx, directory, c, PluginActions(), locations...)
 	if err != nil {
 		return nil, err
 	}
@@ -43,12 +43,12 @@ func (a *App) reloadPlugins() tea.Cmd {
 	a.pluginLoadCancel = cancel
 	a.pluginSerial++
 	m := pluginReloadMsg{Serial: a.pluginSerial, Owner: a.keyOwner(), Draft: a.Prompt.String(), Digest: configDigest(a.Config)}
-	directory := a.Paths.Config
+	paths := a.Paths
 	a.notice = "loading init.lua"
 	return func() tea.Msg {
-		c, err := config.LoadDirectory(directory)
+		c, err := config.LoadDirectory(paths.Config)
 		if err == nil {
-			m.Runtime, err = LoadPlugin(ctx, directory, c)
+			m.Runtime, err = LoadPlugin(ctx, paths.Config, c, paths)
 		}
 		m.Err = err
 		select {

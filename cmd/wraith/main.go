@@ -91,7 +91,7 @@ func run(args []string, out io.Writer) error {
 	}
 
 	if !*demo && !*snapshot {
-		extensions, luaProblem = ui.LoadPlugin(context.Background(), p.Config, c)
+		extensions, luaProblem = ui.LoadPlugin(context.Background(), p.Config, c, p)
 		if luaProblem == nil {
 			defer extensions.Close()
 			c = extensions.Manifest().Config

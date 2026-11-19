@@ -15,6 +15,8 @@ configuration loads in this order:
 
 resuming a session restores its provider and model unless the corresponding CLI override is supplied. `$XDG_CONFIG_HOME` and `--config-dir` change the configuration root. demo and snapshot modes do not load plugins.
 
+`wraith.paths.stdpath("data")` and `stdpath("cache")` follow `--data-dir` and `--cache-dir`, including after `/reload`. without overrides they use the XDG locations.
+
 ```lua
 assert(wraith.api_version == 2)
 

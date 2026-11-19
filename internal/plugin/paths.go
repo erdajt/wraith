@@ -12,10 +12,23 @@ import (
 )
 
 // installPaths exposes application locations and ordered, explicitly trusted module roots.
-func (e *engine) installPaths(api *lua.LTable, directory string) error {
+func (e *engine) installPaths(api *lua.LTable, directory string, overrides config.Paths) error {
 	paths, err := config.Locations()
 	if err != nil {
 		return fmt.Errorf("lua paths: %w", err)
+	}
+	for _, location := range []struct {
+		value string
+		path  *string
+	}{{overrides.Data, &paths.Data}, {overrides.Cache, &paths.Cache}} {
+		if location.value == "" {
+			continue
+		}
+		absolute, err := filepath.Abs(location.value)
+		if err != nil || strings.ContainsRune(absolute, 0) {
+			return fmt.Errorf("lua paths: invalid location %q", location.value)
+		}
+		*location.path = absolute
 	}
 	state := os.Getenv("XDG_STATE_HOME")
 	if !filepath.IsAbs(state) {
