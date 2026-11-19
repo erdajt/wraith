@@ -57,16 +57,20 @@ func (e *engine) guardModuleMetadata(L *lua.LState, operation string) {
 	}
 }
 
-// resolveModuleProvider evaluates ordered metadata without activating plugins or publishing effects.
-func (e *engine) resolveModuleProvider(L *lua.LState, name string) (result *moduleResolution, err error) {
+// withModuleMetadata bounds callbacks while retaining caught violations and the caller state.
+func (e *engine) withModuleMetadata(L *lua.LState, name string, call func() error) (err error) {
 	depth := len(e.moduleResolving)
 	if len(name) > 128 || !namespaceName.MatchString(name) || depth >= 32 || slices.Contains(e.moduleResolving, name) {
 		err = fmt.Errorf("invalid or recursive module resolution: %s", name)
 		if depth > 0 {
 			e.moduleViolation = err
 		}
-		return nil, err
+		return err
 	}
+	state := e.L
+	e.L = L
+	defer func() { e.L = state }()
+
 	before := e.captureRegistry()
 	owner, calls, top := e.owner, len(e.packageCalls), L.GetTop()
 	previous := e.moduleViolation
@@ -90,33 +94,65 @@ func (e *engine) resolveModuleProvider(L *lua.LState, name string) (result *modu
 			e.moduleViolation = err
 		}
 		if err != nil {
-			result = nil
 			err = errors.Join(err, e.disposeRegistry(e.restoreRegistry(before)))
 		}
 	}()
-	for _, provider := range slices.Clone(e.moduleProviders) {
-		if !slices.Contains(e.moduleProviders, provider) {
-			return nil, errors.New("module resolver registration changed")
+	return call()
+}
+
+// resolveModuleProvider evaluates ordered metadata without activating plugins or publishing effects.
+func (e *engine) resolveModuleProvider(L *lua.LState, name string) (result *moduleResolution, err error) {
+	err = e.withModuleMetadata(L, name, func() error {
+		calls := len(e.packageCalls)
+		for _, provider := range slices.Clone(e.moduleProviders) {
+			if !slices.Contains(e.moduleProviders, provider) {
+				return errors.New("module resolver registration changed")
+			}
+			e.owner = provider.owner
+			e.packageCalls = append(e.packageCalls[:calls], provider.owner)
+			if err := L.CallByParam(lua.P{Fn: provider.resolve, NRet: 1, Protect: true}, lua.LString(name)); err != nil {
+				return err
+			}
+			if ctx := L.Context(); ctx != nil && ctx.Err() != nil {
+				return ctx.Err()
+			}
+			if e.moduleViolation != nil {
+				return e.moduleViolation
+			}
+			if !slices.Contains(e.moduleProviders, provider) {
+				return errors.New("module resolver registration changed")
+			}
+			result, err = decodeModuleResolution(L, L.Get(-1), provider)
+			L.Pop(1)
+			if err != nil || result != nil {
+				return err
+			}
 		}
-		e.owner = provider.owner
-		e.packageCalls = append(e.packageCalls[:calls+1], provider.owner)
-		if err := L.CallByParam(lua.P{Fn: provider.resolve, NRet: 1, Protect: true}, lua.LString(name)); err != nil {
-			return nil, err
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// checkModuleResolution validates a captured continuation under its original resolver owner.
+func (e *engine) checkModuleResolution(L *lua.LState, name string, resolution *moduleResolution) error {
+	return e.withModuleMetadata(L, name, func() error {
+		if resolution == nil || resolution.check == nil || !slices.Contains(e.moduleProviders, resolution.provider) {
+			return errors.New("module resolver registration changed")
+		}
+		e.owner = resolution.provider.owner
+		e.packageCalls = append(e.packageCalls, resolution.provider.owner)
+		if err := L.CallByParam(lua.P{Fn: resolution.check, NRet: 0, Protect: true}, lua.LString(name)); err != nil {
+			return err
 		}
 		if ctx := L.Context(); ctx != nil && ctx.Err() != nil {
-			return nil, ctx.Err()
+			return ctx.Err()
 		}
-		if e.moduleViolation != nil {
-			return nil, e.moduleViolation
+		if !slices.Contains(e.moduleProviders, resolution.provider) {
+			return errors.New("module resolver registration changed")
 		}
-		if !slices.Contains(e.moduleProviders, provider) {
-			return nil, errors.New("module resolver registration changed")
-		}
-		result, err = decodeModuleResolution(L, L.Get(-1), provider)
-		L.Pop(1)
-		if err != nil || result != nil {
-			return result, err
-		}
-	}
-	return nil, nil
+		return nil
+	})
 }

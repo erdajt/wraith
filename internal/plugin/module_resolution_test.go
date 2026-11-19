@@ -69,12 +69,13 @@ func TestModuleResolutionDescriptorsRejectCoercion(t *testing.T) {
 // TestModuleResolutionPreservesOrderAndCoroutineScope uses the current lua state without exposing require hooks.
 func TestModuleResolutionPreservesOrderAndCoroutineScope(t *testing.T) {
 	e := moduleResolutionFixture(t)
+	main := e.L
 	var visited []int
 	for index := range 3 {
 		e.owner = fmt.Sprintf("resolver%d", index)
 		_, err := e.addModuleProvider(e.L.NewFunction(func(L *lua.LState) int {
 			visited = append(visited, index)
-			if L == e.L || e.owner != fmt.Sprintf("resolver%d", index) || !slices.Contains(e.packageCalls, "consumer") {
+			if L == main || L != e.L || e.owner != fmt.Sprintf("resolver%d", index) || !slices.Contains(e.packageCalls, "consumer") {
 				t.Fatal("resolver lost its coroutine, owner or consumer protection")
 			}
 			if index == 0 {
@@ -96,7 +97,7 @@ func TestModuleResolutionPreservesOrderAndCoroutineScope(t *testing.T) {
 	if err := e.L.DoString(`local co=coroutine.create(function() assert(dispatch("target")=="provider") end); assert(coroutine.resume(co))`); err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(visited, []int{0, 1}) || e.owner != "consumer" || len(e.packageCalls) != 0 || len(e.moduleResolving) != 0 {
+	if e.L != main || !slices.Equal(visited, []int{0, 1}) || e.owner != "consumer" || len(e.packageCalls) != 0 || len(e.moduleResolving) != 0 {
 		t.Fatal("dispatch changed precedence or retained callback state")
 	}
 }
