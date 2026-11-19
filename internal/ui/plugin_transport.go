@@ -49,6 +49,14 @@ func (p *luaProvider) begin(ctx context.Context, method string, data any) (*plug
 
 // decodeProviderValue rejects unknown wire fields and trailing values before native use.
 func decodeProviderValue(data []byte, target any) error {
+	data = bytes.TrimSpace(data)
+	expected := byte('{')
+	if _, models := target.(*[]ollama.Model); models {
+		expected = '['
+	}
+	if len(data) == 0 || data[0] != expected {
+		return errors.New("extension provider response has the wrong container type")
+	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(target); err != nil {

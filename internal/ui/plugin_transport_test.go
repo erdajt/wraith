@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -103,6 +104,7 @@ func TestLuaProviderDiscoveryStreamingAndNativeActions(t *testing.T) {
 
 func TestLuaProviderMalformedResponseAndFailureStayVisible(t *testing.T) {
 	for _, body := range []string{
+		`wraith.invocation.finish(ctx.invocation.id,wraith.json.null)`,
 		`wraith.invocation.finish(ctx.invocation.id,{content="bad",unknown=true})`,
 		`wraith.invocation.emit(ctx.invocation.id,{calls={{name="request_command",arguments={}}}})`,
 		`wraith.invocation.fail(ctx.invocation.id,"backend unavailable")`,
@@ -118,6 +120,28 @@ func TestLuaProviderMalformedResponseAndFailureStayVisible(t *testing.T) {
 			})
 			if err == nil || len(response.Calls) > 0 {
 				t.Fatalf("invalid response accepted: %+v, %v", response, err)
+			}
+		})
+	}
+}
+
+func TestLuaProviderDiscoveryRejectsWrongContainers(t *testing.T) {
+	for _, value := range []string{"wraith.json.null", "true", "123"} {
+		t.Run(value, func(t *testing.T) {
+			a := pluginFixture(t, `local function reply(ctx) wraith.invocation.finish(ctx.invocation.id,`+value+`) end
+wraith.providers.register("custom",{models=reply,show=reply,chat=reply})`)
+			adapter := &luaProvider{runtime: a.plugins, definition: a.pluginManifest.Providers[0]}
+			err := runTransport(t, a, func() error {
+				if _, err := adapter.Models(t.Context()); err == nil {
+					return errors.New("invalid models container accepted")
+				}
+				if _, err := adapter.Show(t.Context(), "local"); err == nil {
+					return errors.New("invalid model metadata container accepted")
+				}
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
 			}
 		})
 	}

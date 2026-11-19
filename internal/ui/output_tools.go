@@ -29,6 +29,11 @@ func (a *App) runPendingTool() tea.Cmd {
 	if a.pendingTool == nil || !a.canContinue() {
 		return nil
 	}
+	if a.pendingTool.Tool == "extension" {
+		request := *a.pendingTool
+		a.pendingTool = nil
+		return a.proposeExtension(request.Name, request.Arguments)
+	}
 	if a.agentReads >= a.Config.Execution.MaxReads {
 		a.pendingTool, a.agentStopped = nil, true
 		a.notice = "output read limit reached · send a prompt to continue"

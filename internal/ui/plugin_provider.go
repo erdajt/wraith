@@ -23,6 +23,7 @@ func (a *App) providerClient(c config.Config, runtimes ...*plugin.Runtime) *prov
 		return client
 	}
 	manifest := runtime.Manifest()
+	client.Tools = manifest.ToolCatalog
 	if profile, ok := c.Providers[c.Provider]; ok && profile.Kind == "plugin" {
 		for _, definition := range manifest.Providers {
 			if definition.Name == c.Provider {

@@ -33,14 +33,15 @@ func (a *App) proposeExtension(name string, arguments json.RawMessage) tea.Cmd {
 		a.notice = "tool step limit reached · send a prompt to continue"
 		return nil
 	}
-	definitions := a.plugins.Manifest().Tools
+	manifest := a.plugins.Manifest()
+	definitions := manifest.Tools
 	index := slices.IndexFunc(definitions, func(d plugin.ToolDefinition) bool { return d.Name == name })
 	if index < 0 {
 		a.notice = "extension tool is unavailable: " + name
 		return nil
 	}
 	definition := definitions[index]
-	schema, err := modeltool.Compile(definition.Parameters)
+	schema, err := manifest.ToolCatalog.Schema(name)
 	if err == nil {
 		err = schema.Validate(arguments)
 	}
