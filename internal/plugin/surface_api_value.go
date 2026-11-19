@@ -49,3 +49,16 @@ func pushSurface(L *lua.LState, value any) int {
 	L.Push(encodeValue(L, normalized))
 	return 1
 }
+
+// surfaceInteger rejects coercion and fractional indexes before they reach line operations.
+func surfaceInteger(L *lua.LState, index, fallback int) int {
+	if L.Get(index) == lua.LNil {
+		return fallback
+	}
+	var value int
+	decodeSurface(L, L.Get(index), &value)
+	if value > 1<<53 || value < -(1<<53) {
+		L.RaiseError("surface index exceeds exact integer range")
+	}
+	return value
+}

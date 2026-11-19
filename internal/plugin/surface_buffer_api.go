@@ -42,7 +42,7 @@ func (e *engine) installBuffers(api *lua.LTable) {
 				return pushSurface(L, buffer)
 			}
 			if kind == "get_lines" {
-				start, end := L.OptInt(2, 0), L.OptInt(3, -1)
+				start, end := surfaceInteger(L, 2, 0), surfaceInteger(L, 3, -1)
 				page, err := e.previewSurfaces().BufferLines(id, start, end)
 				if err != nil {
 					L.RaiseError("buffers.get_lines: %v", err)
@@ -52,7 +52,7 @@ func (e *engine) installBuffers(api *lua.LTable) {
 			mutation := SurfaceMutation{Operation: "buffer." + kind, ID: id, Expected: buffer.Revision}
 			switch kind {
 			case "set_lines":
-				mutation.Start, mutation.End = L.CheckInt(2), L.CheckInt(3)
+				mutation.Start, mutation.End = surfaceInteger(L, 2, 0), surfaceInteger(L, 3, -1)
 				if mutation.End == -1 {
 					mutation.End = len(buffer.Lines)
 				}
