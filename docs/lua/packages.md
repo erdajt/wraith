@@ -72,6 +72,7 @@ normalized callback specifications expose `source`, `selector` and `pin` for the
 | `main` | explicit setup module; otherwise infer from the plugin's `lua/` entrypoints |
 | `branch`, `tag`, `commit` | at most one; omitted means remote HEAD; commits require a full 40- or 64-digit hexadecimal object id |
 | `pin` | `false`; keep the locked revision during update, except when an explicit commit selector changes |
+| `dev` | select a development checkout; `false` suppresses development patterns |
 | `dependencies` | package names or nested specifications; loaded before the dependent package |
 | `enabled` | `true`, or a function receiving a copied specification and returning a boolean |
 | `cond` | boolean or function receiving the initial merged specification; false skips activation and preserves existing dependency pins |
@@ -123,6 +124,41 @@ a separate top-level declaration removes the dependency-only default. completed 
 `lazy = true` without a trigger means explicit `manager.load(name)` activation. unloading removes activation and init owners, including their triggers. load it explicitly again or reload the configuration to restore them. unload dependents before their dependencies.
 
 normalization rejects unknown fields, conflicting sources or module identities, conflicting triggers, missing dependencies and dependency/import cycles before running init functions. disabled packages are excluded and references to them are removed from surviving dependency lists. genuinely unknown dependencies still fail. there is no semver resolver, submodule installation, Neovim plugin compatibility or build-hook support.
+
+## development checkouts
+
+```lua
+require("shroud").setup({
+  { "owner/review.wraith", dev = true, opts = {} },
+  { "owner/history.wraith", dev = false },
+}, {
+  dev = {
+    path = "~/projects",
+    patterns = { "owner/" },
+    fallback = true,
+  },
+})
+```
+
+a string `dev.path` is a parent directory: the example selects `~/projects/review.wraith`. an explicit `name` changes the appended name. a function returns the full directory instead:
+
+```lua
+dev = {
+  path = function(spec)
+    return "~/work/" .. spec.name
+  end,
+}
+```
+
+defaults are `path = "~/projects"`, `patterns = {}` and `fallback = false`. patterns match literal substrings of the declared remote URL. an explicit `dev = false` disables matching; `dev = true` selects development without a match. an explicit `dir` takes precedence and skips the development callback and fallback check.
+
+with `fallback = true`, a missing path, dangling symlink or nondirectory selects Git using the original revision and pin. valid directory symlinks are followed. permission errors, symlink loops and other filesystem failures stop configuration rather than triggering a fetch. with fallback disabled, the local path stays selected even when absent; loading reports the missing checkout. a directory disappearing after selection does not trigger a later fallback.
+
+relative paths resolve against the configuration directory. `~` expands your home; shell variables are not expanded. paths are bounded to 4,096 bytes. patterns allow up to 64 nonempty strings, each at most 4,096 bytes. normalization performs no Git operation.
+
+the path callback receives detached merged fields, including the declared URL and revision, `name`, `dev = true`, and the original dependency names. it runs once per surviving contribution revision. scope changes can require a new path; filtering dependency edges alone does not. final normalization reuses the selected path. each normalization allows at most 1,024 path callback calls, separately from the gate limit. development selection precedes `cond` and `enabled`, so an excluded package can still evaluate its path callback without loading or installing code.
+
+gate snapshots show the selected local `dir` and resolved `dev` while retaining declared remote fields. normalized specifications and active status rows distinguish effective source/revision from `declared_source`, `declared_selector` and `declared_pin`. local activation never checks out a revision in your working tree. changing a path after its code has been exposed requires `/reload`.
 
 ## scoped specifications
 

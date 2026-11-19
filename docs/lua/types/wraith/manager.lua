@@ -24,6 +24,7 @@
 ---@field repo? string same source forms as the first position; choose one repository field
 ---@field url? string explicit https, ssh, scp-style or file remote
 ---@field dir? string local checkout override; absolute, home-relative or relative to the effective config directory
+---@field dev? boolean select a development checkout; false suppresses development patterns
 ---@field name? string defaults to lowercase repository/directory basename
 ---@field main? string explicit entrypoint; otherwise infer from the selected plugin's lua directory
 ---@field dependencies? Wraith.PackageDeclarations bare dependency names refer to existing declarations
@@ -53,6 +54,8 @@
 ---@field declared_source Wraith.PackageSource original repository or standalone local source
 ---@field declared_selector Wraith.PackageSelector original revision intent before local override
 ---@field declared_pin boolean original pin before local override
+---@field dev? boolean resolved development selection; false after git fallback
+---@field dir? string selected local directory
 ---@field main? string declared entrypoint, remains nil when inferred
 ---@field dependencies string[]
 ---@field enabled boolean
@@ -90,8 +93,17 @@
 ---@class Wraith.PackageDefaults
 ---@field lazy? boolean default false; explicit package lazy takes precedence
 ---@field cond? boolean|fun(spec: Wraith.PackageSpec): boolean used when the package omits cond
+---@class Wraith.DevelopmentPackage: Wraith.PackageSpec
+---@field name string normalized package identity
+---@field url string declared git source
+---@field dev true
+---@class Wraith.PackageDevelopment
+---@field path? string|fun(spec: Wraith.DevelopmentPackage): string default ~/projects; strings append the package name, functions return the full directory
+---@field patterns? string[] literal substrings of the declared remote url; default empty
+---@field fallback? boolean use git when the development directory is absent or not a directory; default false
 ---@class Wraith.PackageManagerOptions
 ---@field defaults? Wraith.PackageDefaults
+---@field dev? Wraith.PackageDevelopment
 ---@field storage? Wraith.PackageStorageOptions
 ---@field ui? Wraith.PackageViewOptions
 
@@ -100,6 +112,10 @@
 ---@field source? Wraith.PackageSource
 ---@field selector? Wraith.PackageSelector
 ---@field pin? boolean
+---@field dev? boolean resolved selection from the active graph
+---@field declared_source? Wraith.PackageSource original source for active packages
+---@field declared_selector? Wraith.PackageSelector original revision for active packages
+---@field declared_pin? boolean original pin for active packages
 ---@field commit? string currently selected installed commit
 ---@field path? string usable local or installed directory
 ---@field state 'local'|'installed'|'missing'|'source-conflict'|'unloaded'|'excluded'

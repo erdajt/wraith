@@ -34,6 +34,14 @@ manager.setup({
     cmd = "review.open",
     opts = { title = "review" },
   },
+}, {
+  dev = {
+    path = function(spec)
+      return "~/projects/" .. spec.name
+    end,
+    patterns = { "owner/" },
+    fallback = true,
+  },
 })
 
 local buffer = wraith.buffers.create({ name = "review", editable = true, lines = { "ready" } })
