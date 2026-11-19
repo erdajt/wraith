@@ -20,6 +20,7 @@ type fileOperation struct {
 	limit, mode             int
 	overwrite, recursive    bool
 	parents, follow         bool
+	missingOK               bool
 }
 
 // run performs one copied filesystem request with cancellation checks before irreversible changes.
@@ -62,14 +63,22 @@ func (op fileOperation) run(ctx context.Context) (result map[string]any, err err
 	case "write":
 		return op.writeAtomic(ctx)
 	case "stat":
-		info, err := os.Lstat(op.path)
+		var info os.FileInfo
 		if op.follow {
 			info, err = os.Stat(op.path)
+		} else {
+			info, err = os.Lstat(op.path)
+		}
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, ctxErr
 		}
 		if err != nil {
+			if op.missingOK && (errors.Is(err, os.ErrNotExist) || errors.Is(err, unix.ENOTDIR)) {
+				return map[string]any{"path": op.path, "exists": false}, nil
+			}
 			return nil, err
 		}
-		return map[string]any{"path": op.path, "size": info.Size(), "mode": int(info.Mode().Perm()), "type": fileKind(info.Mode()), "modified_ms": info.ModTime().UnixMilli()}, nil
+		return map[string]any{"path": op.path, "exists": true, "size": info.Size(), "mode": int(info.Mode().Perm()), "type": fileKind(info.Mode()), "modified_ms": info.ModTime().UnixMilli()}, nil
 	case "list":
 		directory, err := os.OpenFile(op.path, os.O_RDONLY|unix.O_NONBLOCK, 0)
 		if err != nil {

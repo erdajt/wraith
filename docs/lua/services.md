@@ -93,7 +93,7 @@ synchronous methods return a result table or raise an error. every method also h
 | --- | --- | --- |
 | `fs.read(path, opts)` | `offset=0`, `max_bytes=1048576` | `path`, exact `data`, `offset`, `next_offset`, `truncated` |
 | `fs.write(path, data, opts)` | `overwrite=false`, `mode=384` | `path`, bytes written |
-| `fs.stat(path, opts)` | `follow=false` | `path`, `size`, `mode`, `type`, `modified_ms` |
+| `fs.stat(path, opts)` | `follow=false`, `missing_ok=false` | `path`, `exists=true`, `size`, `mode`, `type`, `modified_ms`; absent paths with `missing_ok=true`: `path`, `exists=false` |
 | `fs.list(path, opts)` | `offset=0`, `limit=1024` | `path`, `entries`, `next_offset`, `truncated` |
 | `fs.mkdir(path, opts)` | `parents=false`, `mode=448` | `path` |
 | `fs.remove(path, opts)` | `recursive=false` | `path` |
@@ -109,7 +109,9 @@ modes are decimal permission bits: `384` is `0600`, `420` is `0644`, `448` is `0
 
 listing entries contain `name` and `type`; types are `file`, `directory`, `symlink` or `other`. `limit` accepts 1 through 1,024. each returned page is sorted by name. children removed before their metadata is read are skipped. `next_offset` counts scanned entries, including skipped children. offsets refer to the underlying directory enumeration, not a globally sorted snapshot. directory changes between pages can duplicate or skip entries.
 
-`stat` inspects the symlink itself unless `follow=true`. recursive removal does not follow symlinks to their targets. rename uses an atomic no-replace operation by default; unsupported filesystems return an error. cross-filesystem moves are not copied automatically.
+`stat` inspects the symlink itself unless `follow=true`. with `missing_ok=true`, absent paths and paths beneath a nondirectory return `exists=false` without metadata. a final regular file still exists. a dangling symlink exists unless followed. permission errors, symlink loops and other filesystem failures still raise, or fail the async resource. both variants check cancellation after the stat syscall before classifying its result; a kernel call cannot be interrupted by this check.
+
+recursive removal does not follow symlinks to their targets. rename uses an atomic no-replace operation by default; unsupported filesystems return an error. cross-filesystem moves are not copied automatically.
 
 errors include the operation and path. sync calls can block the VM on slow filesystems. async calls check cancellation around reads and before atomic installation; filesystem operations already inside the kernel may finish after cancellation.
 

@@ -58,7 +58,7 @@ func parseFileOperation(L *lua.LState, kind string) (fileOperation, int) {
 	op := fileOperation{kind: kind, path: L.CheckString(1), limit: 1 << 20, mode: 0600}
 	options := 2
 	allowed := map[string]string{
-		"read": " max_bytes offset ", "write": " overwrite mode ", "stat": " follow ",
+		"read": " max_bytes offset ", "write": " overwrite mode ", "stat": " follow missing_ok ",
 		"list": " limit offset ", "mkdir": " parents mode ", "remove": " recursive ", "rename": " overwrite ",
 	}
 	if kind == "write" {
@@ -99,7 +99,7 @@ func parseFileOperation(L *lua.LState, kind string) (fileOperation, int) {
 				L.RaiseError("fs.%s: unknown option %s", kind, key.String())
 			}
 			switch string(name) {
-			case "overwrite", "recursive", "parents", "follow":
+			case "overwrite", "recursive", "parents", "follow", "missing_ok":
 				flag, ok := value.(lua.LBool)
 				if !ok {
 					L.RaiseError("fs.%s: %s requires a boolean", kind, name)
@@ -113,6 +113,8 @@ func parseFileOperation(L *lua.LState, kind string) (fileOperation, int) {
 					op.parents = bool(flag)
 				case "follow":
 					op.follow = bool(flag)
+				case "missing_ok":
+					op.missingOK = bool(flag)
 				}
 			default:
 				number, ok := value.(lua.LNumber)

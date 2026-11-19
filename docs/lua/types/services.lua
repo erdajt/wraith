@@ -59,10 +59,14 @@ function wraith.resource.release(id) end
 ---@field bytes integer
 ---@alias Wraith.FileKind 'file'|'directory'|'symlink'|'other'
 ---@class Wraith.FileStat: Wraith.FilePathResult
+---@field exists true
 ---@field size integer
 ---@field mode integer permission bits
 ---@field type Wraith.FileKind
 ---@field modified_ms integer
+---@class Wraith.FileMissing: Wraith.FilePathResult
+---@field exists false
+---@alias Wraith.FileStatResult Wraith.FileStat|Wraith.FileMissing
 ---@class Wraith.FileList: Wraith.FilePathResult
 ---@field entries {name: string, type: Wraith.FileKind}[]
 ---@field next_offset integer
@@ -74,6 +78,9 @@ function wraith.resource.release(id) end
 ---@class Wraith.FSWriteOptions
 ---@field overwrite? boolean default false
 ---@field mode? integer permission bits; default 384 (0600)
+---@class Wraith.FSStatOptions
+---@field follow? boolean default false
+---@field missing_ok? boolean default false; report absent paths instead of raising
 ---@class Wraith.FSListOptions
 ---@field offset? integer directory enumeration offset
 ---@field limit? integer 1..1024
@@ -90,9 +97,10 @@ function wraith.fs.read(path, options) end
 ---@param options? Wraith.FSWriteOptions
 ---@return Wraith.FileWrite
 function wraith.fs.write(path, data, options) end
+---@overload fun(path: string, options?: {follow?: boolean, missing_ok?: false}): Wraith.FileStat
 ---@param path string
----@param options? {follow?: boolean}
----@return Wraith.FileStat
+---@param options? Wraith.FSStatOptions
+---@return Wraith.FileStatResult
 function wraith.fs.stat(path, options) end
 ---@param path string
 ---@param options? Wraith.FSListOptions
@@ -128,8 +136,8 @@ function wraith.fs.read_async(path, options, callback) end
 function wraith.fs.write_async(path, data, options, callback) end
 ---@overload fun(path: string, callback: fun(ctx: Wraith.Context<Wraith.ResourceCompletion<Wraith.FileStat>>)): string
 ---@param path string
----@param options {follow?: boolean}?
----@param callback fun(ctx: Wraith.Context<Wraith.ResourceCompletion<Wraith.FileStat>>)
+---@param options Wraith.FSStatOptions?
+---@param callback fun(ctx: Wraith.Context<Wraith.ResourceCompletion<Wraith.FileStatResult>>)
 ---@return string resource_id
 function wraith.fs.stat_async(path, options, callback) end
 ---@overload fun(path: string, callback: fun(ctx: Wraith.Context<Wraith.ResourceCompletion<Wraith.FileList>>)): string

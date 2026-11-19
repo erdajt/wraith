@@ -52,6 +52,20 @@ wraith.fs.read_async("review.txt", { max_bytes = 1024 }, function(ctx)
     wraith.notify(ctx.data.result.data)
   end
 end)
+---@type integer
+local size = wraith.fs.stat("review.txt").size
+local metadata = wraith.fs.stat("review.txt", { missing_ok = true })
+if metadata.exists then
+  size = metadata.size
+else
+  print(metadata.path)
+end
+print(size)
+wraith.fs.stat_async("review.txt", { missing_ok = true }, function(ctx)
+  if ctx.data and ctx.data.result and ctx.data.result.exists then
+    wraith.notify(tostring(ctx.data.result.size))
+  end
+end)
 wraith.process.start({ argv = { "git", "status", "--short" }, mode = "capture" }, function(ctx)
   if ctx.resource then
     wraith.resource.release(ctx.resource.id)
