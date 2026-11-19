@@ -120,10 +120,12 @@ func (a *App) finishOutputRead(result outputReadMsg) tea.Cmd {
 		}
 		if !job.Record.ShareOutput || job.Record.OutputHidden {
 			result.text, result.evidence, result.waiting = "output tool denied: output withheld by user", nil, false
+			result.nextLine = a.pollNext[request.ID]
 		}
 	}
 	if record, ok := a.pendingRuns[request.ID]; ok && (!record.ShareOutput || record.OutputHidden) {
 		result.text, result.evidence, result.waiting = "output tool denied: output withheld by user", nil, false
+		result.nextLine = a.pollNext[request.ID]
 	}
 	a.cancelOutputRead()
 	candidate := a.Session.Clone()
