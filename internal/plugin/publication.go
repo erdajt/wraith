@@ -43,7 +43,13 @@ func (e *engine) captureRegistry() registryState {
 	for name, ids := range e.events {
 		events[name] = slices.Clone(ids)
 	}
-	return registryState{e.cloneOwnership(), e.cloneScheduler(), cloneManifest(e.manifest), maps.Clone(e.functions), events, maps.Clone(e.actions), maps.Clone(e.loaded), slices.Clone(e.cleanup), slices.Clone(e.disposing), slices.Clone(e.effects), e.dirty, e.clonePackages()}
+	return registryState{
+		ownershipLayers: e.cloneOwnership(), schedulerState: e.cloneScheduler(),
+		manifest: cloneManifest(e.manifest), functions: maps.Clone(e.functions), events: events,
+		actions: maps.Clone(e.actions), loaded: maps.Clone(e.loaded), packages: e.clonePackages(),
+		cleanup: slices.Clone(e.cleanup), disposing: slices.Clone(e.disposing),
+		effects: slices.Clone(e.effects), dirty: e.dirty,
+	}
 }
 
 // restoreRegistry drops staged registrations without pretending to roll back arbitrary Lua state.

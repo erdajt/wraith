@@ -108,7 +108,12 @@ func Open(parent context.Context, directory string, c config.Config, actions []s
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(parent)
-	r := &Runtime{discarded: map[string]bool{}, notices: make(chan string, 64), queue: make(chan request, 128), ack: make(chan publicationDecision, 1), done: make(chan struct{}), ctx: ctx, cancel: cancel, pending: map[string]request{}, waiting: map[*completion]struct{}{}}
+	r := &Runtime{
+		ctx: ctx, cancel: cancel, done: make(chan struct{}),
+		queue: make(chan request, 128), ack: make(chan publicationDecision, 1),
+		notices: make(chan string, 64), discarded: map[string]bool{},
+		pending: map[string]request{}, waiting: map[*completion]struct{}{},
+	}
 	ready := make(chan error, 1)
 	go r.serve(directory, detached, actions, ready)
 	go func() {
