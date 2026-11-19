@@ -110,7 +110,15 @@ func (a *App) cacheSurfaceBuffer(buffer plugin.SurfaceBuffer, external bool) {
 		if view.surface == nil || view.surface.window.BufferID != buffer.ID {
 			continue
 		}
-		view.surface.reader.Buffer.SyncText(text, external)
+		b := view.surface.reader.Buffer
+		lostInsert := !buffer.Editable && b.Mode == "insert"
+		if lostInsert {
+			b.Mode = "normal"
+		}
+		b.SyncText(text, external)
+		if lostInsert && b.Pos == len(b.Text) && b.Pos > 0 && b.Text[b.Pos-1] != '\n' {
+			b.Pos--
+		}
 		view.surface.revision = buffer.Revision
 	}
 }

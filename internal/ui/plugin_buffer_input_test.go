@@ -76,3 +76,28 @@ end)`)
 		t.Fatal("mode change altered picker ownership")
 	}
 }
+
+func TestNativeProjectionLosingEditabilityLeavesInsertMode(t *testing.T) {
+	a := pluginFixture(t, "")
+	a.Prompt.Set("complete draft")
+	a.syncNativeSurfaces()
+	var id string
+	for _, buffer := range a.surfaceBuffers {
+		if buffer.Projection == "prompt" {
+			id = buffer.ID
+		}
+	}
+	surfaceWindowFixture(t, a, id, true)
+	a.feedInput("i")
+	view := a.focusedSurfaceView()
+	delta, err := a.plugins.Surfaces().HostUpsert("prompt", []string{"truncated draft"}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.applySurfaceDelta(delta, true)
+	before := view.reader.Buffer.String()
+	a.feedInput("dd")
+	if view.reader.Buffer.Mode != "normal" || view.window.Mode != "normal" || view.reader.Buffer.String() != before {
+		t.Fatal("incomplete native projection retained editable input")
+	}
+}
