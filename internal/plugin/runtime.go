@@ -61,6 +61,7 @@ type request struct {
 	resource        *ResourceEvent
 	invocation      *InvocationStart
 	invocationID    string
+	listeners       []string
 }
 
 type completion struct {
@@ -196,7 +197,7 @@ func (r *Runtime) Submit(callback, event string, snapshot any, c config.Config) 
 }
 
 // submit queues detached state while preserving an optional managed resource identity.
-func (r *Runtime) submit(callback, event string, snapshot any, c config.Config, resource *ResourceEvent, invocation *InvocationStart, invocationID string) (<-chan Result, error) {
+func (r *Runtime) submit(callback, event string, snapshot any, c config.Config, resource *ResourceEvent, invocation *InvocationStart, invocationID string, listeners ...[]string) (<-chan Result, error) {
 	data, err := json.Marshal(snapshot)
 	if err != nil || len(data) > 1<<20 {
 		return nil, errors.New("plugin snapshot exceeds value limits")
@@ -216,7 +217,10 @@ func (r *Runtime) submit(callback, event string, snapshot any, c config.Config, 
 	}
 	reply := &completion{channel: make(chan Result, 1)}
 	req := request{callback: callback, event: event, data: data, config: copy, reply: reply, revision: r.revision, resource: resource, invocation: invocation, invocationID: invocationID}
-	if previous, ok := r.pending[event]; (event == "window_changed" || event == "session_changed" || event == "buffer_changed") && invocationID == "" && ok {
+	if len(listeners) > 0 {
+		req.listeners = append([]string{}, listeners[0]...)
+	}
+	if previous, ok := r.pending[event]; req.listeners == nil && (event == "window_changed" || event == "session_changed" || event == "buffer_changed") && invocationID == "" && ok {
 		previous.reply.resolve(Result{})
 		delete(r.waiting, previous.reply)
 		r.waiting[reply] = struct{}{}
@@ -226,7 +230,7 @@ func (r *Runtime) submit(callback, event string, snapshot any, c config.Config, 
 	select {
 	case r.queue <- req:
 		r.waiting[reply] = struct{}{}
-		if invocationID == "" && (event == "window_changed" || event == "session_changed" || event == "buffer_changed") {
+		if req.listeners == nil && invocationID == "" && (event == "window_changed" || event == "session_changed" || event == "buffer_changed") {
 			r.pending[event] = req
 		}
 		return reply.channel, nil
@@ -286,7 +290,7 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, pat
 				e.surfaceStartupBytes = 0
 				e.surfacePreview = nil
 			}
-			if req.invocationID == "" && (req.event == "window_changed" || req.event == "session_changed" || req.event == "buffer_changed") {
+			if req.listeners == nil && req.invocationID == "" && (req.event == "window_changed" || req.event == "session_changed" || req.event == "buffer_changed") {
 				req = r.pending[req.event]
 				delete(r.pending, req.event)
 			}
@@ -395,7 +399,7 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 		return Result{Err: err}
 	}
 	if req.event != "" {
-		if err := e.invokeObservers(parent, req.event); err != nil {
+		if err := e.invokeObservers(parent, req.event, req.listeners); err != nil {
 			return Result{Err: err}
 		}
 	} else {

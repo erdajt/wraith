@@ -11,8 +11,11 @@ import (
 )
 
 // invokeObservers isolates each subscriber while preserving successful earlier changes.
-func (e *engine) invokeObservers(parent context.Context, event string) error {
+func (e *engine) invokeObservers(parent context.Context, event string, listeners []string) error {
 	ids := slices.Clone(e.events[event])
+	if listeners != nil {
+		ids = slices.Clone(listeners)
+	}
 	for _, id := range ids {
 		if err := parent.Err(); err != nil {
 			return err

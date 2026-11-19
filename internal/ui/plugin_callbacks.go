@@ -51,8 +51,8 @@ func (a *App) callPlugin(callback, event, argument string) tea.Cmd {
 }
 
 // callPluginData includes detached event data while retaining the callback's input ownership.
-func (a *App) callPluginData(callback, event, argument string, data any) tea.Cmd {
-	cmd, err := a.queuePluginData(callback, event, argument, data)
+func (a *App) callPluginData(callback, event, argument string, data any, listeners ...[]string) tea.Cmd {
+	cmd, err := a.queuePluginData(callback, event, argument, data, listeners...)
 	if err != nil {
 		a.notice = err.Error()
 		if a.pluginDepth < 8 {
@@ -63,7 +63,7 @@ func (a *App) callPluginData(callback, event, argument string, data any) tea.Cmd
 }
 
 // queuePluginData lets persistent event sources retain their latest state under queue pressure.
-func (a *App) queuePluginData(callback, event, argument string, data any) (tea.Cmd, error) {
+func (a *App) queuePluginData(callback, event, argument string, data any, listeners ...[]string) (tea.Cmd, error) {
 	if a.plugins == nil || event != "" && !slices.Contains(a.pluginManifest.Events, event) {
 		return nil, nil
 	}
@@ -74,8 +74,10 @@ func (a *App) queuePluginData(callback, event, argument string, data any) (tea.C
 	m := pluginResultMsg{Runtime: a.plugins, Owner: a.keyOwner(), Draft: a.Prompt.String(), Digest: configDigest(a.Config), Target: a.pluginTarget(), Keys: keymapDigest(a.Config), Depth: a.pluginDepth + 1}
 	var result <-chan plugin.Result
 	var err error
-	if a.pluginInvocation != "" {
-		m.Invocation = a.pluginInvocation
+	m.Invocation = a.pluginInvocation
+	if len(listeners) > 0 {
+		result, err = a.plugins.SubmitEvent(event, listeners[0], snapshot, a.Config, m.Invocation)
+	} else if m.Invocation != "" {
 		result, err = a.plugins.SubmitWithinInvocation(m.Invocation, callback, event, snapshot, a.Config)
 	} else {
 		result, err = a.plugins.Submit(callback, event, snapshot, a.Config)
@@ -188,7 +190,7 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 		owned := a.pluginOwns(m)
 		if background && !owned {
 			switch effect.Name {
-			case "notify", "event.emit", "schedule.callback", "resource.activate", "resource.release", "surface.apply", "dialog.open", "workspace.query", "workspace.cancel":
+			case "notify", "event.emit", "event.dispatch", "schedule.callback", "resource.activate", "resource.release", "surface.apply", "dialog.open", "workspace.query", "workspace.cancel":
 			default:
 				a.notice = "lua input effect discarded after workspace changed"
 				continue
@@ -268,6 +270,13 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 		switch effect.Name {
 		case "event.emit":
 			cmd = a.callPluginData("", effect.Argument, "", effect.Data)
+		case "event.dispatch":
+			delivery, ok := effect.Data.(plugin.EventDelivery)
+			if !ok {
+				a.notice = "lua: invalid targeted event"
+				return nil
+			}
+			cmd = a.callPluginData("", effect.Argument, "", delivery.Data, delivery.Listeners)
 		case "notify":
 			a.notice = strings.Map(func(r rune) rune {
 				if r < 32 || r == 127 {
@@ -291,7 +300,7 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 		if effect.Name == "editor.open" && !a.editing {
 			return nil
 		}
-		callback := effect.Name == "event.emit" && cmd != nil || slices.Contains(a.pluginManifest.Callbacks, effect.Name)
+		callback := (effect.Name == "event.emit" || effect.Name == "event.dispatch") && cmd != nil || slices.Contains(a.pluginManifest.Callbacks, effect.Name)
 		for _, command := range a.pluginManifest.Commands {
 			callback = callback || effect.Name == "command."+command.Name
 		}
