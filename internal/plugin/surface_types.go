@@ -87,6 +87,7 @@ type SurfaceMutation struct {
 // SurfaceDelta reports committed changes for the UI cache without executing renderer callbacks.
 type SurfaceDelta struct {
 	ChangedBuffers []SurfaceBuffer
+	ChangedWindows []SurfaceWindow
 	Operation      string
 	Buffer         *SurfaceBuffer
 	Window         *SurfaceWindow

@@ -130,7 +130,10 @@ func (s *SurfaceStore) apply(m SurfaceMutation) (SurfaceDelta, error) {
 		if err != nil {
 			return delta, err
 		}
-		total := size - current.bytes
+		total := 0
+		if current.Projection == "" {
+			total = size - current.bytes
+		}
 		for _, buffer := range s.buffers {
 			if buffer.Projection == "" {
 				total += buffer.bytes
@@ -143,6 +146,7 @@ func (s *SurfaceStore) apply(m SurfaceMutation) (SurfaceDelta, error) {
 			current.Lines, current.bytes = lines, size
 			current.Spans, current.decorations = nil, nil
 			current.Revision++
+			delta.ChangedWindows = s.clampBufferWindows(current)
 		}
 	case "buffer.set_spans":
 		if err := validateSurfaceSpans(current.Lines, m.Spans); err != nil {

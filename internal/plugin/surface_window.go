@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -83,4 +84,25 @@ func (s *SurfaceStore) applyWindow(m SurfaceMutation) (SurfaceDelta, error) {
 	window.Focus = focus
 	delta.Window = &window
 	return delta, nil
+}
+
+// clampBufferWindows keeps cursor metadata valid before richer UI rebasing is applied.
+func (s *SurfaceStore) clampBufferWindows(buffer *surfaceBufferRecord) []SurfaceWindow {
+	var changed []SurfaceWindow
+	for id, window := range s.windows {
+		if window.BufferID != buffer.ID {
+			continue
+		}
+		cursor := window.Cursor
+		cursor.Line = min(cursor.Line, len(buffer.Lines)-1)
+		cursor.Column = min(cursor.Column, utf8.RuneCountInString(buffer.Lines[cursor.Line]))
+		if cursor != window.Cursor {
+			window.Cursor = cursor
+			window.Revision++
+			s.windows[id] = window
+			changed = append(changed, window)
+		}
+	}
+	slices.SortFunc(changed, func(a, b SurfaceWindow) int { return strings.Compare(a.ID, b.ID) })
+	return changed
 }

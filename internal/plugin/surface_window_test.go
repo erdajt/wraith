@@ -55,3 +55,23 @@ func TestSurfaceWindowsShareTextButKeepIndependentCursors(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSurfaceTextEditsClampIndependentWindowMetadata(t *testing.T) {
+	store := newSurfaceStore("clamp")
+	bufferID, _ := store.Reserve("config", "buffer")
+	lease := store.OwnerLease("config")
+	_, _ = store.Apply(SurfaceMutation{Operation: "buffer.create", ID: bufferID, Owner: "config", Lease: lease, Buffer: &SurfaceBuffer{Lines: []string{"line", "écho"}}})
+	windowID, _ := store.Reserve("config", "window")
+	_, err := store.Apply(SurfaceMutation{Operation: "window.create", ID: windowID, Owner: "config", Lease: lease, Window: &SurfaceWindow{BufferID: bufferID, Cursor: SurfacePosition{1, 4}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	delta, err := store.HostApply(SurfaceMutation{Operation: "buffer.set_lines", ID: bufferID, Expected: 1, Start: 0, End: 2, Lines: []string{"é"}})
+	if err != nil || len(delta.ChangedWindows) != 1 {
+		t.Fatalf("clamp: %+v, %v", delta, err)
+	}
+	window, _ := store.Window(windowID)
+	if window.Cursor != (SurfacePosition{0, 1}) || window.Revision != 2 {
+		t.Fatalf("invalid cursor metadata after text update: %+v", window)
+	}
+}

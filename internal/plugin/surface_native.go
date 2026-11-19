@@ -43,5 +43,5 @@ func (s *SurfaceStore) HostUpsert(slot string, lines []string, truncated bool) (
 		current.Revision++
 	}
 	copy := cloneSurfaceBuffer(current.SurfaceBuffer)
-	return SurfaceDelta{Operation: "buffer.native", Buffer: &copy}, nil
+	return SurfaceDelta{Operation: "buffer.native", Buffer: &copy, ChangedWindows: s.clampBufferWindows(current)}, nil
 }
