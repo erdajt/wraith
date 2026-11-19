@@ -46,7 +46,7 @@ wraith.api_version = 2
 wraith.capabilities = {
   trusted_lua = true, runtimepath = true, stdpath = true, modules = true, module_sources = true, module_loading = true,
   module_providers = true,
-  live_registration = true, custom_events = true, plugin_lifecycle = true,
+  live_registration = true, custom_events = true, plugin_lifecycle = true, plugins_unload_many = true,
   scheduling = true, json = true, filesystem = true, http = true,
   timers = true, managed_resources = true, process = true,
   buffers = true, windows = true, regions = true, dialogs = true,
@@ -139,6 +139,9 @@ function wraith.plugins.load(module, options, load_options) end
 -- refuses unloading an executing package or one with active dependents.
 ---@param module string
 function wraith.plugins.unload(module) end
+-- stages up to 128 unique loaded names together; empty is a no-op, outside dependents reject.
+---@param modules string[]
+function wraith.plugins.unload_many(modules) end
 ---@param module string
 function wraith.plugins.depend(module) end
 -- calls one captured export under its package owner; one return value, at most 16 arguments.

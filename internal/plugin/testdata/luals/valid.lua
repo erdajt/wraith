@@ -162,3 +162,5 @@ local resolve_source = function(name)
 end
 local provider_id = wraith.modules.provider(resolve_source)
 wraith.modules.remove_provider(provider_id)
+wraith.plugins.unload_many({ "plugins.review", "plugins.helper" })
+wraith.plugins.unload_many({})

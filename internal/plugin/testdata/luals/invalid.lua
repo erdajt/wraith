@@ -34,6 +34,9 @@ print(operation)
 
 wraith.modules.provider(false) -- expect: param-type-mismatch
 wraith.modules.remove_provider(1) -- expect: param-type-mismatch
+wraith.plugins.unload_many("plugins.review") -- expect: param-type-mismatch
+wraith.plugins.unload_many() -- expect: missing-parameter
+wraith.plugins.unload_many({ false }) -- expect: assign-type-mismatch
 
 ---@type Wraith.ModuleCheckPhase
 local phase = "resolve" -- expect: assign-type-mismatch
