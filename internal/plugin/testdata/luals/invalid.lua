@@ -27,3 +27,7 @@ wraith.hooks.add("before_request", function(ctx)
   print(model)
   return { request = ctx.request }
 end)
+
+---@type Wraith.PackageOperation
+local operation = { id = "invalid", phase = "publishing", state = "invented", restart_required = {} } -- expect: assign-type-mismatch
+print(operation)

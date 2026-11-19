@@ -95,3 +95,22 @@ local plan = manager.plan("install", { "review" })
 ---@type string
 local handle = plan.id
 print(handle, manager.status().packages[1].loaded)
+
+---@type Wraith.PackageOperation[]
+local operations = {
+  { id = "1", phase = "preparing", state = "preparing", restart_required = {} },
+  { id = "2", phase = "fetching", state = "fetching", restart_required = {} },
+  { id = "3", phase = "verifying", state = "verifying", restart_required = {} },
+  { id = "4", phase = "publishing", state = "publishing", restart_required = {} },
+  { id = "5", phase = "cleaning", state = "cleaning", restart_required = {} },
+  { id = "6", phase = "cleaning", state = "installed", restart_required = { "review" } },
+  { id = "7", phase = "fetching", state = "failed", restart_required = {}, error = "fetch failed" },
+  { id = "8", phase = "fetching", state = "cancelled", restart_required = {} },
+  { id = "9", phase = "publishing", state = "conflict", restart_required = {}, error = "lock changed" },
+  { id = "10", phase = "publishing", state = "uncertain", restart_required = {}, error = "inspect lock" },
+}
+for _, operation in ipairs(operations) do
+  if operation.state == "conflict" or operation.state == "uncertain" then
+    print(operation.error, manager.recover().root)
+  end
+end

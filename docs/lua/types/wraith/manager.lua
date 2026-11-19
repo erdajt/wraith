@@ -93,7 +93,7 @@
 ---@field restart_required boolean disk selection differs from this runtime's frozen source
 ---@class Wraith.PackageOperation
 ---@field id string
----@field state 'preparing'|'fetching'|'verifying'|'publishing'|'cleaning'|'installed'|'failed'|'cancelled'
+---@field state 'preparing'|'fetching'|'verifying'|'publishing'|'cleaning'|'installed'|'failed'|'cancelled'|'conflict'|'uncertain'
 ---@field phase string latest progress phase; retained after completion
 ---@field restart_required string[]
 ---@field name? string package being processed
