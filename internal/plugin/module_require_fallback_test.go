@@ -10,10 +10,7 @@ import (
 func moduleFallbackFixture(t *testing.T, resolver bool) (*engine, nativeModules) {
 	t.Helper()
 	e := moduleResolutionFixture(t)
-	native, err := captureNativeModules(e.L)
-	if err != nil {
-		t.Fatal(err)
-	}
+	native := e.nativeModules
 	if resolver {
 		if err := e.L.DoString(`function resolve() resolves=(resolves or 0)+1; return nil end`); err != nil {
 			t.Fatal(err)

@@ -12,10 +12,7 @@ import (
 func moduleRequireFixture(t *testing.T) (*engine, nativeModules) {
 	t.Helper()
 	e := moduleResolutionFixture(t)
-	native, err := captureNativeModules(e.L)
-	if err != nil {
-		t.Fatal(err)
-	}
+	native := e.nativeModules
 	e.L.SetGlobal("descriptors", e.L.NewTable())
 	e.owner = "resolver"
 	if _, err := e.addModuleProvider(e.L.NewFunction(func(L *lua.LState) int {

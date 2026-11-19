@@ -11,15 +11,12 @@ import (
 func moduleActivationFixture(t *testing.T) (*engine, nativeModules, *moduleResolution) {
 	t.Helper()
 	e := moduleResolutionFixture(t)
-	native, err := captureNativeModules(e.L)
-	if err != nil {
-		t.Fatal(err)
-	}
+	native := e.nativeModules
 	e.owner = "resolver"
-	if _, err = e.addModuleProvider(e.L.NewFunction(func(*lua.LState) int { return 0 })); err != nil {
+	if _, err := e.addModuleProvider(e.L.NewFunction(func(*lua.LState) int { return 0 })); err != nil {
 		t.Fatal(err)
 	}
-	if err = e.L.DoString(`function activate(name) assert(name=="target"); activations=(activations or 0)+1; wraith.plugins.load("provider",{},{dependency=false}) end
+	if err := e.L.DoString(`function activate(name) assert(name=="target"); activations=(activations or 0)+1; wraith.plugins.load("provider",{},{dependency=false}) end
 function verify(name,phase) assert(name=="target"); assert(phase=="validate" or phase=="before" or phase=="after"); return false end
 package.preload.target=function() runs=(runs or 0)+1; wraith.commands.create("source",function() end); return {} end
 package.preload.provider=function() return {

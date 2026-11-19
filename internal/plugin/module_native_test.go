@@ -12,10 +12,7 @@ import (
 func moduleNativeFixture(t *testing.T) (*engine, nativeModules, *moduleResolution, string) {
 	t.Helper()
 	e, _, owner := moduleExecutionFixture(t)
-	native, err := captureNativeModules(e.L)
-	if err != nil {
-		t.Fatal(err)
-	}
+	native := e.nativeModules
 	e.owner = "resolver"
 	if _, err := e.addModuleProvider(e.L.NewFunction(func(*lua.LState) int { return 0 })); err != nil {
 		t.Fatal(err)

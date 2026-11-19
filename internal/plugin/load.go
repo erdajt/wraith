@@ -62,6 +62,10 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 		L.Push(L.NewFunction(open))
 		L.Call(0, 0)
 	}
+	e.nativeModules, err = captureNativeModules(L)
+	if err != nil {
+		return nil, err
+	}
 	if err := e.installLoader(directory); err != nil {
 		return nil, err
 	}
@@ -106,6 +110,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	}
 
 	e.installModuleDiscovery(api)
+	e.installModuleProviders(api)
 	e.guardHookAPIs(api)
 	fn, err := loadFile(L, filepath.Join(directory, "init.lua"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {

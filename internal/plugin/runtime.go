@@ -98,6 +98,7 @@ type Runtime struct {
 }
 
 type engine struct {
+	nativeModules      nativeModules
 	moduleProviders    []moduleProvider
 	moduleExecutions   map[string]moduleExecution
 	moduleClaims       map[string]*moduleClaim

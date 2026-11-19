@@ -41,3 +41,30 @@ func (e *engine) removeModuleProvider(id string) error {
 	e.dirty = !e.setup
 	return nil
 }
+
+// installModuleProviders exposes owned routing before user modules capture require.
+func (e *engine) installModuleProviders(api *lua.LTable) {
+	L := e.L
+	native := e.nativeModules
+	L.SetGlobal("require", L.NewFunction(func(L *lua.LState) int { return e.requireModule(L, native) }))
+	modules := api.RawGetString("modules").(*lua.LTable)
+	L.SetFuncs(modules, map[string]lua.LGFunction{
+		"provider": func(L *lua.LState) int {
+			e.registration(L)
+			id, err := e.addModuleProvider(L.CheckFunction(1))
+			if err != nil {
+				L.RaiseError("modules.provider: %v", err)
+			}
+			L.Push(lua.LString(id))
+			return 1
+		},
+		"remove_provider": func(L *lua.LState) int {
+			e.registration(L)
+			if err := e.removeModuleProvider(L.CheckString(1)); err != nil {
+				L.RaiseError("modules.remove_provider: %v", err)
+			}
+			return 0
+		},
+	})
+	api.RawGetString("capabilities").(*lua.LTable).RawSetString("module_providers", lua.LTrue)
+}
