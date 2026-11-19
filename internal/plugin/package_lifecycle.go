@@ -79,6 +79,7 @@ func (e *engine) unloadPlugin(name string) error {
 	}
 	e.manifest.Hooks = slices.DeleteFunc(e.manifest.Hooks, func(hook HookDefinition) bool { return hook.Owner == record.owner })
 	e.removeOwnerExtensions(record.owner)
+	e.moduleProviders = slices.DeleteFunc(e.moduleProviders, func(provider moduleProvider) bool { return provider.owner == record.owner })
 	e.removeOwnerRegistrations(record.owner)
 	for key, layers := range e.bindingLayers {
 		e.bindingLayers[key] = slices.DeleteFunc(layers, func(layer ownedBinding) bool {

@@ -16,6 +16,7 @@ type publicationDecision struct {
 }
 
 type registryState struct {
+	moduleProviders []moduleProvider
 	extensionState
 	ownershipLayers
 	schedulerState
@@ -48,6 +49,7 @@ func (e *engine) captureRegistry() registryState {
 		events[name] = slices.Clone(ids)
 	}
 	return registryState{
+		moduleProviders: slices.Clone(e.moduleProviders),
 		extensionState:  e.cloneExtensions(),
 		ownershipLayers: e.cloneOwnership(), schedulerState: e.cloneScheduler(), resourceState: e.cloneResources(), surfaceState: e.cloneSurfaces(),
 		manifest: cloneManifest(e.manifest), functions: maps.Clone(e.functions), events: events,
@@ -86,6 +88,7 @@ func (e *engine) restoreRegistry(s registryState) []cleanupHook {
 	e.resourceState = s.resourceState
 	e.schedulerState = s.schedulerState
 	e.packages = s.packages
+	e.moduleProviders = slices.Clone(s.moduleProviders)
 	e.ownershipLayers = s.ownershipLayers
 	e.manifest, e.functions, e.events = s.manifest, s.functions, s.events
 	e.actions, e.loaded, e.cleanup = s.actions, s.loaded, s.cleanup

@@ -98,6 +98,7 @@ type Runtime struct {
 }
 
 type engine struct {
+	moduleProviders    []moduleProvider
 	moduleSources      map[string]moduleSource
 	moduleNamespaces   []string
 	runtimeRoots       []string
