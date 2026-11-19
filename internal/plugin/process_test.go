@@ -1,12 +1,15 @@
 package plugin
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -28,6 +31,47 @@ func TestManagedProcessFixture(t *testing.T) {
 		}
 		_, _ = os.Stderr.Write([]byte("diagnostic\r\n"))
 		os.Exit(7)
+	case "frames":
+		reader := bufio.NewReader(os.Stdin)
+		for {
+			header, err := reader.ReadString('\n')
+			if err == io.EOF {
+				os.Exit(0)
+			}
+			length, parseErr := strconv.Atoi(strings.TrimSpace(strings.TrimPrefix(header, "Content-Length:")))
+			blank, blankErr := reader.ReadString('\n')
+			if err != nil || parseErr != nil || blankErr != nil || blank != "\r\n" || length < 0 || length > 1<<20 {
+				os.Exit(10)
+			}
+			data := make([]byte, length)
+			if _, err := io.ReadFull(reader, data); err != nil {
+				os.Exit(11)
+			}
+			_, _ = fmt.Fprintf(os.Stdout, "Content-Length: %d\r\n\r\n", length)
+			for _, value := range data {
+				_, _ = os.Stdout.Write([]byte{value})
+			}
+		}
+	case "child", "orphan":
+		child := exec.Command(os.Args[0], "-test.run=^TestManagedProcessFixture$", "--", "wait")
+		child.Stdout, child.Stderr = os.Stdout, os.Stderr
+		if err := child.Start(); err != nil {
+			os.Exit(12)
+		}
+		if err := os.WriteFile(os.Getenv("WRAITH_CHILD_PID"), []byte(strconv.Itoa(child.Process.Pid)), 0600); err != nil {
+			os.Exit(13)
+		}
+		if mode == "orphan" {
+			os.Exit(0)
+		}
+		_, _ = fmt.Fprintln(os.Stdout, "child ready")
+		for {
+			time.Sleep(time.Hour)
+		}
+	case "flood":
+		for {
+			_, _ = os.Stdout.Write(bytes.Repeat([]byte{'x'}, 32<<10))
+		}
 	case "wait":
 		_, _ = fmt.Fprintln(os.Stdout, "ready")
 		for {
@@ -39,13 +83,13 @@ func TestManagedProcessFixture(t *testing.T) {
 }
 
 // processFixture starts a real subprocess through the same manager used by Lua plugins.
-func processFixture(t *testing.T, mode string, timeout time.Duration) (*resourceManager, *managedProcess, string) {
+func processFixture(t *testing.T, mode string, timeout time.Duration, environment ...string) (*resourceManager, *managedProcess, string) {
 	t.Helper()
 	manager := newResourceManager(t.Context())
 	t.Cleanup(manager.close)
 	process := newManagedProcess(processOptions{
 		argv:        []string{os.Args[0], "-test.run=^TestManagedProcessFixture$", "--", mode},
-		environment: append(os.Environ(), "WRAITH_PROCESS_FIXTURE=1"),
+		environment: append(append(os.Environ(), "WRAITH_PROCESS_FIXTURE=1"), environment...),
 		limit:       128 << 10, protocol: true, stdin: true, timeout: timeout,
 	})
 	id, err := manager.reserve("config", "process", process.run)
