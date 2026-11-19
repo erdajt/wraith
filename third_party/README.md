@@ -24,6 +24,12 @@ it or running cache metamethods. wraith uses this boolean to distinguish bound
 loaders entered through require from direct function calls. trusted code can
 still mutate the registry; this is not a sandbox.
 
+the logical-expression compiler copies an operand to its destination only when
+short-circuiting selects the final result. this preserves nil and false operands
+and prevents intermediate values from changing aliased locals before evaluation
+finishes. regression tests cover selected values, operand order and assignment
+contexts.
+
 both generator sources and generated sources carry the protected-call changes.
 the upstream finalizer test reads its shared counter atomically to match the
 finalizer writes. upstream formatting and comments remain unchanged outside the

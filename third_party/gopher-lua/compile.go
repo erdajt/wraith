@@ -1668,10 +1668,10 @@ func compileLogicalOpExprAux(context *funcContext, reg int, expr ast.Expr, ec *e
 		}
 	} else {
 		reg += compileExpr(context, reg, expr, ecnone(0))
-		if !hasnextcond {
-			code.AddABC(OP_TEST, a, 0, 0^flip, sline(expr))
-		} else {
+		if isLastAnd || isLastOr {
 			code.AddABC(OP_TESTSET, sreg, a, 0^flip, sline(expr))
+		} else {
+			code.AddABC(OP_TEST, a, 0, 0^flip, sline(expr))
 		}
 	}
 	code.AddASbx(OP_JMP, 0, jumplabel, sline(expr))
