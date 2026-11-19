@@ -71,6 +71,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	e.installRegistration(api)
 	e.installHooks(api)
 	e.installWorkspace(api)
+	e.installWorkspaceQueries(api)
 	e.installPlugins(api)
 	e.installSchedule(api)
 	e.installDialogs(api)
