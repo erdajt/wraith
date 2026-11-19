@@ -2,6 +2,7 @@ package store
 
 import (
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -58,11 +59,16 @@ func (s Store) Save(v session.Session) error {
 
 // Load loads a session and verifies its id against the requested filename.
 func (s Store) Load(id string) (session.Session, error) {
+	return s.LoadContext(context.Background(), id)
+}
+
+// LoadContext bounds and cancels query reads without changing the saved session format.
+func (s Store) LoadContext(ctx context.Context, id string) (session.Session, error) {
 	if !validID.MatchString(id) {
 		return session.Session{}, errors.New("invalid session id")
 	}
 
-	v, err := read(filepath.Join(s.Root, "sessions", id+".json.gz"))
+	v, err := readContext(ctx, filepath.Join(s.Root, "sessions", id+".json.gz"))
 	if err == nil && v.ID != id {
 		return v, errors.New("session id does not match file")
 	}
@@ -124,20 +130,32 @@ func compressed(path string, v session.Session) error {
 
 // read loads a session with a decompression limit and validates its format.
 func read(path string) (session.Session, error) {
+	return readContext(context.Background(), path)
+}
+
+// readContext rejects special files and checks cancellation between decompression reads.
+func readContext(ctx context.Context, path string) (session.Session, error) {
 	var v session.Session
-	f, err := os.Open(path)
+	f, err := os.OpenFile(path, os.O_RDONLY|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return v, err
 	}
 	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return v, err
+	}
+	if !info.Mode().IsRegular() {
+		return v, errors.New("session is not a regular file")
+	}
 
-	z, err := gzip.NewReader(f)
+	z, err := gzip.NewReader(sessionReader{ctx, f})
 	if err != nil {
 		return v, err
 	}
 	defer z.Close()
 
-	b, err := io.ReadAll(io.LimitReader(z, maxSession+1))
+	b, err := io.ReadAll(io.LimitReader(sessionReader{ctx, z}, maxSession+1))
 	if err != nil {
 		return v, err
 	}
@@ -151,5 +169,18 @@ func read(path string) (session.Session, error) {
 	if v.Version != 1 || !validID.MatchString(v.ID) {
 		return v, errors.New("invalid session format")
 	}
-	return v, nil
+	return v, ctx.Err()
+}
+
+type sessionReader struct {
+	context context.Context
+	reader  io.Reader
+}
+
+// Read checks cancellation before reading the next bounded source chunk.
+func (r sessionReader) Read(p []byte) (int, error) {
+	if err := r.context.Err(); err != nil {
+		return 0, err
+	}
+	return r.reader.Read(p)
 }
