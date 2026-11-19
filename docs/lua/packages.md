@@ -60,7 +60,7 @@ HTTP, remote helper protocols, embedded URL credentials, query strings, fragment
 
 | field | default and behavior |
 | --- | --- |
-| `name` | lowercase source basename without `.git`; unique, at most 64 bytes, using lowercase letters, digits, `.`, `_` and `-`, starting with a letter or digit |
+| `name` | lowercase source basename without `.git`; identity across fragments, at most 64 bytes, using lowercase letters, digits, `.`, `_` and `-`, starting with a letter or digit |
 | `main` | source basename without `.git`; module passed to `require` |
 | `branch`, `tag`, `commit` | at most one; omitted means remote HEAD; commits require a full 40- or 64-digit hexadecimal object id |
 | `pin` | `false`; keep the locked revision during update, except when an explicit commit selector changes |
@@ -72,7 +72,8 @@ HTTP, remote helper protocols, embedded URL credentials, query strings, fragment
 | `event` | one lifecycle/custom event name or a list that activates the package |
 | `keys` | key specifications, described below |
 | `init` | function receiving a copied specification; runs during manager setup, before activation |
-| `opts` | table, or `function(spec, opts)` that mutates the options table or returns its replacement |
+| `opts` | nested maps merge across fragments; lists replace; a function mutates inherited options or returns their replacement |
+| `opts_extend` | dotted option paths whose lists append from this declaration onward |
 | `config` | function receiving `(spec, opts)`, or `false` to require the module without calling its setup function |
 
 without a custom `config`, activation requires `main` and calls `module.setup(opts)` if that field exists. a module can also be a library with no setup function. `config = function(spec, opts) ... end` controls loading itself and may require a different module. the installer does not assume a conventional module entry point or run build scripts.
@@ -100,7 +101,25 @@ command triggers activate the package and replay that command with its original 
 
 `lazy = true` without a trigger means explicit `manager.load(name)` activation. unloading removes activation and init owners, including their triggers. load it explicitly again or reload the configuration to restore them. unload dependents before their dependencies.
 
-normalization rejects unknown fields, duplicate names or module identities, conflicting triggers, missing dependencies and dependency/import cycles before running init functions. disabled packages are excluded; an enabled package cannot depend on a disabled package. there is no semver resolver, submodule installation, Neovim plugin compatibility or build-hook support.
+normalization rejects unknown fields, conflicting sources or module identities, conflicting triggers, missing dependencies and dependency/import cycles before running init functions. disabled packages are excluded; an enabled package cannot depend on a disabled package. there is no semver resolver, submodule installation, Neovim plugin compatibility or build-hook support.
+
+## repeated declarations
+
+use a bare name to override a plugin declared elsewhere. the source may appear before or after the override:
+
+```lua
+require("shroud").setup({
+  { "owner/review", opts = { window = { width = 80 }, sources = { "history" } } },
+  { "review", opts_extend = { "sources" }, opts = { sources = { "commands" } } },
+  { name = "review", opts = function(_, opts) opts.window.height = 24 end },
+})
+```
+
+later scalar fields replace earlier values, including `false`; absent values remain inherited. dependencies, commands and events combine in first-seen order. key mappings replace the same normalized key and mode across fragments. aliases duplicated inside a single fragment remain invalid.
+
+nested option maps merge; lists replace unless their dotted path is in `opts_extend`. its value is inherited by later fragments, not applied retroactively. `wraith.json.null` removes a map field. callbacks run on activation with detached arguments; returning a table replaces the options, while returning `nil` retains mutations. `enabled` runs once per merged plugin during normalization.
+
+the first source stays selected. remote `.git` suffix variants match, but different transports or local directories conflict. choose one revision selector across the merged plugin; unlike lazy.nvim, a later branch does not silently coexist with an earlier commit. option recipes and callback results have a 4096-entry, depth-16 structural limit; declarations allow 256 fragments and 63 enabled plugins.
 
 ## package view
 

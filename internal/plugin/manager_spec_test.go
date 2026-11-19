@@ -62,7 +62,7 @@ func TestManagerSpecsRejectInvalidGraphsBeforeInitialization(t *testing.T) {
   assert(not ok and tostring(err):find(expected,1,true), tostring(err))
   assert(initialized==0)
  end
- rejects({{"owner/app",init=function() initialized=initialized+1 end},{"owner/app"}},"duplicate package")
+ rejects({{"owner/app",init=function() initialized=initialized+1 end},{"other/app"}},"conflicting source")
  rejects({{"owner/app",dependencies={"missing"}}},"unknown dependency")
  rejects({{"owner/app",dependencies={"lib"}},{"owner/lib",dependencies={"app"}}},"dependency cycle")
  rejects({{"owner/app",dependencies={"lib"}},{"owner/lib",enabled=false}},"depends on disabled")

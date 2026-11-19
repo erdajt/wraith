@@ -14,7 +14,7 @@
 ---@field desc? string shorthand for description
 ---@field description? string
 ---@class Wraith.PackageSpec
----@field [1]? string repository shorthand, remote url or explicit local path
+---@field [1]? string repository shorthand, remote url, local path or existing package name
 ---@field repo? string same source forms as the first position; choose one source
 ---@field url? string explicit https, ssh, scp-style or file remote
 ---@field dir? string absolute, home-relative or relative to the effective config directory
@@ -28,6 +28,7 @@
 ---@field event? Wraith.Event|Wraith.Event[]
 ---@field keys? Wraith.PackageKey[]
 ---@field init? fun(spec: Wraith.NormalizedPackage): Wraith.PackageCleanup?
+---@field opts_extend? string[] dotted list paths, inherited by later fragments
 ---@field opts? table|fun(spec: Wraith.NormalizedPackage, opts: table): table? nil retains in-place changes
 ---@field config? boolean|fun(spec: Wraith.NormalizedPackage, opts: table): Wraith.PackageCleanup? false skips module setup
 ---@field branch? string choose one branch, tag or commit
@@ -48,6 +49,7 @@
 ---@field event Wraith.Event[]
 ---@field keys {keys: string, action: string|fun(ctx: Wraith.Context), mode: Wraith.KeyMode, description: string}[]
 ---@field init? fun(spec: Wraith.NormalizedPackage): Wraith.PackageCleanup?
+---@field opts_extend? string[] dotted list paths, inherited by later fragments
 ---@field opts? table|fun(spec: Wraith.NormalizedPackage, opts: table): table?
 ---@field config? boolean|fun(spec: Wraith.NormalizedPackage, opts: table): Wraith.PackageCleanup?
 
