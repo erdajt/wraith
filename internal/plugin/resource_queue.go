@@ -61,7 +61,12 @@ func (s *resourceSink) Emit(kind string, data map[string]any, lossless bool) err
 // terminal uses reserved control capacity rather than waiting behind a full progress queue.
 func (m *resourceManager) terminal(record *managedResource) {
 	record.sequence++
-	data := map[string]any{"state": record.state, "done": record.done, "result": record.result.Data}
+	result, err := cloneResourceValue(record.result.Data)
+	if err != nil {
+		record.result.Err = err
+		result = nil
+	}
+	data := map[string]any{"state": record.state, "done": record.done, "result": result}
 	if record.result.Err != nil {
 		data["error"] = record.result.Err.Error()
 	}

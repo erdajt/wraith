@@ -30,8 +30,9 @@ func TestResourceActivationAndRetainedCompletion(t *testing.T) {
 		if !event.Final || !m.valid(event) {
 			t.Fatalf("terminal event lost its handle: %+v", event)
 		}
+		event.Data["result"].(map[string]any)["bytes"].([]byte)[0] = 42
 		status, err := m.Status(id, "config")
-		if err != nil || status["state"] != "completed" || status["done"] != true {
+		if err != nil || status["state"] != "completed" || status["done"] != true || status["result"].(map[string]any)["bytes"].([]byte)[0] != 0 {
 			t.Fatalf("status: %v, %v", status, err)
 		}
 		m.discard([]string{id})
