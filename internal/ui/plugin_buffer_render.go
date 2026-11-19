@@ -23,17 +23,23 @@ func styledSurfaceLine(line string, row int, spans []plugin.SurfaceSpan, p palet
 		start         bool
 	}
 	runes := []rune(line)
-	starts, ends := make([]int, len(runes)+1), make([]int, len(runes)+1)
-	position := 0
+	starts, ends, cells := make([]int, len(runes)+1), make([]int, len(runes)+1), make([]int, len(runes)+1)
+	position, column := 0, 0
 	clusters := uniseg.NewGraphemes(line)
 	for clusters.Next() {
 		next := position + utf8.RuneCountInString(clusters.Str())
 		for i := position; i < next; i++ {
 			starts[i], ends[i+1] = position, next
+			cells[i] = column
+		}
+		if clusters.Str() == "\t" {
+			column += 4 - column%4
+		} else {
+			column += clusters.Width()
 		}
 		position = next
 	}
-	starts[len(runes)] = len(runes)
+	starts[len(runes)], cells[len(runes)] = len(runes), column
 	var boundaries []boundary
 	for i, span := range spans {
 		if span.Start.Line > row || span.End.Line < row {
@@ -62,7 +68,7 @@ func styledSurfaceLine(line string, row int, spans []plugin.SurfaceSpan, p palet
 			if top >= 0 {
 				style = spans[top].Style
 			}
-			out.WriteString(surfaceStyle(string(runes[position:edge.column]), style, p))
+			out.WriteString(surfaceStyle(expandTabs(string(runes[position:edge.column]), cells[position]), style, p))
 			position = edge.column
 		}
 		active[edge.index] = edge.start
@@ -74,7 +80,7 @@ func styledSurfaceLine(line string, row int, spans []plugin.SurfaceSpan, p palet
 			}
 		}
 	}
-	out.WriteString(ink(p.FG, string(runes[position:])))
+	out.WriteString(ink(p.FG, expandTabs(string(runes[position:]), cells[position])))
 	return out.String()
 }
 

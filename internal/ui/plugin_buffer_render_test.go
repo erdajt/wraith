@@ -41,11 +41,23 @@ func TestRuneDisplayRangeKeepsCombiningAndJoinedGlyphsTogether(t *testing.T) {
 		{"ae\u0301z", 1, 2, 1, 2},
 		{"a👩‍💻z", 2, 3, 1, 3},
 		{"a界", 2, 2, 3, 3},
+		{"a\t界\tz", 2, 4, 4, 8},
 	} {
 		from, to := runeDisplayRange(test.text, test.start, test.end)
 		if from != test.from || to != test.to {
 			t.Fatalf("%q [%d:%d] = [%d:%d], want [%d:%d]", test.text, test.start, test.end, from, to, test.from, test.to)
 		}
+	}
+}
+
+func TestSurfaceTabsUseFixedStopsWithoutChangingEditorText(t *testing.T) {
+	p := fixture(t).Config.Palette()
+	view := newReader("a\t界\tz")
+	view.Buffer.Pos = 2
+	buffer := plugin.SurfaceBuffer{Lines: []string{view.Buffer.String()}, Spans: []plugin.SurfaceSpan{{Start: plugin.SurfacePosition{Column: 1}, End: plugin.SurfacePosition{Column: 4}, Style: plugin.SurfaceStyle{Foreground: "accent"}}}}
+	frame := renderSurfaceBuffer(buffer, view, 10, 1, p, true)
+	if strings.ContainsRune(frame[0], '\t') || ansi.Strip(frame[0]) != "a   界  z " || view.Buffer.String() != "a\t界\tz" {
+		t.Fatalf("tab rendering changed cells or canonical text: %q", frame[0])
 	}
 }
 

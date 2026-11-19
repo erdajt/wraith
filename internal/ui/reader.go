@@ -121,7 +121,7 @@ func (r *reader) styledLines(width, height int, p palette, focused bool, style f
 	for i, line := range text {
 		size := len([]rune(line))
 		if i >= r.Offset && i < r.Offset+height {
-			styled := ink(p.FG, line)
+			styled := ink(p.FG, expandTabs(line, 0))
 			if style != nil {
 				styled = style(i, line)
 			}
@@ -163,16 +163,20 @@ func runeDisplayRange(text string, start, end int) (int, int) {
 	clusters := uniseg.NewGraphemes(text)
 	for clusters.Next() {
 		next := position + utf8.RuneCountInString(clusters.Str())
+		width := clusters.Width()
+		if clusters.Str() == "\t" {
+			width = 4 - cells%4
+		}
 		if left < 0 && start < next {
 			left = cells
 		}
 		if right < 0 && end <= next {
 			right = cells
 			if end > position {
-				right += clusters.Width()
+				right += width
 			}
 		}
-		position, cells = next, cells+clusters.Width()
+		position, cells = next, cells+width
 	}
 	if left < 0 {
 		left = cells
@@ -181,4 +185,21 @@ func runeDisplayRange(text string, start, end int) (int, int) {
 		right = cells
 	}
 	return left, right
+}
+
+// expandTabs uses four-cell stops without changing the canonical editor text.
+func expandTabs(text string, column int) string {
+	var out strings.Builder
+	clusters := uniseg.NewGraphemes(text)
+	for clusters.Next() {
+		if clusters.Str() == "\t" {
+			width := 4 - column%4
+			out.WriteString(strings.Repeat(" ", width))
+			column += width
+		} else {
+			out.WriteString(clusters.Str())
+			column += clusters.Width()
+		}
+	}
+	return out.String()
 }
