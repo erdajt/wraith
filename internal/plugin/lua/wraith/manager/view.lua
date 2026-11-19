@@ -19,7 +19,7 @@ function M.new(manager, options)
   for key in pairs(options) do assert(key == "position" or key == "keys", "unknown manager ui option: " .. tostring(key)) end
   local position = options.position == nil and "right" or options.position
   assert(position == "right" or position == "left" or position == "above" or position == "below", "invalid manager window position")
-  local keys = { refresh = "r", install = "i", update = "u", restore = "s", cancel = "x", close = "q", inspect = "<Enter>", confirm = "<Enter>", load = "l", unload = "d" }
+  local keys = { refresh = "r", install = "i", update = "u", restore = "s", cancel = "x", close = "q", inspect = "<Enter>", confirm = "<Enter>", load = "l", unload = "d", log = "o" }
   assert(options.keys == nil or type(options.keys) == "table", "manager ui keys must be a table")
   for action, key in pairs(options.keys or {}) do
     assert(keys[action] ~= nil, "unknown manager binding: " .. tostring(action))
@@ -44,6 +44,7 @@ function M.new(manager, options)
   local rows, api = {}, {}
   local function close_detail()
     if detail_window and pcall(wraith.windows.get, detail_window) then wraith.windows.close(detail_window) end
+    if window and pcall(wraith.windows.get, window) then wraith.windows.focus(window) end
   end
   local function details(title, lines, accept)
     if detail_buffer and pcall(wraith.buffers.get, detail_buffer) then
@@ -110,6 +111,26 @@ function M.new(manager, options)
       refresh = function() api.refresh() end,
       close = function() api.close() end,
       cancel = function() manager.cancel(); api.refresh() end,
+      log = function()
+        local operation = manager.status().operation
+        if not operation then wraith.notify("no package operation yet"); return end
+        local lines = { "operation: " .. text(operation.id, 128), "state: " .. text(operation.state, 128) }
+        if operation.phase then lines[#lines + 1] = "phase: " .. text(operation.phase, 128) end
+        if operation.name then lines[#lines + 1] = "package: " .. text(operation.name, 128) end
+        if operation.message then lines[#lines + 1] = text(operation.message, 1024) end
+        if operation.error then lines[#lines + 1] = "error: " .. text(operation.error, 2048) end
+        lines[#lines + 1] = ""
+        local log = tostring(operation.log or "")
+        local clipped = #log > 8192 or operation.log_truncated
+        log = wraith.ui.decode(log:sub(-8192))
+        local count = 0
+        for line in (log .. "\n"):gmatch("([^\n]*)\n") do
+          if count == 256 then clipped = true; break end
+          lines[#lines + 1], count = line, count + 1
+        end
+        if clipped then lines[#lines + 1] = "[log excerpt truncated]" end
+        details("package operation", lines)
+      end,
     }
     for _, action in ipairs({ "install", "update", "restore", "load", "unload", "inspect" }) do
       local operation = action
@@ -142,7 +163,7 @@ function M.new(manager, options)
     local operation = status.operation
     local lines = { "packages" .. (operation and " · " .. text(operation.state, 128) or ""), "", "" }
     local spans, column = {}, 0
-    for _, item in ipairs({ { "close", "hint_quit" }, { "refresh", "hint_refresh" }, { "cancel", "hint_cancel" }, { "install", "accent" }, { "update", "accent" }, { "restore", "accent" }, { "load", "accent" }, { "unload", "accent" }, { "inspect", "accent" } }) do
+    for _, item in ipairs({ { "close", "hint_quit" }, { "refresh", "hint_refresh" }, { "cancel", "hint_cancel" }, { "install", "accent" }, { "update", "accent" }, { "restore", "accent" }, { "load", "accent" }, { "unload", "accent" }, { "inspect", "accent" }, { "log", "hint_refresh" } }) do
       local key = keys[item[1]]
       if key then
         local label = text(key, 128) .. " " .. item[1] .. "  "
@@ -162,6 +183,9 @@ function M.new(manager, options)
       lines[#lines + 1] = text(item.name, 128) .. " · " .. state .. " · " .. source(item)
     end
     if #rows == 0 then lines[#lines + 1] = "no packages configured" end
+    if operation and operation.name then lines[#lines + 1] = "active package: " .. text(operation.name, 128) end
+    if operation and operation.phase and operation.phase ~= operation.state then lines[#lines + 1] = "last phase: " .. text(operation.phase, 128) end
+    if operation and operation.message then lines[#lines + 1] = text(operation.message, 1024) end
     if operation and operation.error then lines[#lines + 1] = "operation: " .. text(operation.error, 2048) end
     wraith.buffers.set_lines(buffer, 0, -1, lines)
     wraith.buffers.set_spans(buffer, spans)
