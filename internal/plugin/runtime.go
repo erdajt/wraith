@@ -21,6 +21,8 @@ type Command struct {
 var ErrQueueFull = errors.New("plugin callback queue is full")
 
 type Manifest struct {
+	Providers   []ProviderDefinition
+	Tools       []ToolDefinition
 	Hooks       []HookDefinition
 	Surface     []SurfaceMutation
 	Resources   []string
@@ -88,6 +90,7 @@ type Runtime struct {
 }
 
 type engine struct {
+	extensionState
 	pureHook      bool
 	hookViolation error
 	ownershipLayers

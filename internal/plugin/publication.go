@@ -16,6 +16,7 @@ type publicationDecision struct {
 }
 
 type registryState struct {
+	extensionState
 	ownershipLayers
 	schedulerState
 	resourceState
@@ -46,6 +47,7 @@ func (e *engine) captureRegistry() registryState {
 		events[name] = slices.Clone(ids)
 	}
 	return registryState{
+		extensionState:  e.cloneExtensions(),
 		ownershipLayers: e.cloneOwnership(), schedulerState: e.cloneScheduler(), resourceState: e.cloneResources(), surfaceState: e.cloneSurfaces(),
 		manifest: cloneManifest(e.manifest), functions: maps.Clone(e.functions), events: events,
 		actions: maps.Clone(e.actions), loaded: maps.Clone(e.loaded), packages: e.clonePackages(),
@@ -79,6 +81,7 @@ func (e *engine) restoreRegistry(s registryState) []cleanupHook {
 	}
 	e.services.discard(abandoned)
 	e.restoreSurfaces(s.surfaceState)
+	e.extensionState = s.extensionState
 	e.resourceState = s.resourceState
 	e.schedulerState = s.schedulerState
 	e.packages = s.packages
@@ -179,6 +182,7 @@ func (e *engine) pruneCallbacks() {
 		}
 	}
 	e.retainOwnerCallbacks(retained)
+	e.retainExtensionCallbacks(retained)
 	for _, hook := range e.manifest.Hooks {
 		retained[hook.Callback] = true
 	}
