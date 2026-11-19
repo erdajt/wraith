@@ -64,7 +64,7 @@ lua tests execute real scripts, including the documented configuration and plugi
 extension tests use the real lua VM and app publication handshake. rejection cases verify that commands, mappings, resources and owned cleanup retain their previous state. protected-call tests cover live upvalues, escaped closures, nested error handlers, go panics, coroutine failures and VM reuse. the upstream suite is separate from the root module:
 
 ```sh
-go test -count=1 -timeout=2m github.com/yuin/gopher-lua
+go test -race -shuffle=on -count=1 -timeout=2m github.com/yuin/gopher-lua
 go test -race ./internal/plugin -run 'TestProtectedCall|TestManager'
 GOMAXPROCS=2 go test ./internal/plugin -run '^$' -fuzz '^FuzzJSONSurrogateValidation$' -fuzztime=30s -parallel=2
 ```
