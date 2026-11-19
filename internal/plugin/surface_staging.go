@@ -1,6 +1,9 @@
 package plugin
 
-import lua "github.com/yuin/gopher-lua"
+import (
+	lua "github.com/yuin/gopher-lua"
+	"slices"
+)
 
 // previewSurfaces fixes observed revisions until the current callback has finished.
 func (e *engine) previewSurfaces() *SurfaceStore {
@@ -30,6 +33,9 @@ func (e *engine) stageSurface(mutation SurfaceMutation) SurfaceDelta {
 	mutation.Owner, mutation.Lease = e.owner, e.surfaceLease()
 	preview := e.previewSurfaces()
 	preview.owners[e.owner] = mutation.Lease
+	if mutation.TargetOwner != "" {
+		preview.owners[mutation.TargetOwner] = e.surfaces.OwnerLease(mutation.TargetOwner)
+	}
 	before := preview.snapshot()
 	accepted := false
 	defer func() {
@@ -38,6 +44,7 @@ func (e *engine) stageSurface(mutation SurfaceMutation) SurfaceDelta {
 			if mutation.Expected == 0 {
 				e.surfaces.DiscardReservations([]string{mutation.ID})
 				delete(before.reserved, mutation.ID)
+				e.surfaceReserved = slices.DeleteFunc(e.surfaceReserved, func(id string) bool { return id == mutation.ID })
 			}
 		}
 	}()

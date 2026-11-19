@@ -68,6 +68,13 @@ func (e *engine) installBufferMappings(api *lua.LTable) {
 					mutation.TargetOwner = layers[len(layers)-1].owner
 				}
 			}
+			if mutation.TargetOwner != "" {
+				lease, err := e.surfaces.registerOwner(mutation.TargetOwner)
+				if err != nil {
+					L.RaiseError("buffer mapping target: %v", err)
+				}
+				e.surfaceOwners[mutation.TargetOwner] = lease
+			}
 			delta := e.stageSurface(mutation)
 			accepted = true
 			if callback != nil {

@@ -75,3 +75,25 @@ end)
 		t.Fatal("rejected mapping registration became visible")
 	}
 }
+
+func TestStartupUnloadDropsCopiedSurfaceCallbackTargets(t *testing.T) {
+	r := openTestRuntime(t, `
+local b = wraith.buffers.create({lines={"shared"}})
+package.preload.maps = function() return {setup=function()
+ wraith.keymap.set("prompt.normal","x",function() error("unloaded callback") end)
+end} end
+wraith.plugins.load("maps")
+for _, mapping in ipairs(wraith.config.get("keymaps")) do
+ if mapping.keys == "x" then wraith.buffers.set_keymap(b,"buffer.normal","y",mapping.action) end
+end
+wraith.plugins.unload("maps")
+assert(#wraith.buffers.get(b).keymaps == 0)
+`)
+	manifest := r.Manifest()
+	if len(manifest.Surface) != 1 || len(manifest.Callbacks) != 0 {
+		t.Fatalf("unloaded startup target survived: surfaces=%+v callbacks=%+v", manifest.Surface, manifest.Callbacks)
+	}
+	if _, err := r.Surfaces().Apply(manifest.Surface[0]); err != nil {
+		t.Fatal(err)
+	}
+}

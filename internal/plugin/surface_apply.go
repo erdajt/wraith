@@ -102,6 +102,9 @@ func (s *SurfaceStore) apply(m SurfaceMutation) (SurfaceDelta, error) {
 	}
 	switch m.Operation {
 	case "buffer.set_keymap", "buffer.del_keymap":
+		if m.TargetOwner != "" && s.owners[m.TargetOwner] == "" {
+			return delta, errors.New("buffer mapping target owner is no longer active")
+		}
 		if err := setBufferKeymap(current, m); err != nil {
 			return delta, err
 		}
