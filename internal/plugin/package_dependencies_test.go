@@ -58,3 +58,25 @@ func TestPackageDependencyAdmissionRejectsCyclesAndUninitializedTargets(t *testi
 		t.Fatal("rejected cycle changed dependency graph")
 	}
 }
+
+func TestSharedDependenciesRemainUntilEveryDependentUnloads(t *testing.T) {
+	openTestRuntime(t, `
+ package.preload.shared=function() return {setup=function() end,link=function()
+  wraith.plugins.depend("first")
+ end} end
+ package.preload.first=function() return {setup=function()
+  wraith.plugins.depend("shared")
+  wraith.plugins.depend("shared")
+ end} end
+ package.preload.second=function() return {setup=function() wraith.plugins.depend("shared") end} end
+ wraith.plugins.load("shared")
+ wraith.plugins.load("first")
+ wraith.plugins.load("second")
+ local ok,err=pcall(wraith.plugins.call,"shared","link")
+ assert(not ok and string.find(err,"cycle"))
+ wraith.plugins.unload("first")
+ assert(not pcall(wraith.plugins.unload,"shared"))
+ wraith.plugins.unload("second")
+ wraith.plugins.unload("shared")
+ `)
+}

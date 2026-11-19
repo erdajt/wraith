@@ -150,3 +150,20 @@ func TestPackageMethodsKeepInvocationChildrenAndTargetOwnership(t *testing.T) {
 		t.Fatalf("method invocation did not finish: %+v, %v", final, err)
 	}
 }
+
+func TestPureHooksRejectCapturedPackageLifecycleMethods(t *testing.T) {
+	for _, method := range []string{"call", "depend", "load"} {
+		t.Run(method, func(t *testing.T) {
+			r := openTestRuntime(t, `
+ local captured=wraith.plugins.`+method+`
+ wraith.hooks.add("before_request",function()
+  assert(not pcall(captured,"missing","method"))
+ end)
+ `)
+			_, err := r.Transform(t.Context(), HookRequest{Kind: "before_request", Purpose: "chat", Request: &RequestData{Model: "local"}})
+			if err == nil {
+				t.Fatal("caught lifecycle operation escaped hook restriction")
+			}
+		})
+	}
+}
