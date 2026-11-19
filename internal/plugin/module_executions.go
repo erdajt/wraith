@@ -64,11 +64,15 @@ func (e *engine) retiredModuleExecutions() []moduleExecution {
 
 // disposeRegistry lets cleanup read cached exports before invalidating only proven values.
 func (e *engine) disposeRegistry(disposal registryDisposal) error {
-	err := e.disposeHooks(disposal.hooks)
-	for _, execution := range disposal.modules {
-		if execution.cache.RawGetString(execution.name) == execution.value {
-			execution.cache.RawSetString(execution.name, lua.LNil)
+	depth := len(e.moduleDisposals)
+	e.moduleDisposals = append(e.moduleDisposals, disposal.modules)
+	defer func() {
+		e.moduleDisposals = e.moduleDisposals[:depth]
+		for _, execution := range disposal.modules {
+			if execution.cache.RawGetString(execution.name) == execution.value {
+				execution.cache.RawSetString(execution.name, lua.LNil)
+			}
 		}
-	}
-	return err
+	}()
+	return e.disposeHooks(disposal.hooks)
 }

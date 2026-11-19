@@ -100,6 +100,8 @@ type Runtime struct {
 type engine struct {
 	moduleProviders    []moduleProvider
 	moduleExecutions   map[string]moduleExecution
+	moduleClaims       map[string]*moduleClaim
+	moduleDisposals    [][]moduleExecution
 	moduleResolving    []string
 	moduleViolation    error
 	moduleSources      map[string]moduleSource
