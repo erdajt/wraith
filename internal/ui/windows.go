@@ -1,10 +1,27 @@
 package ui
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 // windowPlaces measures conversation leaves inside the shared workspace body.
 func (a *App) windowPlaces() []windowPlace {
-	return a.windowTree.layout(windowRect{0, 3, a.mainWidth(), a.bodyHeight()}, a.windowID)
+	places := a.windowTree.layout(windowRect{0, 3, a.mainWidth(), a.bodyHeight()}, a.windowID)
+	var floating []uint64
+	for id, view := range a.windows {
+		if view.surface != nil && view.surface.window.Kind == "float" {
+			floating = append(floating, id)
+		}
+	}
+	slices.Sort(floating)
+	for _, id := range floating {
+		window := a.windows[id].surface.window
+		x, y := min(max(0, window.Column), max(0, a.mainWidth()-3)), min(max(0, window.Row), max(0, a.bodyHeight()-3))
+		width, height := min(max(3, window.Width), a.mainWidth()-x), min(max(3, window.Height), a.bodyHeight()-y)
+		places = append(places, windowPlace{id, windowRect{x, y + 3, width, height}})
+	}
+	return places
 }
 
 // chatSize returns the focused conversation leaf's current dimensions.
@@ -36,6 +53,9 @@ func (a *App) focusWindow(id uint64) {
 		a.notice = "conversation window is no longer available"
 		return
 	}
+	if current := a.focusedSurfaceView(); current != nil {
+		current.reader.Buffer.Pending, current.reader.Buffer.Count, current.reader.Buffer.OperatorCount = "", "", ""
+	}
 	a.Prompt.Pending, a.Prompt.Count, a.Prompt.OperatorCount = "", "", ""
 	a.chatCount, a.chatMotionPending, a.chatMotionCount = "", "", ""
 	a.chatG, a.chatZ = false, false
@@ -48,6 +68,9 @@ func (a *App) focusWindow(id uint64) {
 
 // windowAction applies a split, focus, close or proportion change to conversation windows.
 func (a *App) windowAction(action string) {
+	if a.surfaceWindowAction(action) {
+		return
+	}
 	a.chatCount, a.chatMotionPending, a.chatMotionCount = "", "", ""
 	a.chatG, a.chatZ = false, false
 	places := a.windowPlaces()
@@ -85,8 +108,9 @@ func (a *App) windowAction(action string) {
 			return
 		}
 		closed := a.windowID
-		a.windowTree.remove(closed)
+		a.detachSurfaceWindow(closed)
 		delete(a.windows, closed)
+		a.ensureSurfaceFallback()
 		a.focusWindow(a.windowPlaces()[0].id)
 	case "o":
 		a.windowTree = &windowNode{id: a.windowID}

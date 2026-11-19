@@ -12,6 +12,10 @@ func (a *App) drawConversations(rows []string, p palette) {
 	for _, place := range places {
 		view := a.windows[place.id]
 		focused := place.id == a.windowID && a.focus == "chat"
+		if view.surface != nil {
+			a.overlay(rows, a.surfaceFrame(view.surface, place.width, place.height, p, focused), place.x, place.y)
+			continue
+		}
 		lines := a.windowTranscript(view, max(10, place.width-5), focused)
 		start := view.viewportStart(place.height)
 		frame := make([]string, place.height)

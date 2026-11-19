@@ -31,6 +31,9 @@ func (a *App) remapConversation(old, next []session.Message) {
 	}
 
 	for _, view := range a.windows {
+		if view.surface != nil {
+			continue
+		}
 		view.rows = append([]rendered(nil), view.rows...)
 		if view.visualMode != "" {
 			first, _, last, _ := view.selectionBounds()

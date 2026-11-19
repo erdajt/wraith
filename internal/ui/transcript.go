@@ -31,6 +31,15 @@ func (a *App) transcript(w int) []rendered {
 // windowTranscript renders one view without borrowing another window's navigation state.
 func (a *App) windowTranscript(view *conversationView, w int, focused bool) []rendered {
 	p := a.Config.Palette()
+	if view.surface != nil {
+		buffer := a.surfaceBuffers[view.surface.window.BufferID]
+		rows := make([]rendered, len(buffer.Lines))
+		for i, line := range buffer.Lines {
+			rows[i] = rendered{Text: styledSurfaceLine(line, i, buffer.Spans, p), Message: -1, Block: -1, Section: "buffer", Source: i}
+		}
+		view.rows = rows
+		return rows
+	}
 	var out []rendered
 	section, sourceLine, sourceCell := "summary-header", 0, 0
 	add := func(text string, index int) {

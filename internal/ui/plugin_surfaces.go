@@ -159,6 +159,12 @@ func (a *App) cacheSurfaceWindow(window plugin.SurfaceWindow, focus bool) {
 		if err == nil {
 			a.surfaceBuffers[buffer.ID] = buffer
 			view.surface.reader = newReader(strings.Join(buffer.Lines, "\n"))
+			for _, existing := range a.windows {
+				if existing != view && existing.surface != nil && existing.surface.window.BufferID == buffer.ID {
+					view.surface.reader.Buffer = existing.surface.reader.Buffer.CloneView()
+					break
+				}
+			}
 			view.surface.revision = buffer.Revision
 		}
 	}
