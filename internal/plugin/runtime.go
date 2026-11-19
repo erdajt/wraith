@@ -142,6 +142,15 @@ func Open(parent context.Context, directory string, c config.Config, actions []s
 	if len(locations) == 1 {
 		paths = locations[0]
 	}
+	return OpenWithOptions(parent, directory, c, actions, Options{Paths: paths})
+}
+
+// OpenWithOptions loads explicit package roots without installing or discovering packages itself.
+func OpenWithOptions(parent context.Context, directory string, c config.Config, actions []string, options Options) (*Runtime, error) {
+	options.Packages = slices.Clone(options.Packages)
+	for index := range options.Packages {
+		options.Packages[index].Namespaces = slices.Clone(options.Packages[index].Namespaces)
+	}
 	encoded, err := json.Marshal(c)
 	if err != nil {
 		return nil, err
@@ -163,7 +172,7 @@ func Open(parent context.Context, directory string, c config.Config, actions []s
 	r.surfaces = newSurfaceStore(r.services.prefix)
 	r.invocations = newInvocationManager(r.services.prefix, r.services.discard)
 	ready := make(chan error, 1)
-	go r.serve(directory, detached, actions, paths, ready)
+	go r.serve(directory, detached, actions, options, ready)
 	go func() {
 		<-ctx.Done()
 		r.invocations.close()
@@ -252,12 +261,12 @@ func (r *Runtime) Close() {
 func (r *Runtime) Done() <-chan struct{} { return r.done }
 
 // serve owns every VM access from candidate loading through callback execution and teardown.
-func (r *Runtime) serve(directory string, c config.Config, actions []string, paths config.Paths, ready chan<- error) {
+func (r *Runtime) serve(directory string, c config.Config, actions []string, options Options, ready chan<- error) {
 	defer close(r.done)
 	defer close(r.notices)
 	defer r.cancel()
 	defer r.cancelWaiters()
-	e, err := load(r.ctx, directory, c, actions, runtimeHosts{services: r.services, surfaces: r.surfaces, invocations: r.invocations, paths: paths})
+	e, err := load(r.ctx, directory, c, actions, runtimeHosts{services: r.services, surfaces: r.surfaces, invocations: r.invocations, paths: options.Paths, packages: options.Packages})
 	if err != nil {
 		ready <- err
 		return

@@ -21,6 +21,7 @@ type runtimeHosts struct {
 	surfaces    *SurfaceStore
 	invocations *invocationManager
 	paths       config.Paths
+	packages    []PackageRoot
 }
 
 // load initializes trusted user code without sourcing project files or environment module paths.
@@ -100,6 +101,12 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 
 	if err := e.installBundledModules(); err != nil {
 		return nil, err
+	}
+
+	if len(hosts) > 0 {
+		if err := e.installPackageModules(hosts[0].packages); err != nil {
+			return nil, err
+		}
 	}
 
 	e.guardHookAPIs(api)
