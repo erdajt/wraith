@@ -12,7 +12,8 @@ import (
 
 // newInvocationManager separates host waits from the Lua actor and managed worker budget.
 func newInvocationManager(prefix string, cancelChildren func([]string)) *invocationManager {
-	return &invocationManager{prefix: prefix, records: map[string]*invocationRecord{}, starts: make(chan InvocationStart, 128), cancelChildren: cancelChildren}
+	m := &invocationManager{prefix: prefix, records: map[string]*invocationRecord{}, starts: make(chan InvocationStart), startWake: make(chan struct{}, 1), stopped: make(chan struct{}), cancelChildren: cancelChildren}
+	return m
 }
 
 // begin reserves a bounded handle before making its callback visible to the host.
@@ -48,14 +49,13 @@ func (m *invocationManager) begin(parent context.Context, request InvocationRequ
 	id := fmt.Sprintf("%s.invocation.%d", m.prefix, m.serial)
 	record := &invocationRecord{context: ctx, binding: request.Binding, data: bytes.Clone(data), cancel: cancel, wake: make(chan struct{}, 1), children: map[string]bool{}}
 	m.records[id] = record
+	m.startQueue = append(m.startQueue, InvocationStart{ID: id, Binding: request.Binding, Data: data})
+	m.dispatchOnce.Do(func() { go m.dispatchStarts() })
 	select {
-	case m.starts <- InvocationStart{ID: id, Binding: request.Binding, Data: data}:
+	case m.startWake <- struct{}{}:
 	default:
-		delete(m.records, id)
-		m.mu.Unlock()
-		cancel()
-		return nil, ErrQueueFull
 	}
+
 	record.stop = context.AfterFunc(ctx, func() { m.finish(id, nil, ctx.Err()) })
 	m.mu.Unlock()
 	return &Invocation{ID: id, manager: m}, nil
@@ -117,7 +117,8 @@ func (m *invocationManager) close() {
 		return
 	}
 	m.closed = true
-	close(m.starts)
+	close(m.stopped)
+	m.dispatchOnce.Do(func() { close(m.starts) })
 	ids := make([]string, 0, len(m.records))
 	for id := range m.records {
 		ids = append(ids, id)
@@ -128,23 +129,49 @@ func (m *invocationManager) close() {
 	}
 }
 
-// removeStart releases queued notices while retaining the order of other live starts.
+// removeStart releases pending notices without sharing queue ownership with receivers.
 func (m *invocationManager) removeStart(id string) {
-	var retained []InvocationStart
+	m.startQueue = slices.DeleteFunc(m.startQueue, func(start InvocationStart) bool { return start.ID == id })
+	select {
+	case m.startWake <- struct{}{}:
+	default:
+	}
+}
+
+// dispatchStarts serializes notices while cancellation can remove unclaimed queue entries.
+func (m *invocationManager) dispatchStarts() {
+	defer close(m.starts)
 	for {
-		select {
-		case start, ok := <-m.starts:
-			if !ok {
-				return
-			}
-			if start.ID != id && !m.closed {
-				retained = append(retained, start)
-			}
-		default:
-			for _, start := range retained {
-				m.starts <- start
-			}
+		m.mu.Lock()
+		if m.closed {
+			m.mu.Unlock()
 			return
+		}
+		var start InvocationStart
+		if len(m.startQueue) > 0 {
+			start = m.startQueue[0]
+		}
+		m.mu.Unlock()
+		if start.ID == "" {
+			select {
+			case <-m.stopped:
+				return
+			case <-m.startWake:
+				continue
+			}
+		}
+		select {
+		case <-m.stopped:
+			return
+		case <-m.startWake:
+			continue
+		case m.starts <- start:
+			m.mu.Lock()
+			if len(m.startQueue) > 0 && m.startQueue[0].ID == start.ID {
+				m.startQueue[0] = InvocationStart{}
+				m.startQueue = m.startQueue[1:]
+			}
+			m.mu.Unlock()
 		}
 	}
 }

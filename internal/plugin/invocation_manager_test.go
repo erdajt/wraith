@@ -126,7 +126,10 @@ func TestClosedUnstartedInvocationsDoNotOccupyDispatchCapacity(t *testing.T) {
 		}
 		call.Close()
 	}
-	if len(manager.starts) != 0 {
+	manager.mu.Lock()
+	pending := len(manager.startQueue)
+	manager.mu.Unlock()
+	if pending != 0 {
 		t.Fatal("closed invocations retained dispatch notices")
 	}
 	first, err := manager.begin(t.Context(), InvocationRequest{})
@@ -144,5 +147,27 @@ func TestClosedUnstartedInvocationsDoNotOccupyDispatchCapacity(t *testing.T) {
 	removed.Close()
 	if a, b := <-manager.starts, <-manager.starts; a.ID != first.ID || b.ID != last.ID {
 		t.Fatalf("dispatch order changed: %s, %s", a.ID, b.ID)
+	}
+}
+
+func TestInvocationCancellationWinsOverPendingSuccess(t *testing.T) {
+	manager := newInvocationManager("test", func([]string) {})
+	t.Cleanup(manager.close)
+	ctx, cancel := context.WithCancel(t.Context())
+	call, err := manager.begin(ctx, InvocationRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(call.Close)
+	manager.mu.Lock()
+	manager.records[call.ID].stop()
+	manager.mu.Unlock()
+	cancel()
+	if err := manager.commit(InvocationEffect{ID: call.ID, Kind: "finish", Data: json.RawMessage(`"late success"`)}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("late success overrode cancellation: %v", err)
+	}
+	final, err := call.Next(t.Context())
+	if err != nil || final.Error != context.Canceled.Error() || !final.Final {
+		t.Fatalf("terminal lost cancellation: %+v, %v", final, err)
 	}
 }

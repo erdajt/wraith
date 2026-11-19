@@ -16,6 +16,11 @@ func (m *invocationManager) finish(id string, data json.RawMessage, err error) e
 		m.mu.Unlock()
 		return errors.New("invocation is already completed or released")
 	}
+	var canceled error
+	if err == nil && record.context.Err() != nil {
+		canceled = record.context.Err()
+		err = canceled
+	}
 	record.sequence++
 	event := InvocationEvent{Sequence: record.sequence, Data: bytes.Clone(data), Final: true}
 	if err != nil {
@@ -36,7 +41,7 @@ func (m *invocationManager) finish(id string, data json.RawMessage, err error) e
 	}
 	m.mu.Unlock()
 	m.cancelChildren(children)
-	return nil
+	return canceled
 }
 
 // commit publishes ordered callback replies without blocking the VM on a slow consumer.

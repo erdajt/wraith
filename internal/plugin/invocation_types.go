@@ -72,10 +72,14 @@ type invocationRecord struct {
 
 type invocationManager struct {
 	mu             sync.Mutex
+	dispatchOnce   sync.Once
 	prefix         string
 	serial         uint64
 	closed         bool
 	records        map[string]*invocationRecord
 	starts         chan InvocationStart
+	startQueue     []InvocationStart
+	startWake      chan struct{}
+	stopped        chan struct{}
 	cancelChildren func([]string)
 }
