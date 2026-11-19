@@ -9,6 +9,7 @@ type surfaceState struct {
 	surfaceOwners   map[string]string
 	surfaceReleased []string
 	surfaceReserved []string
+	surfacePreview  *SurfaceStore
 }
 
 // surfaceLease validates the current package before issuing an explicit UI lifetime receipt.
@@ -36,7 +37,11 @@ func (e *engine) surfaceLease() string {
 
 // cloneSurfaces preserves private reservations and owner receipts across nested callbacks.
 func (e *engine) cloneSurfaces() surfaceState {
-	return surfaceState{maps.Clone(e.surfaceOwners), slices.Clone(e.surfaceReleased), slices.Clone(e.surfaceReserved)}
+	copy := surfaceState{surfaceOwners: maps.Clone(e.surfaceOwners), surfaceReleased: slices.Clone(e.surfaceReleased), surfaceReserved: slices.Clone(e.surfaceReserved)}
+	if e.surfacePreview != nil {
+		copy.surfacePreview = e.surfacePreview.snapshot()
+	}
+	return copy
 }
 
 // restoreSurfaces invalidates abandoned receipts before restoring the last accepted owner state.
