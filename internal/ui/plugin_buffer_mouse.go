@@ -12,7 +12,7 @@ func (a *App) surfaceMouse(place windowPlace, x, y int) {
 	view := a.windows[place.id].surface
 	buffer := a.surfaceBuffers[view.window.BufferID]
 	row := view.reader.Offset + y - place.y - 1
-	if x <= place.x || x >= place.x+place.width-1 || row < 0 || row >= len(buffer.Lines) || y >= place.y+place.height-1 {
+	if x <= place.x || x >= place.x+place.width-1 || y <= place.y || row < 0 || row >= len(buffer.Lines) || y >= place.y+place.height-1 {
 		return
 	}
 	start := surfaceCursorOffset(buffer.Lines, view.window.Cursor)

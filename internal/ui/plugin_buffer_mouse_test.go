@@ -45,3 +45,22 @@ func TestSurfaceMouseUsesTopmostViewAndGraphemeCells(t *testing.T) {
 		t.Fatal("pointer cursor was not visible through the window handle")
 	}
 }
+
+func TestSurfaceHeaderClickDoesNotMoveScrolledCursor(t *testing.T) {
+	a := pluginFixture(t, "")
+	a.width, a.height, a.Config.Appearance.Mouse = 100, 30, true
+	buffer := surfaceFixture(t, a, false)
+	id := surfaceWindowFixture(t, a, buffer.ID, true)
+	a.feedInput("G")
+	view := a.windows[id].surface
+	view.reader.Offset = 2
+	position, revision := view.reader.Buffer.Pos, view.window.Revision
+	for _, place := range a.windowPlaces() {
+		if place.id == id {
+			a.mouse(tea.MouseMsg{X: place.x + 3, Y: place.y, Button: tea.MouseButtonLeft, Action: tea.MouseActionPress})
+		}
+	}
+	if view.reader.Buffer.Pos != position || view.window.Revision != revision {
+		t.Fatal("header click moved the cursor into a hidden line")
+	}
+}
