@@ -14,11 +14,13 @@ local function source(item)
 end
 
 function M.new(manager, options)
-  options = options or {}
+  options = options == nil and {} or options
+  assert(type(options) == "table", "manager ui options must be a table")
   for key in pairs(options) do assert(key == "position" or key == "keys", "unknown manager ui option: " .. tostring(key)) end
-  local position = options.position or "right"
+  local position = options.position == nil and "right" or options.position
   assert(position == "right" or position == "left" or position == "above" or position == "below", "invalid manager window position")
   local keys = { refresh = "r", install = "i", update = "u", restore = "s", cancel = "x", close = "q", inspect = "<Enter>", confirm = "<Enter>", load = "l", unload = "d" }
+  assert(options.keys == nil or type(options.keys) == "table", "manager ui keys must be a table")
   for action, key in pairs(options.keys or {}) do
     assert(keys[action] ~= nil, "unknown manager binding: " .. tostring(action))
     assert(key == false or type(key) == "string" and #key > 0 and #key <= 128, "invalid manager binding: " .. action)
