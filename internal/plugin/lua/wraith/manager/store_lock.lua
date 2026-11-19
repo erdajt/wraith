@@ -46,7 +46,8 @@ function M.read(path)
     if parent == "" then parent = "/" end
     local offset = 0
     for _ = 1, 4 do
-      local page = wraith.fs.list(parent, { offset = offset, limit = 1024 })
+      local listed, page = pcall(wraith.fs.list, parent, { offset = offset, limit = 1024 })
+      assert(listed, "package lock parent must exist and be readable: " .. parent .. "; " .. tostring(page))
       for _, entry in ipairs(page.entries) do
         assert(entry.name ~= name, "cannot inspect package lock: " .. tostring(stat))
       end

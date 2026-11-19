@@ -3,7 +3,7 @@ local files = require("wraith.manager.store_files")
 local M = {}
 
 function M.new(options, completed)
-  local control, current, finished, cancelled = {}, nil, false, false
+  local control, current, last, finished, cancelled = {}, nil, nil, false, false
 
   function control.finish(result)
     if finished then return end
@@ -14,7 +14,7 @@ function M.new(options, completed)
   local function start(factory, next, process)
     if cancelled then control.finish({ state = "cancelled", error = "package installation cancelled" }); return end
     current = factory(function(result)
-      current = nil
+      last, current = control.resource(), nil
       if cancelled or result.state == "cancelled" then
         control.finish({ state = "cancelled", error = result.error or "package installation cancelled" })
       elseif result.state ~= "completed" or process and result.exit_code ~= 0 or result.truncated then
@@ -35,6 +35,11 @@ function M.new(options, completed)
 
   function control.file(method, arguments, next)
     start(function(callback) return files.start(method, arguments, callback) end, next, false)
+  end
+
+  function control.resource()
+    if current then return current.resource and current.resource() or current.id or last end
+    return last
   end
 
   function control.cancel()

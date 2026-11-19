@@ -46,7 +46,10 @@ function M.start(argv, options, completed)
     timeout_ms = options.timeout_ms or 300000, max_output_bytes = 65536,
   }, function(ctx)
     if ctx.resource.kind == "started" then started = true end
-    if not ctx.resource.final then return end
+    if not ctx.resource.final then
+      if options.progress then options.progress(control.id) end
+      return
+    end
     wait.finish(control.id, finish)
   end)
 
