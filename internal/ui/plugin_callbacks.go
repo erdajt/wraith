@@ -249,9 +249,11 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 		}
 		if effect.Name == "resource.release" {
 			m.Runtime.DiscardResources([]string{effect.Argument})
-			if m.Resource != nil && m.Resource.ID == effect.Argument {
-				m.Resource = nil
-				m.Explicit, m.LeaseOwner, m.Lease = true, effect.Owner, effect.Lease
+			for current := &m; current != nil; current = current.Parent {
+				if current.Resource != nil && current.Resource.ID == effect.Argument {
+					current.Resource = nil
+					current.Explicit, current.LeaseOwner, current.Lease = true, effect.Owner, effect.Lease
+				}
 			}
 			continue
 		}

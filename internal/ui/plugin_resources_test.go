@@ -140,3 +140,15 @@ func TestReleasedResourceCanFinishOwnedEventChain(t *testing.T) {
  end)`)
 	runScheduledProgram(t, a, a.startPluginResources())
 }
+
+// TestNestedResourceReleasePreservesParentEffects keeps the accepted source lease through returning observers.
+func TestNestedResourceReleasePreservesParentEffects(t *testing.T) {
+	a := pluginFixture(t, `wraith.events.on("cleanup.release",function(ctx)
+  wraith.resource.release(ctx.data.id)
+ end)
+ wraith.timer.start(1,function(ctx)
+  wraith.events.emit("cleanup.release",{id=ctx.resource.id})
+  wraith.notify("complete")
+ end)`)
+	runScheduledProgram(t, a, a.startPluginResources())
+}
