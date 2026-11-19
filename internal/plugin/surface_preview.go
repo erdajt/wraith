@@ -18,6 +18,10 @@ func (s *SurfaceStore) snapshot() *SurfaceStore {
 	for id, buffer := range s.buffers {
 		record := *buffer
 		record.decorations = slices.Clone(buffer.decorations)
+		record.bindings = make(map[string][]ownedBinding, len(buffer.bindings))
+		for key, layers := range buffer.bindings {
+			record.bindings[key] = slices.Clone(layers)
+		}
 		copy.buffers[id] = &record
 	}
 	return copy

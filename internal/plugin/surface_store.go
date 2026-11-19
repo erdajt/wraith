@@ -16,6 +16,7 @@ type surfaceBufferRecord struct {
 	SurfaceBuffer
 	bytes       int
 	decorations []surfaceDecoration
+	bindings    map[string][]ownedBinding
 }
 
 // SurfaceStore owns committed display data without holding Lua values or running callbacks.
@@ -136,9 +137,22 @@ func (s *SurfaceStore) RevokeOwner(owner string) SurfaceDelta {
 			delta.RemovedBuffers = append(delta.RemovedBuffers, id)
 			continue
 		}
+		bindingsChanged := false
+		for key, layers := range buffer.bindings {
+			kept := slices.DeleteFunc(layers, func(layer ownedBinding) bool { return layer.owner == owner })
+			bindingsChanged = bindingsChanged || len(kept) != len(layers)
+			if len(kept) == 0 {
+				delete(buffer.bindings, key)
+			} else {
+				buffer.bindings[key] = kept
+			}
+		}
+		if bindingsChanged {
+			buffer.refreshKeymaps()
+		}
 		previous := len(buffer.decorations)
 		buffer.decorations = slices.DeleteFunc(buffer.decorations, func(layer surfaceDecoration) bool { return layer.owner == owner })
-		if len(buffer.decorations) != previous {
+		if len(buffer.decorations) != previous || bindingsChanged {
 			buffer.Spans = nil
 			for _, layer := range buffer.decorations {
 				buffer.Spans = append(buffer.Spans, layer.spans...)
@@ -188,5 +202,6 @@ func (s *SurfaceStore) OwnerValid(owner, lease string) bool {
 func cloneSurfaceBuffer(buffer SurfaceBuffer) SurfaceBuffer {
 	buffer.Lines = slices.Clone(buffer.Lines)
 	buffer.Spans = slices.Clone(buffer.Spans)
+	buffer.Keymaps = slices.Clone(buffer.Keymaps)
 	return buffer
 }

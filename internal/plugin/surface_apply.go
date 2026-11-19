@@ -52,6 +52,9 @@ func (s *SurfaceStore) apply(m SurfaceMutation) (SurfaceDelta, error) {
 			return delta, errors.New("buffer creation requires a live reservation and revision zero")
 		}
 		buffer := cloneSurfaceBuffer(*m.Buffer)
+		if len(buffer.Keymaps) > 0 {
+			return delta, errors.New("create buffer mappings with set_keymap")
+		}
 		if buffer.Projection != "" || buffer.Truncated {
 			return delta, errors.New("native projections can only be created by the host")
 		}
@@ -98,6 +101,10 @@ func (s *SurfaceStore) apply(m SurfaceMutation) (SurfaceDelta, error) {
 		return delta, fmt.Errorf("buffer %s changed: expected revision %d, current %d", m.ID, m.Expected, current.Revision)
 	}
 	switch m.Operation {
+	case "buffer.set_keymap", "buffer.del_keymap":
+		if err := setBufferKeymap(current, m); err != nil {
+			return delta, err
+		}
 	case "buffer.delete":
 		if current.Projection != "" {
 			return delta, errors.New("native projections cannot be deleted")
