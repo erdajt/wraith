@@ -27,7 +27,11 @@ terminal data contains `state`, `done`, `result` and optional `error`. successfu
 
 handles belong to the runtime and package that created them. callbacks run under that owner. another package cannot use the handle through these APIs. unload and reload cancel owned resources. completed handles remain queryable until released; release handles you no longer need.
 
-Lua exceptions in a resource callback cancel its remaining work. all Lua callbacks run on the VM owner, never on worker goroutines. terminal events remain deliverable when progress notifications fill their queue. progress may coalesce; a sequence gap does not imply a missing terminal result.
+Lua exceptions in a resource callback cancel its remaining work and disable that callback for queued events. `callback_error` remains available in status and terminal data. all Lua callbacks run on the VM owner, never on worker goroutines. terminal events remain deliverable when progress notifications fill their queue. progress may coalesce; a sequence gap does not imply a missing terminal result.
+
+a runtime retains at most 128 handles and admits at most 32 reserved or unfinished workers. cancellation does not free worker capacity until the worker returns. progress queues allow up to 256 events and 8 mib of accounted payload; one event in delivery and terminal results are separate. capture notifications coalesce or report dropped progress; protocol events apply backpressure. a single progress event larger than the byte budget is rejected. retained results and process output have their own per-operation bounds; these are not a total Lua memory limit.
+
+resource callbacks have a 250 ms cooperative Lua deadline. raw native calls can outlast it. event dispatch stays ordered, but nested or deferred host actions may finish after a later event callback. explicit resource updates survive unrelated typing and focus changes; stale implicit draft or current-window edits are discarded. keymap registration conflicts are checked independently.
 
 managed lifecycle is not a sandbox. plugins have the user's account authority through trusted Lua libraries. synchronous filesystem calls run immediately and are not rolled back. cancellation checks prevent queued work from starting, but cannot undo a completed rename or interrupt every kernel call.
 
@@ -165,3 +169,76 @@ end, { repeat_ms = 1000 })
 a one-shot timer reports one terminal completion, with `tick=1` and `elapsed_ms` under `ctx.data.result`. a repeating timer emits progress events with `ctx.resource.kind="tick"` and `tick`, `elapsed_ms` directly under `ctx.data`. elapsed time starts at activation.
 
 ticks coalesce when the host falls behind. the counter records emitted ticks, so callbacks may observe gaps. repeats schedule the next interval after emitting the current tick; this is not a wall-clock scheduler. cancel through `wraith.resource.cancel(id)`, then release when no longer needed. callback errors cancel repeating timers; unload and reload cancel them as well.
+
+## processes
+
+```lua
+local id = wraith.process.start({
+  argv = { "git", "status", "--short" },
+  cwd = "/path/to/project",
+  timeout_ms = 10000,
+}, function(ctx)
+  if ctx.resource.final then
+    local output = wraith.process.output(ctx.resource.id)
+    wraith.notify(output.data)
+    wraith.resource.release(ctx.resource.id)
+  end
+end)
+```
+
+`process.start(opts, callback)` reserves a process and returns its resource id. this is a trusted plugin API, separate from model command approvals. no terminal input or output is inherited. default stdin is closed.
+
+| option | default | behavior |
+| --- | --- | --- |
+| `argv` | required unless `shell` is set | consecutive array of 1 through 256 strings; 64 kib total |
+| `shell` | unset | explicit shell command; cannot be combined with `argv` |
+| `shell_path` | `/bin/sh` | absolute shell executable; requires `shell` |
+| `cwd` | application working directory | child working directory; relative paths resolve when reserved |
+| `env` | `{}` | string overrides; `false` removes a variable; up to 128 overrides |
+| `clear_env` | `false` | start with an empty child environment |
+| `stdin` | `false` | keep an input pipe open for `process.write` |
+| `timeout_ms` | `0` | no deadline; otherwise 1 through 86,400,000 milliseconds |
+| `max_output_bytes` | `262144` | retained tail per stream; 1,024 through 4,194,304 bytes |
+| `mode` | `"capture"` | capture notifications or lossless `"protocol"` chunks |
+
+arguments are passed directly to the executable. quoting and shell expansion apply only when `shell` is set. executable names without a path use the application's `PATH`; `env.PATH` changes the child's environment, not executable lookup. use an absolute executable path when overriding lookup matters. environment size is bounded to 1 mib. arguments, paths and environment values reject nul bytes.
+
+`started` arrives before stdout or stderr events and includes `ctx.data.pid`. each stream event includes `stream`, `offset`, `next_offset` and `earliest_offset`. offsets count bytes independently for stdout and stderr; event sequence numbers order notifications across the handle.
+
+capture mode retains a bounded tail and coalesces change notifications. query the bytes you need:
+
+```lua
+local page = wraith.process.output(id, {
+  stream = "stderr",
+  offset = 0,
+  max_bytes = 65536,
+})
+```
+
+`stream` defaults to `stdout`. `offset` defaults to zero. `max_bytes` defaults to 64 kib and accepts 1 through 1,048,576. results contain exact `data`, actual `offset`, `next_offset`, `earliest_offset`, `observed_bytes`, `truncated` and `more`. `truncated=true` means the requested prefix was already evicted. querying a completed process remains valid until release.
+
+protocol mode includes exact `ctx.data.data` bytes in each stream event. it preserves nul, invalid utf-8, partial Unicode sequences and framing boundaries. chunks are at most 32 kib. backpressure pauses producers when the event queue fills; it does not silently drop protocol bytes. parse protocol state in the event callback before deferring UI actions. callbacks dispatch in event order, but a nested UI action or editor can finish after a later event callback.
+
+```lua
+wraith.process.start({
+  argv = { "/path/to/language-server", "--stdio" },
+  stdin = true,
+  mode = "protocol",
+}, function(ctx)
+  if ctx.resource.kind == "started" then
+    local body = wraith.json.encode({
+      jsonrpc = "2.0", id = 1, method = "initialize", params = {},
+    })
+    wraith.process.write(ctx.resource.id,
+      "Content-Length: " .. #body .. "\r\n\r\n" .. body)
+  elseif ctx.resource.kind == "stdout" then
+    -- append bytes to your protocol parser here.
+  end
+end)
+```
+
+`process.write(id, bytes)` queues bytes and returns the accepted byte count. it does not wait for the child to read them. each write accepts at most 64 kib; pending input is bounded to 1 mib and 32 requests. full queues raise an error so the caller can retry later. `process.close_stdin(id)` queues EOF after earlier writes and rejects subsequent writes. both require a started process with `stdin=true`.
+
+pipe failures produce a `stdin` event with `written` and `error`; terminal results also include `stdin_error` when present. a process's terminal result contains `pid` and `exit_code`; launch, timeout and nonzero-exit errors appear in terminal `error`. inspect lifecycle with `resource.status`, stop with `resource.cancel`, and discard with `resource.release`.
+
+cancellation kills the process group and reaps the direct child. ordinary descendants are also stopped when the parent exits. descendants that create a separate session or process group can escape this cleanup. cancellation notification can precede reaping; `resource.status(id).done` distinguishes them. managed processes cannot detach from their owner.
