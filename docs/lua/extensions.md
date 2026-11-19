@@ -2,6 +2,8 @@
 
 [plugin setup](../plugins.md) · [managed services](services.md) · [buffers and views](surfaces.md) · [providers](../providers.md) · [execution](../execution.md)
 
+`wraith.capabilities.hooks`, `providers`, `model_tools`, `invocations` and `workspace_queries` report these API families.
+
 register extensions from `init.lua` or a package's `setup` function. runtime registrations become visible after their callback succeeds and the host accepts the new registry. failed setup, callback errors and rejected publications restore the previous registrations.
 
 ## request hooks

@@ -55,6 +55,9 @@ func TestManagedCapabilitiesExposeCallableServices(t *testing.T) {
  regions={"regions","create","get","list","set","delete"},
  dialogs={"ui","select","input","decode"},
  buffer_keymaps={"buffers","set_keymap","del_keymap"},
+ hooks={"hooks","add","remove"}, providers={"providers","register","unregister"},
+ model_tools={"tools","register","unregister"}, invocations={"invocation","emit","finish","fail","cancelled"},
+ workspace_queries={"workspace","cancel"},
 }
 for capability, methods in pairs(services) do
  assert(wraith.capabilities[capability], "missing capability: " .. capability)
@@ -62,6 +65,9 @@ for capability, methods in pairs(services) do
  for index = 2, #methods do
   assert(type(service[methods[index]]) == "function", "missing method: " .. methods[index])
  end
+end
+for namespace,methods in pairs({sessions={"list","get","messages","message"},jobs={"list","get","output"},environment={"list"},terminals={"list"}}) do
+ for _,method in ipairs(methods) do assert(type(wraith[namespace][method])=="function") end
 end
 assert(wraith.json.decode(wraith.json.encode(wraith.json.array({1, wraith.json.null})))[2] == wraith.json.null)`)
 }

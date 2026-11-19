@@ -58,6 +58,7 @@ func (e *engine) installDiagnostics(api *lua.LTable) {
 		"live_registration", "custom_events", "plugin_lifecycle", "scheduling",
 		"json", "filesystem", "http", "timers", "managed_resources", "process",
 		"buffers", "windows", "regions", "dialogs", "buffer_keymaps",
+		"hooks", "providers", "model_tools", "invocations", "workspace_queries",
 	} {
 		capabilities.RawSetString(name, lua.LTrue)
 	}
