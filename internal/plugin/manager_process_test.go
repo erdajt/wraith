@@ -61,6 +61,13 @@ func runManagerResources(t *testing.T, r *Runtime) {
 	if err := r.Activate(manifest.Resources); err != nil {
 		t.Fatal(err)
 	}
+	runManagerEvents(t, r)
+}
+
+// runManagerEvents delivers accepted resources until the operation reports completion.
+func runManagerEvents(t *testing.T, r *Runtime) {
+	t.Helper()
+	manifest := r.Manifest()
 	for {
 		event := receiveResource(t, r)
 		if !r.ResourceValid(event) {
@@ -142,5 +149,75 @@ end)
 %s`, filepath.Join(path, "store_wait.lua"), filepath.Join(path, "store_process.lua"), test.argv, test.options, test.state, test.cancel))
 			runManagerResources(t, r)
 		})
+	}
+}
+
+// TestManagerProcessExposesReapCallbackFailure tracks the timer that owns a delayed completion callback.
+func TestManagerProcessExposesReapCallbackFailure(t *testing.T) {
+	r := openTestRuntime(t, `local status=wraith.resource.status
+ local delayed=false
+ wraith.resource.status=function(id)
+  local value=status(id)
+  if value.done and not delayed then delayed=true; value.done=false end
+  return value
+ end
+ local operation=require("wraith.manager.store_process").start({"/bin/sh","-c","printf ready"},{},function()
+  error("completion rejected")
+ end)
+ wraith.commands.create("inspect",function()
+  local receipt=operation.resource()
+  assert(receipt~=operation.id and status(receipt).callback_error)
+  assert(status(operation.id).done)
+  operation.abandon()
+ end)`)
+	if err := r.Activate(r.Manifest().Resources); err != nil {
+		t.Fatal(err)
+	}
+	for {
+		event := receiveResource(t, r)
+		if !r.ResourceValid(event) {
+			continue
+		}
+		pending, err := r.SubmitResource(event, nil, r.Manifest().Config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		result := receiveResult(t, pending)
+		if result.Err != nil {
+			break
+		}
+		for _, effect := range result.Effects {
+			if effect.Name == "resource.activate" {
+				if err := r.Activate([]string{effect.Argument}); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+	}
+	var callback string
+	for _, command := range r.Manifest().Commands {
+		if command.Name == "inspect" {
+			callback = command.Callback
+		}
+	}
+	pending, err := r.Submit(callback, "", nil, r.Manifest().Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := receiveResult(t, pending)
+	if result.Err != nil {
+		t.Fatal(result.Err)
+	}
+	if len(result.Effects) != 2 {
+		t.Fatalf("missing receipt cleanup: %+v", result)
+	}
+	for _, effect := range result.Effects {
+		r.DiscardResources([]string{effect.Argument})
+	}
+	r.services.mu.Lock()
+	remaining := len(r.services.records)
+	r.services.mu.Unlock()
+	if remaining != 0 {
+		t.Fatalf("abandoned completion retained %d resources", remaining)
 	}
 }

@@ -3,7 +3,7 @@ local verify = require("wraith.manager.store_verify")
 local M = {}
 
 function M.install(item, stage, root, options, completed)
-  local control, current, last, finished, cancelled = {}, nil, nil, false, false
+  local control, current, previous, last, finished, cancelled = {}, nil, nil, nil, false, false
   local parents = { root, root .. "/objects", root .. "/objects/" .. item.name }
   local destination = parents[3] .. "/" .. item.commit
 
@@ -16,7 +16,7 @@ function M.install(item, stage, root, options, completed)
   local function begin(factory, next)
     if cancelled then finish({ state = "cancelled", error = "package promotion cancelled" }); return end
     current = factory(function(result)
-      last, current = control.resource(), nil
+      last, previous, current = control.resource(), current, nil
       if cancelled or result.state == "cancelled" then
         finish({ state = "cancelled", error = "package promotion cancelled" })
         return
@@ -64,6 +64,12 @@ function M.install(item, stage, root, options, completed)
   function control.resource()
     if current then return current.resource and current.resource() or current.id or last end
     return last
+  end
+
+  function control.abandon()
+    cancelled = true
+    if current then current.abandon() end
+    if previous and previous ~= current then previous.abandon() end
   end
 
   function control.cancel()

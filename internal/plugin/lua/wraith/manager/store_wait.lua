@@ -14,11 +14,22 @@ function M.finish(id, completed)
   end
 
   local status = wraith.resource.status(id)
-  if status.done then finish(status); return end
+  if status.done then finish(status); return function() return id end end
   poll = wraith.timer.start(20, function()
     local current = wraith.resource.status(id)
     if current.done then finish(current) end
   end, { repeat_ms = 20 })
+  return function() return poll or id end
+end
+
+function M.abandon(id, waiting)
+  pcall(wraith.resource.cancel, id)
+  pcall(wraith.resource.release, id)
+  local receipt = waiting and waiting()
+  if receipt and receipt ~= id then
+    pcall(wraith.resource.cancel, receipt)
+    pcall(wraith.resource.release, receipt)
+  end
 end
 
 return M

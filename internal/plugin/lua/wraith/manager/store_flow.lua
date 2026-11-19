@@ -1,7 +1,7 @@
 local M = {}
 
 function M.new(completed)
-  local flow, current, last, finished, cancelled = {}, nil, nil, false, false
+  local flow, current, previous, last, finished, cancelled = {}, nil, nil, nil, false, false
 
   function flow.resource()
     if current then return current.resource and current.resource() or current.id or last end
@@ -17,7 +17,7 @@ function M.new(completed)
   function flow.begin(factory, next, settle)
     if cancelled then flow.finish({ state = "cancelled", error = "package operation cancelled" }); return end
     current = factory(function(result)
-      last, current = flow.resource(), nil
+      last, previous, current = flow.resource(), current, nil
       if not settle and (cancelled or result.state == "cancelled") then
         flow.finish({ state = "cancelled", error = "package operation cancelled" })
         return
@@ -29,6 +29,12 @@ function M.new(completed)
       end
     end)
     last = flow.resource()
+  end
+
+  function flow.abandon()
+    cancelled = true
+    if current then current.abandon() end
+    if previous and previous ~= current then previous.abandon() end
   end
 
   function flow.cancel()

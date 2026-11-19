@@ -21,7 +21,7 @@ end
 function M.start(argv, options, completed)
   assert(type(completed) == "function", "package process callback is required")
   options = options or {}
-  local control, finished, started = {}, false, false
+  local control, finished, started, waiting = {}, false, false, nil
 
   local function finish(status)
     if finished then return end
@@ -50,8 +50,16 @@ function M.start(argv, options, completed)
       if options.progress then options.progress(control.id) end
       return
     end
-    wait.finish(control.id, finish)
+    waiting = wait.finish(control.id, finish)
   end)
+
+  function control.abandon()
+    wait.abandon(control.id, waiting)
+  end
+
+  function control.resource()
+    return waiting and waiting() or control.id
+  end
 
   function control.cancel()
     if not finished then wraith.resource.cancel(control.id) end
