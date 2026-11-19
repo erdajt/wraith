@@ -29,12 +29,12 @@ type Registry struct {
 func New(bindings []Binding) (*Registry, error) {
 	r := &Registry{entries: map[string]map[string]Binding{}}
 	for _, binding := range bindings {
-		valid := slices.Contains([]string{"*", "command", "search", "picker", "output", "terminal", "terminal.copy"}, binding.Mode)
-		for _, surface := range []string{"prompt", "chat", "output", "terminal.copy"} {
+		valid := slices.Contains([]string{"*", "command", "search", "picker", "output", "buffer", "terminal", "terminal.copy"}, binding.Mode)
+		for _, surface := range []string{"prompt", "chat", "output", "buffer", "terminal.copy"} {
 			mode := strings.TrimPrefix(binding.Mode, surface+".")
 			valid = valid || mode != binding.Mode && slices.Contains([]string{"normal", "visual", "operator", "argument", "search"}, mode)
 		}
-		if !valid && binding.Mode != "prompt.insert" {
+		if !valid && binding.Mode != "prompt.insert" && binding.Mode != "buffer.insert" {
 			return nil, fmt.Errorf("keymap %q: unknown mode %q", binding.Keys, binding.Mode)
 		}
 		keys, err := Parse(binding.Keys)
@@ -96,6 +96,11 @@ func (r *Registry) Lookup(mode string, keys []string) Match {
 		layers = append(layers, "terminal.copy")
 	} else if strings.HasPrefix(mode, "output.") {
 		layers = append(layers, "output")
+	} else if strings.HasPrefix(mode, "buffer.") {
+		if mode != "buffer.insert" {
+			layers = append(layers, "chat."+strings.TrimPrefix(mode, "buffer."))
+		}
+		layers = append(layers, "buffer")
 	}
 	layers = append(layers, mode)
 	for _, layer := range layers {
