@@ -2,10 +2,11 @@ package contextual
 
 import (
 	"encoding/json"
-	"github.com/erdajt/wraith/internal/modeltool"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/erdajt/wraith/internal/modeltool"
 )
 
 var runReference = regexp.MustCompile(`\bid: ([a-f0-9]{24})\b`)

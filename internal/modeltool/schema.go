@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/erdajt/wraith/internal/regexutil"
 
+	"github.com/erdajt/wraith/internal/regexutil"
 	"github.com/google/jsonschema-go/jsonschema"
 )
 
