@@ -199,3 +199,8 @@ The compatibility `ctx.prompt` mirror is limited to 32 kib, with
 8 kib with `ctx.argument_truncated`. Recent message content shares a 64 kib budget.
 Native buffers provide paged access to their bounded projections. An explicit prompt
 replacement over 1 mib is rejected before the actual draft changes.
+
+Startup registration accepts at most 128 surface mutations and 8 mib of encoded
+mutation data in total, including metadata and repeated replacements. Accepted
+startup records and their preview are released after installation, including when
+the plugin registers no callbacks. Live buffers and windows remain available.
