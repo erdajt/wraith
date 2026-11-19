@@ -14,10 +14,18 @@ type processOutput struct {
 	stream   string
 	protocol bool
 	sink     *resourceSink
+	ready    <-chan struct{}
 }
 
 // Write retains a bounded byte tail and separates lossless protocol data from capture notifications.
 func (o *processOutput) Write(data []byte) (int, error) {
+	if o.ready != nil {
+		select {
+		case <-o.ready:
+		case <-o.sink.ctx.Done():
+			return 0, o.sink.ctx.Err()
+		}
+	}
 	written := 0
 	for len(data) > 0 {
 		chunk := data[:min(len(data), 32<<10)]
