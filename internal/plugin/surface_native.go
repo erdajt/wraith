@@ -37,6 +37,9 @@ func (s *SurfaceStore) HostUpsert(slot string, lines []string, truncated bool) (
 		s.buffers[id] = current
 	}
 	if current.Revision == 0 || current.Truncated != truncated || !slices.Equal(current.Lines, lines) {
+		if current.Revision == 0 || !slices.Equal(current.Lines, lines) {
+			current.TextRevision++
+		}
 		current.Lines, current.bytes = slices.Clone(lines), size
 		current.Truncated, current.Editable = truncated, slot == "prompt" && !truncated
 		current.Spans, current.decorations = nil, nil

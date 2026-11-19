@@ -58,7 +58,7 @@ func (s *SurfaceStore) apply(m SurfaceMutation) (SurfaceDelta, error) {
 		if buffer.Projection != "" || buffer.Truncated {
 			return delta, errors.New("native projections can only be created by the host")
 		}
-		buffer.ID, buffer.Owner, buffer.Revision = m.ID, reservation.owner, 1
+		buffer.ID, buffer.Owner, buffer.Revision, buffer.TextRevision = m.ID, reservation.owner, 1, 1
 		if len(buffer.Lines) == 0 {
 			buffer.Lines = []string{""}
 		}
@@ -151,6 +151,7 @@ func (s *SurfaceStore) apply(m SurfaceMutation) (SurfaceDelta, error) {
 		}
 		if !slices.Equal(lines, current.Lines) {
 			current.Lines, current.bytes = lines, size
+			current.TextRevision++
 			current.Spans, current.decorations = nil, nil
 			current.Revision++
 			delta.ChangedWindows = s.clampBufferWindows(current)

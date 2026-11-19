@@ -182,7 +182,7 @@ func (r *Runtime) submit(callback, event string, snapshot any, c config.Config, 
 	}
 	reply := &completion{channel: make(chan Result, 1)}
 	req := request{callback: callback, event: event, data: data, config: copy, reply: reply, revision: r.revision, resource: resource}
-	if previous, ok := r.pending[event]; (event == "window_changed" || event == "session_changed") && ok {
+	if previous, ok := r.pending[event]; (event == "window_changed" || event == "session_changed" || event == "buffer_changed") && ok {
 		previous.reply.resolve(Result{})
 		delete(r.waiting, previous.reply)
 		r.waiting[reply] = struct{}{}
@@ -192,7 +192,7 @@ func (r *Runtime) submit(callback, event string, snapshot any, c config.Config, 
 	select {
 	case r.queue <- req:
 		r.waiting[reply] = struct{}{}
-		if event == "window_changed" || event == "session_changed" {
+		if event == "window_changed" || event == "session_changed" || event == "buffer_changed" {
 			r.pending[event] = req
 		}
 		return reply.channel, nil
@@ -238,7 +238,7 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 		case req := <-r.queue:
 			r.discardScheduled(e)
 			r.mu.Lock()
-			if req.event == "window_changed" || req.event == "session_changed" {
+			if req.event == "window_changed" || req.event == "session_changed" || req.event == "buffer_changed" {
 				req = r.pending[req.event]
 				delete(r.pending, req.event)
 			}

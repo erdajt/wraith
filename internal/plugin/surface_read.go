@@ -102,7 +102,7 @@ func (s *SurfaceStore) Index() SurfaceIndex {
 func bufferInfo(buffer *surfaceBufferRecord) SurfaceBufferInfo {
 	return SurfaceBufferInfo{
 		Projection: buffer.Projection, Truncated: buffer.Truncated,
-		ID: buffer.ID, Owner: buffer.Owner, Name: buffer.Name, Revision: buffer.Revision, Editable: buffer.Editable,
+		ID: buffer.ID, Owner: buffer.Owner, Name: buffer.Name, Revision: buffer.Revision, TextRevision: buffer.TextRevision, Editable: buffer.Editable,
 		LineCount: len(buffer.Lines), ByteCount: buffer.bytes,
 	}
 }
