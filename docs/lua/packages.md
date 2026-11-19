@@ -25,7 +25,7 @@ require("wraith.manager").setup({
 })
 ```
 
-`import` uses ordinary `require`. split specifications into modules below `lua/`; return a specification or a list of specifications from each module. relative local package directories resolve against the configuration directory, not the current project.
+`import` discovers and evaluates specification modules below `lua/`; return a specification or a list of specifications from each module. see [imports](#imports) for discovery and cache rules. relative local package directories resolve against the configuration directory, not the current project.
 
 for a remote package, replace the local source with a repository you trust:
 
@@ -66,6 +66,8 @@ HTTP, remote helper protocols, embedded URL credentials, query strings, fragment
 | `pin` | `false`; keep the locked revision during update, except when an explicit commit selector changes |
 | `dependencies` | package names or nested specifications; loaded before the dependent package |
 | `enabled` | `true`, or a function receiving a copied specification and returning a boolean |
+| `optional` | `false`; keep this contribution only when a surviving nonoptional declaration names the same plugin |
+| `specs` | declarations owned by this fragment, without dependency edges or dependency-only loading defaults |
 | `priority` | `50`; higher values start first, with declaration order breaking ties; dependencies still load before their parent |
 | `lazy` | true for dependency-only declarations or command, event or key triggers; explicit booleans override the default |
 | `cmd` | one slash command name or a list of names that activate the package |
@@ -109,7 +111,25 @@ a separate top-level declaration removes the dependency-only default. completed 
 
 `lazy = true` without a trigger means explicit `manager.load(name)` activation. unloading removes activation and init owners, including their triggers. load it explicitly again or reload the configuration to restore them. unload dependents before their dependencies.
 
-normalization rejects unknown fields, conflicting sources or module identities, conflicting triggers, missing dependencies and dependency/import cycles before running init functions. disabled packages are excluded; an enabled package cannot depend on a disabled package. there is no semver resolver, submodule installation, Neovim plugin compatibility or build-hook support.
+normalization rejects unknown fields, conflicting sources or module identities, conflicting triggers, missing dependencies and dependency/import cycles before running init functions. disabled packages are excluded and references to them are removed from surviving dependency lists. genuinely unknown dependencies still fail. there is no semver resolver, submodule installation, Neovim plugin compatibility or build-hook support.
+
+## scoped specifications
+
+```lua
+{
+  "owner/workspace.wraith",
+  enabled = false,
+  specs = {
+    { "owner/history.wraith", optional = true, opts = { limit = 200 } },
+  },
+}
+```
+
+removing a parent removes its owned declarations and their contributions. an independently declared child survives with its remaining settings. `specs` does not make a child a dependency; use `dependencies` when activation order matters. scoped self-overrides are allowed. cached import replay never re-parents declarations or rescues a removed scope.
+
+`optional = true` applies only while every surviving actual declaration is optional. a nonoptional source declaration, name-only override or full dependency declaration qualifies the plugin. a bare dependency reference does not. optional-only declarations can omit a source; surviving plugins must have one. declarations are collected before pruning, so trusted import code can run even when its parent is later excluded.
+
+source conflicts and malformed declarations fail before pruning. final dependency, main and trigger conflicts are checked among survivors. exclusions cannot be bypassed by manual loading or installation: change the configuration and reload. package status reports `disabled`, `optional` or `scope`, with a `retained pin` only when an eligible existing lock entry remains. that pin does not claim an installed checkout or loaded code.
 
 ## imports
 
@@ -144,9 +164,9 @@ require("shroud").setup({
 
 later scalar fields replace earlier values, including `false`; absent values remain inherited. dependencies, commands and events combine in first-seen order. key mappings replace the same normalized key and mode across fragments. aliases duplicated inside a single fragment remain invalid.
 
-nested option maps merge; lists replace unless their dotted path is in `opts_extend`. its value is inherited by later fragments, not applied retroactively. `wraith.json.null` removes a map field. callbacks run on activation with detached arguments; returning a table replaces the options, while returning `nil` retains mutations. `enabled` runs once per merged plugin during normalization.
+nested option maps merge; lists replace unless their dotted path is in `opts_extend`. its value is inherited by later fragments, not applied retroactively. `wraith.json.null` removes a map field. callbacks run on activation with detached arguments; returning a table replaces the options, while returning `nil` retains mutations. `enabled` runs during normalization, once per effective contribution and dependency revision. pruning can change that revision; unchanged predicates do not run again. callbacks receive detached merged fields and effective dependency names, without recursive `specs` declarations. normalization stops after 1,024 predicate calls.
 
-the first source stays selected. remote `.git` suffix variants match, but different transports or local directories conflict. choose one revision selector across the merged plugin; unlike lazy.nvim, a later branch does not silently coexist with an earlier commit. option recipes and callback results have a 4096-entry, depth-16 structural limit; declarations allow 256 fragments and 63 enabled plugins.
+the first surviving source stays selected. remote `.git` suffix variants match, but different transports or local directories conflict. choose one revision selector across the merged plugin; unlike lazy.nvim, a later branch does not silently coexist with an earlier commit. option recipes and callback results have a 4096-entry, depth-16 structural limit; declarations allow 256 fragments and 63 enabled plugins.
 
 ## package view
 
@@ -212,7 +232,7 @@ end)
 | update | resolve unpinned refs; preserve pinned commits unless an explicit commit selector changes |
 | restore | fetch exact locked commits; preserve the lock bytes, selector and pin metadata |
 
-install and update reconcile the lock against the enabled graph. removed, disabled and newly local packages lose their git lock entries; their files remain. active unselected git entries remain. the plan lists every pruned name. restore does not prune or rewrite the lock. changing a git source under the same package name is rejected; use a separate identity or deliberately reconcile the old entry first.
+install and update reconcile the lock against the enabled graph. removed, optional-only, scope-removed and newly local packages lose their git lock entries; their files remain. explicitly disabled nonoptional packages retain existing pins without installing or fetching them. retention never creates a missing lock entry. active unselected git entries remain. the plan lists every pruned name. restore does not prune or rewrite the lock. changing a git source under the same package name is rejected; use a separate identity or deliberately reconcile the old entry first.
 
 ## storage and credentials
 

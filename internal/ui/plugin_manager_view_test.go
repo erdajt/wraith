@@ -169,3 +169,34 @@ func TestManagerViewRetainsWindowIdentityWhenCloseIsRejected(t *testing.T) {
 		t.Fatalf("rejected close leaked a window: %+v", windows)
 	}
 }
+
+// TestManagerViewDistinguishesRetainedPinsFromInstalledCode checks excluded rows and their details.
+func TestManagerViewDistinguishesRetainedPinsFromInstalledCode(t *testing.T) {
+	a := managerViewApp(t, `local view=require("wraith.manager.view").new({status=function()
+ return {packages={{name="disabled",state="excluded",exclusion="disabled",loaded=false,managed=false,
+ retained_commit=string.rep("a",40)}}}
+end})
+wraith.commands.create("packages",view.open)`)
+	a.width, a.height = 120, 40
+	applyPluginEvents(t, a, a.runCommand("packages"))
+	reader := a.inputReader()
+	if reader == nil {
+		t.Fatalf("package view missing: %s", a.notice)
+	}
+	text := reader.Buffer.String()
+	if !strings.Contains(text, "disabled · excluded · disabled · retained pin aaaaaaaa") || strings.Contains(text, "installed") || strings.HasSuffix(strings.TrimSpace(text), "·") {
+		t.Fatalf("excluded row claims installation or has an empty source: %s", text)
+	}
+
+	a.key(key("3"))
+	a.key(key("j"))
+	applyPluginEvents(t, a, a.key(tea.KeyMsg{Type: tea.KeyEnter}))
+	reader = a.inputReader()
+	if reader == nil {
+		t.Fatalf("package details missing: %s", a.notice)
+	}
+	text = reader.Buffer.String()
+	if !strings.Contains(text, "excluded: disabled") || !strings.Contains(text, "retained pin: "+strings.Repeat("a", 40)) || strings.Contains(text, "installed commit") || strings.Contains(text, "source:") {
+		t.Fatalf("excluded details claim unverified source state: %s", text)
+	}
+}

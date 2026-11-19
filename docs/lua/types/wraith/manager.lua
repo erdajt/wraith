@@ -28,6 +28,8 @@
 ---@field main? string explicit entrypoint; otherwise infer from the selected plugin's lua directory
 ---@field dependencies? Wraith.PackageDeclarations bare dependency names refer to existing declarations
 ---@field enabled? boolean|fun(spec: Wraith.PackageSpec): boolean
+---@field optional? boolean qualifies only with a surviving nonoptional declaration
+---@field specs? Wraith.PackageDeclarations scoped declarations without dependency edges
 ---@field priority? integer default 50, within -1000000..1000000
 ---@field lazy? boolean defaults to dependency-only declarations or command, event or key triggers
 ---@field cmd? string|string[]
@@ -88,24 +90,27 @@
 
 ---@class Wraith.PackageStatus
 ---@field name string
----@field source Wraith.PackageSource
----@field selector Wraith.PackageSelector
----@field pin boolean
+---@field source? Wraith.PackageSource
+---@field selector? Wraith.PackageSelector
+---@field pin? boolean
 ---@field commit? string currently selected installed commit
 ---@field path? string usable local or installed directory
----@field state 'local'|'installed'|'missing'|'source-conflict'|'unloaded'
+---@field state 'local'|'installed'|'missing'|'source-conflict'|'unloaded'|'excluded'
 ---@field error? string
 ---@field loaded boolean
 ---@field managed boolean init wrapper is present
----@field installed boolean
----@field lazy boolean
+---@field installed? boolean
+---@field lazy? boolean
 ---@field loaded_commit? string commit chosen by the active runtime
 ---@field requested_main? string explicitly declared entrypoint
 ---@field selected_main? string bound entrypoint, retained after unload or failure
 ---@field loaded_main? string entrypoint of active automatic setup
 ---@field main_source_kind? 'file'|'preload' a preload's code is independent of the checkout commit
 ---@field main_source_path? string selected file path
----@field restart_required boolean disk selection differs from this runtime's frozen source
+---@field restart_required? boolean disk selection differs from this runtime's frozen source
+---@field exclusion? 'disabled'|'optional'|'scope'
+---@field retained_commit? string existing lock pin; does not imply an installed checkout
+---@field origins? {index: integer, module?: string, path?: string}[] surviving declaration origins before exclusion
 ---@class Wraith.PackageOperation
 ---@field id string
 ---@field state 'preparing'|'fetching'|'verifying'|'publishing'|'cleaning'|'installed'|'failed'|'cancelled'|'conflict'|'uncertain'
