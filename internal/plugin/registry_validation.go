@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"fmt"
+
 	"github.com/erdajt/wraith/internal/modeltool"
 )
 

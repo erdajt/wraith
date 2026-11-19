@@ -1,6 +1,6 @@
 # request hooks, providers and model tools
 
-[plugin setup](../plugins.md) · [managed services](services.md) · [buffers and views](surfaces.md) · [providers](../providers.md) · [execution](../execution.md)
+[plugin setup](../plugins.md) · [managed services](services.md) · [buffers and views](surfaces.md) · [providers](../providers.md) · [execution](../execution.md) · [workspace queries](workspace.md) · [example packages](examples.md)
 
 `wraith.capabilities.hooks`, `providers`, `model_tools`, `invocations` and `workspace_queries` report these API families.
 
@@ -32,7 +32,7 @@ hooks run in ascending priority, then registration order. priority ranges from `
 
 return `nil` to leave the request unchanged. return `{ request = replacement }` to replace the complete mutable request. return `{ decision = "deny", reason = "..." }` to stop it. unknown fields, invalid types, errors and timeouts fail the request.
 
-protected command evidence appears as an opaque `reference` with empty `content`. retain its original role and reference when keeping it. references cannot be invented, duplicated or given replacement content. the host restores the original evidence and reapplies output-sharing rules, private-variable redaction, execution instructions and context limits after transformation. hooks cannot change the execution mode or the tool catalog through this DTO.
+protected command evidence appears as an opaque `reference` with empty `content`. a hook may omit evidence; when keeping it, retain its original role and reference. references cannot be invented, duplicated or given replacement content. the host restores the original evidence and reapplies output-sharing rules, private-variable redaction, execution instructions and context limits after transformation. hooks cannot change the execution mode or the tool catalog through this DTO.
 
 ## command hooks
 
@@ -56,7 +56,7 @@ end)
 | `timeout` | positive Go duration string, such as `"30s"` or `"1.5ms"` |
 | `background` | boolean |
 
-approval applies to that exact tuple. editing or transforming an approved tuple requires a fresh approval before execution. a denial stops execution. hooks receive local resolved values as trusted code; provider requests still pass through privacy filtering.
+approval applies to that exact tuple. saving an edited command approves the saved text once. a subsequent hook transformation or hook registry change requires renewed approval before execution. a denial stops execution. hooks receive local resolved values as trusted code; provider requests still pass through privacy filtering.
 
 hooks return data. they cannot call host actions, register callbacks, start managed work, open dialogs, mutate buffers or print notices. `wraith.json` remains available for value conversion. catching a forbidden call with `pcall` does not make the hook valid. raw `io`, `os` and other trusted Lua facilities still have local process authority; this restriction is not a security sandbox.
 
@@ -100,11 +100,15 @@ all three callbacks are required. `ctx.invocation` contains `id`, `kind`, `name`
 
 | callback | input | final result |
 | --- | --- | --- |
-| `models` | discovery request | array of `{ name, size }` |
-| `show` | selected model request | `{ context_window, capabilities, thinking? }` |
-| `chat` | prepared model request | final text, tool calls and usage metadata |
+| `models` | `{}` | array of `{ name, size }` |
+| `show` | `{ model = "selected-model" }` | `{ context_window, capabilities, thinking? }` |
+| `chat` | prepared request described below | final text, tool calls and usage metadata |
 
-chat emits `{ content = "...", thinking = "..." }` deltas. either field may be omitted. its final result may contain `content`, `thinking`, `calls`, `reason`, `prompt_tokens`, `output_tokens` and `duration_ns`. `calls` contains `{ name, arguments }` entries. `reason` is `"stop"` or `"length"`. the host validates provider results before they enter the conversation pipeline.
+the chat request contains `model`, `messages`, `options`, `stream` and `keep_alive`, plus `think`, `tools` and `format` when applicable. messages use the native request shape; options use the fields listed under [request hooks](#request-hooks). tool entries contain `type = "function"` and `function = { name, description, parameters }`. transport callbacks receive the request after host instructions and privacy filtering.
+
+discovery callbacks finish once without streaming. `models` returns an array, including `wraith.json.array({})` for no models; names must be unique and sizes nonnegative, with at most 1024 entries. `show` returns an object with nonnegative `context_window`, up to 32 capability strings and optional `thinking = { values = { ... }, default = ... }`; thinking values are boolean or text. null or a wrong container type is rejected.
+
+chat emits `{ content = "...", thinking = "..." }` deltas. either field may be omitted. its final result may contain `content`, `thinking`, `calls`, `reason`, `prompt_tokens`, `output_tokens` and `duration_ns`. `calls` contains `{ name, arguments }` entries. `reason` is `"stop"` or `"length"`. chat results must be objects. at most one final call is accepted, with an object argument payload of at most 32 KiB; a `"length"` result cannot contain a call. total content and thinking are limited to 16 MiB across all deltas and the final result. usage counts and duration must be nonnegative. the host validates provider results before they enter the conversation pipeline.
 
 use managed HTTP or process callbacks for transport work. return from the initial callback, then emit or finish from a later callback. do not block the Lua actor waiting for a callback that needs the same actor.
 
@@ -131,7 +135,7 @@ wraith.tools.register("describe_workspace", {
 
 `approval` defaults to `"required"`. `"read_only"` is a declaration for host policy; current host policy requires approval for both values. native command and output tool names are reserved. model tools enter the agent tool catalog; blocks mode and compaction do not advertise them. the handler receives `{ arguments, job_id, directory }` in `ctx.data`. arguments contain resolved local values after approval. streamed and final results become output in the tracked job.
 
-schemas use the supported, bounded subset of JSON Schema draft 2020-12. the root must describe an object. remote references, recursive references and unsupported keywords are rejected at registration. schemas and arguments are limited to 32 KiB each. use `wraith.json.array({})`, `wraith.json.object({})` and `wraith.json.null` when empty container types or null values matter. integer values must fit the exact JSON-to-Lua number range, from `-9007199254740991` through `9007199254740991`.
+schemas use the [supported, bounded subset of JSON Schema draft 2020-12](tool-schemas.md). the root must describe an object. remote references, recursive references and unsupported keywords are rejected at registration. schemas and arguments are limited to 32 KiB each. use `wraith.json.array({})`, `wraith.json.object({})` and `wraith.json.null` when empty container types or null values matter. integer values must fit the exact JSON-to-Lua number range, from `-9007199254740991` through `9007199254740991`.
 
 ## replacement and ownership
 
@@ -170,8 +174,11 @@ raw `os.execute`, unmanaged subprocesses and arbitrary external side effects are
 | queued stream output | 64 chunks and 1 MiB per invocation |
 | invocation payload | 1 MiB, depth 32, 16384 values |
 | default discovery deadline | 30 seconds |
-| default chat or tool deadline | 10 minutes |
-| explicit invocation deadline | 1 millisecond through 24 hours |
+| default chat deadline | 10 minutes |
+| model tool deadline | `execution.command_timeout` |
+| Go host invocation deadline | 1 millisecond through 24 hours; defaults to 10 minutes for tools |
+
+the explicit invocation deadline belongs to the Go host API; provider and tool registrations do not expose a Lua timeout option.
 
 stream overflow ends the call with an error and cancels its children. the terminal result remains available after queued deltas. consuming a delta releases its queue charge; closing the host handle releases retained results and any unclaimed start. callback errors fail the invocation and roll back its uncommitted registrations and reservations. effects already accepted by the host are not undone.
 
