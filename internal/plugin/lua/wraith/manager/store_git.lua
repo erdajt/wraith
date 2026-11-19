@@ -1,8 +1,10 @@
 local git = require("wraith.manager.store_git_command")
+local operation = require("wraith.manager.store_operation")
 local M = {}
 
 function M.prepare(item, directory, options, completed)
-  local control, current, finished, cancelled = {}, nil, false, false
+  local control = operation.new(options, completed)
+  local run, finish = control.run, control.finish
   local commit, format, reference
   if item.commit then
     reference, format = item.commit, #item.commit == 64 and "sha256" or "sha1"
@@ -12,30 +14,6 @@ function M.prepare(item, directory, options, completed)
     reference = "refs/tags/" .. item.selector.value
   else
     reference = "HEAD"
-  end
-
-  local function finish(result)
-    if finished then return end
-    finished = true
-    completed(result)
-  end
-
-  local function run(arguments, cwd, next)
-    if cancelled then finish({ state = "cancelled", error = "package installation cancelled" }); return end
-    current = git.run(arguments, cwd, options, function(result)
-      current = nil
-      if cancelled or result.state == "cancelled" then
-        finish({ state = "cancelled", error = result.error or "package installation cancelled" })
-      elseif result.state ~= "completed" or result.exit_code ~= 0 or result.truncated then
-        finish({ state = "failed", error = result.truncated and "git output exceeded its capture limit" or result.error or "git command failed", stderr = result.stderr })
-      else
-        local ok, err = pcall(next, result.stdout)
-        if not ok then
-          if finished then error(err) end
-          finish({ state = "failed", error = tostring(err) })
-        end
-      end
-    end)
   end
 
   local function initialize()
@@ -75,11 +53,6 @@ function M.prepare(item, directory, options, completed)
     resolve()
   else
     run({ "check-ref-format", reference }, nil, resolve)
-  end
-
-  function control.cancel()
-    cancelled = true
-    if current then current.cancel() end
   end
 
   return control

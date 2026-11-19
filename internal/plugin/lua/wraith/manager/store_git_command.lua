@@ -6,7 +6,7 @@ local policy = {
 }
 
 function M.run(arguments, directory, options, completed)
-  local argv = { "git" }
+  local argv = { "git", "--no-optional-locks" }
   for _, setting in ipairs(policy) do
     argv[#argv + 1], argv[#argv + 2] = "-c", setting
   end
