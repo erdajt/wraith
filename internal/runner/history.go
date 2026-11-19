@@ -2,6 +2,7 @@ package runner
 
 import (
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -58,19 +59,41 @@ func (h History) Save(r Record) error {
 		return errors.New("invalid command id")
 	}
 
-	return fsutil.Atomic(filepath.Join(h.Root, r.ID+".json.gz"), func(w io.Writer) error {
+	var source os.FileInfo
+	err := fsutil.Atomic(filepath.Join(h.Root, r.ID+".json.gz"), func(w io.Writer) error {
 		z := gzip.NewWriter(w)
 		if err := json.NewEncoder(z).Encode(r); err != nil {
 			z.Close()
 			return err
 		}
-		return z.Close()
+		if err := z.Close(); err != nil {
+			return err
+		}
+		if file, ok := w.(*os.File); ok {
+			source, _ = file.Stat()
+		}
+		return nil
 	})
+	if err == nil && source != nil {
+		h.saveMetadata(r, sourceSignature(source))
+	}
+	return err
 }
 
 // Load loads a bounded command record and validates its id and capture limits.
 func (h History) Load(id string) (Record, error) {
+	return h.LoadBounded(context.Background(), id, MaxOutputLimit*6+8<<20)
+}
+
+// LoadBounded reads a command with a caller-selected decoded source limit.
+func (h History) LoadBounded(ctx context.Context, id string, limit int64) (Record, error) {
 	var r Record
+	if limit < 1 || limit > MaxOutputLimit*6+8<<20 {
+		return r, errors.New("invalid command history source limit")
+	}
+	if err := ctx.Err(); err != nil {
+		return r, err
+	}
 	if !validID.MatchString(id) {
 		return r, errors.New("invalid command id")
 	}
@@ -81,18 +104,18 @@ func (h History) Load(id string) (Record, error) {
 	}
 	defer f.Close()
 
-	z, err := gzip.NewReader(f)
+	z, err := gzip.NewReader(contextReader{ctx, f})
 	if err != nil {
 		return r, err
 	}
 	defer z.Close()
 
-	b, err := io.ReadAll(io.LimitReader(z, MaxOutputLimit*6+8<<20+1))
+	b, err := io.ReadAll(io.LimitReader(contextReader{ctx, z}, limit+1))
 	if err != nil {
 		return r, err
 	}
-	if len(b) > MaxOutputLimit*6+8<<20 {
-		return r, errors.New("command history exceeds decompression limit")
+	if int64(len(b)) > limit {
+		return r, ErrHistoryLimit
 	}
 
 	if err = json.Unmarshal(b, &r); err != nil {
