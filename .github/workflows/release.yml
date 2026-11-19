@@ -41,6 +41,8 @@ jobs:
             mkdir -p "dist/$package"
             GOARCH="$arch" go build -trimpath -ldflags "-s -w -X main.version=$RELEASE_TAG" -o "dist/$package/wraith" ./cmd/wraith
             cp README.md LICENSE NOTICE "dist/$package/"
+            mkdir -p "dist/$package/licenses"
+            cp third_party/gopher-lua/LICENSE "dist/$package/licenses/gopher-lua.txt"
             cp -R docs "dist/$package/"
             tar -C dist -czf "dist/$package.tar.gz" "$package"
           done
