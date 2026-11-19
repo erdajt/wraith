@@ -50,6 +50,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	api.RawSetString("api_version", lua.LNumber(2))
 	L.SetGlobal("wraith", api)
 	e.installConfig(api)
+	e.installJSON(api)
 	e.installRegistration(api)
 	e.installWorkspace(api)
 	e.installPlugins(api)
