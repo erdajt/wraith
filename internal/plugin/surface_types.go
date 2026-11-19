@@ -84,6 +84,7 @@ type SurfaceMutation struct {
 
 // SurfaceDelta reports committed changes for the UI cache without executing renderer callbacks.
 type SurfaceDelta struct {
+	ChangedBuffers []SurfaceBuffer
 	Operation      string
 	Buffer         *SurfaceBuffer
 	Window         *SurfaceWindow
@@ -108,7 +109,7 @@ type SurfaceBufferInfo struct {
 type SurfaceIndex struct {
 	Buffers []SurfaceBufferInfo `json:"buffers"`
 	Windows []SurfaceWindow     `json:"windows"`
-	Regions []SurfaceRegion     `json:"regions"`
+	Regions []SurfaceRegionInfo `json:"regions"`
 }
 
 // SurfaceBufferPage carries a detached bounded line window and its observed revision.
@@ -117,4 +118,18 @@ type SurfaceBufferPage struct {
 	Start int      `json:"start"`
 	Lines []string `json:"lines"`
 	Next  int      `json:"next"`
+}
+
+// SurfaceRegionInfo lists frame dimensions without copying text or style spans.
+type SurfaceRegionInfo struct {
+	ID        string `json:"id"`
+	Owner     string `json:"owner"`
+	Slot      string `json:"slot"`
+	Revision  uint64 `json:"revision"`
+	Order     uint64 `json:"order"`
+	Width     int    `json:"width"`
+	Height    int    `json:"height"`
+	Row       int    `json:"row"`
+	Column    int    `json:"column"`
+	LineCount int    `json:"line_count"`
 }
