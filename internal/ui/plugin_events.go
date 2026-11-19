@@ -10,6 +10,8 @@ import (
 
 // Update records lifecycle transitions and queues plugin events after normal state handling.
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	a.reconcileOutputRead()
+	defer a.reconcileOutputRead()
 	a.reconcileWorkspaceQueries(false)
 	depth := a.pluginDepth
 	if result, ok := msg.(pluginResultMsg); ok {

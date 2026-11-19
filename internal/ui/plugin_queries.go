@@ -37,6 +37,8 @@ func (a *App) startWorkspaceQuery(runtime *plugin.Runtime, query plugin.Workspac
 	}
 	if a.pluginQueries == nil {
 		a.pluginQueries = map[string]*workspaceQueryState{}
+	}
+	if a.workspaceScans == nil {
 		a.workspaceScans = &workspaceScanStore{}
 	}
 	if _, exists := a.pluginQueries[query.ID]; exists {

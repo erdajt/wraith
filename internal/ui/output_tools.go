@@ -1,11 +1,13 @@
 package ui
 
 import (
+	"context"
 	"errors"
-	"github.com/erdajt/wraith/internal/provider"
+	"reflect"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/erdajt/wraith/internal/provider"
 	"github.com/erdajt/wraith/internal/runner"
 	"github.com/erdajt/wraith/internal/session"
 )
@@ -24,9 +26,17 @@ func (a *App) jobRecord(id string) (runner.Record, error) {
 func (a *App) runPendingTool() tea.Cmd {
 	if a.agentStopped {
 		a.pendingTool = nil
+		a.cancelOutputRead()
 		return nil
 	}
+	a.reconcileOutputRead()
 	if a.pendingTool == nil || !a.canContinue() {
+		return nil
+	}
+	if a.outputRead != nil {
+		if a.outputRead.result != nil {
+			return a.finishOutputRead(*a.outputRead.result)
+		}
 		return nil
 	}
 	if a.pendingTool.Tool == "extension" {
@@ -41,7 +51,11 @@ func (a *App) runPendingTool() tea.Cmd {
 	}
 
 	request := *a.pendingTool
+	var record runner.Record
 	for _, job := range a.jobs.Snapshot() {
+		if job.Record.ID == request.ID {
+			record = job.Record
+		}
 		if job.Record.ID == request.ID && job.Err != nil {
 			a.pendingTool, a.agentStopped = nil, true
 			a.notice = "output result is not saved; inspect /jobs before continuing"
@@ -62,65 +76,64 @@ func (a *App) runPendingTool() tea.Cmd {
 		return a.deferOutputRead()
 	}
 
-	nextLine := a.pollNext[request.ID]
-	r, err := a.jobRecord(request.ID)
-	text := "output tool denied: command is not in this session"
-	var evidence *session.Evidence
-	waiting := false
-	if err == nil && r.Session == a.Session.ID {
-		if !r.ShareOutput || r.OutputHidden {
-			text = "output tool denied: output withheld by user"
-		} else if request.Tool == "poll" && r.Finished.IsZero() && time.Since(a.lastPoll[r.ID]) < time.Second {
-			waiting = true
-			evidence = &session.Evidence{ID: r.ID, Kind: "waiting", Status: r.Status}
-		} else {
-			if request.Tool == "poll" {
-				request.Limit = 20
-				request.From = max(1, nextLine)
-			}
-			page, queryErr := runner.ReadOutput(r, request.Query, a.Variables)
-			if queryErr != nil {
-				text = "output tool rejected: " + queryErr.Error()
-			} else {
-				size := 0
-				for i, line := range page.Lines {
-					if len(line.Text)+40 > budget {
-						page.Lines[i].Text = "[line exceeds output budget; inspect local history]"
-						line = page.Lines[i]
-						page.Truncated = true
-					}
-					size += len(line.Text) + 40
-					if size > budget {
-						page.Next = line.Number
-						page.Truncated = true
-						page.Lines = page.Lines[:i]
-						break
-					}
-				}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	state := &outputReadState{
+		pending: a.pendingTool, request: request, runtime: a.plugins,
+		session: a.Session.ID, generation: a.generation, mode: a.Config.Execution.Mode,
+		variables: a.Variables, cancel: cancel,
+	}
+	a.outputRead = state
+	if a.workspaceScans == nil {
+		a.workspaceScans = &workspaceScanStore{}
+	}
+	scans, history := a.workspaceScans, a.history()
+	nextLine, lastPoll := a.pollNext[request.ID], a.lastPoll[request.ID]
+	a.workers.Add(1)
+	go func() {
+		defer a.workers.Done()
+		defer cancel()
+		a.post(readToolOutput(ctx, state, scans, history, record, budget, nextLine, lastPoll))
+	}()
+	return a.next()
+}
 
-				if request.Tool == "poll" {
-					if page.Next > 0 {
-						nextLine = page.Next
-					} else if len(page.Lines) > 0 {
-						nextLine = page.Lines[len(page.Lines)-1].Number + 1
-					}
-				}
-
-				evidence = &session.Evidence{ID: r.ID, Kind: "output", Status: r.Status, ExitCode: r.ExitCode, Page: &page}
-				if request.Tool == "poll" && r.Finished.IsZero() && len(page.Lines) == 0 {
-					waiting, evidence.Kind = true, "waiting"
-				}
-			}
+// finishOutputRead saves a current read before advancing its cursor or starting a response.
+func (a *App) finishOutputRead(result outputReadMsg) tea.Cmd {
+	a.reconcileOutputRead()
+	if a.outputRead != result.state {
+		return nil
+	}
+	if !a.canContinue() {
+		a.outputRead.result = &result
+		return nil
+	}
+	request := result.state.request
+	for _, job := range a.jobs.Snapshot() {
+		if job.Record.ID != request.ID {
+			continue
+		}
+		if job.Err != nil {
+			a.cancelOutputRead()
+			a.pendingTool, a.agentStopped = nil, true
+			a.notice = "output result is not saved; inspect /jobs before continuing"
+			return nil
+		}
+		if !job.Record.ShareOutput || job.Record.OutputHidden {
+			result.text, result.evidence, result.waiting = "output tool denied: output withheld by user", nil, false
 		}
 	}
-
+	if record, ok := a.pendingRuns[request.ID]; ok && (!record.ShareOutput || record.OutputHidden) {
+		result.text, result.evidence, result.waiting = "output tool denied: output withheld by user", nil, false
+	}
+	a.cancelOutputRead()
 	candidate := a.Session.Clone()
-	message := session.Message{Role: "user", Content: a.Variables.Redact(text)}
-	if evidence != nil {
-		message = evidence.Message()
+	message := session.Message{Role: "user", Content: a.Variables.Redact(result.text)}
+	if result.evidence != nil {
+		message = result.evidence.Message()
 	}
 	candidate.Messages = append(candidate.Messages, message)
 	if _, err := a.chatBudget(candidate); err != nil {
+		var overflow *provider.ContextError
 		if errors.As(err, &overflow) {
 			return a.deferOutputRead()
 		}
@@ -136,13 +149,13 @@ func (a *App) runPendingTool() tea.Cmd {
 	a.pendingTool = nil
 	a.agentReads++
 	if request.Tool == "poll" {
-		a.pollNext[request.ID] = nextLine
+		a.pollNext[request.ID] = result.nextLine
 		a.lastPoll[request.ID] = time.Now()
 	}
 	a.Session = candidate
 
-	if waiting {
-		a.notice = "waiting for background job " + r.ID + " · /jobs shows live output"
+	if result.waiting {
+		a.notice = "waiting for background job " + request.ID + " · /jobs shows live output"
 		return nil
 	}
 	return a.continueEvidence()
@@ -162,4 +175,27 @@ func (a *App) deferOutputRead() tea.Cmd {
 
 	a.popup = &menu{Kind: "overflow", Title: "compact before reading command output?", Items: []item{{"yes", "yes", "archive and compact"}, {"no", "no", "pause without consuming output"}}}
 	return nil
+}
+
+// reconcileOutputRead cancels work whose privacy snapshot or conversation owner changed.
+func (a *App) reconcileOutputRead() {
+	state := a.outputRead
+	if state == nil {
+		return
+	}
+	ownerChanged := state.session != a.Session.ID || state.generation != a.generation || state.runtime != a.plugins || state.mode != a.Config.Execution.Mode
+	if ownerChanged && a.pendingTool == state.pending {
+		a.pendingTool = nil
+	}
+	if ownerChanged || state.pending != a.pendingTool || a.pendingTool == nil || !reflect.DeepEqual(state.request, *a.pendingTool) || a.agentStopped || !state.variables.Equal(a.Variables) {
+		a.cancelOutputRead()
+	}
+}
+
+// cancelOutputRead releases an outstanding read without consuming its pending request.
+func (a *App) cancelOutputRead() {
+	if a.outputRead != nil {
+		a.outputRead.cancel()
+		a.outputRead = nil
+	}
 }

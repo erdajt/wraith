@@ -62,6 +62,7 @@ func (a *App) declineCommand() {
 
 // stopAgent clears pending actions and cancels background jobs requested by the current turn.
 func (a *App) stopAgent() {
+	a.cancelOutputRead()
 	if a.policyCancel != nil {
 		a.policyCancel()
 		a.policyCancel = nil

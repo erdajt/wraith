@@ -53,6 +53,8 @@ func applyPluginEvents(t *testing.T, a *App, cmd tea.Cmd) {
 		}
 	case pluginResultMsg:
 		a.Update(msg)
+	case outputReadMsg:
+		a.Update(msg)
 	}
 }
 
@@ -117,10 +119,13 @@ func TestLuaResponseEventSurvivesImmediateToolContinuation(t *testing.T) {
 	a.streamSerial, a.busy, a.agentStopped = 2, true, false
 	request := "```wraith-tool\n{\"tool\":\"poll\",\"id\":\"0123456789abcdef01234567\"}\n```"
 	_, cmd := a.Update(streamMsg{Serial: 2, Final: true, Chunk: ollama.Response{Message: session.Message{Role: "assistant", Content: request}}})
-	if !a.busy || a.streamSerial != 3 {
-		t.Fatalf("tool did not start another response: %s", a.notice)
+	if a.busy || a.outputRead == nil || a.streamSerial != 2 {
+		t.Fatalf("tool did not yield to a background read: %s", a.notice)
 	}
 	applyPluginEvents(t, a, cmd)
+	if !a.busy || a.streamSerial != 3 {
+		t.Fatalf("completed read did not start another response: %s", a.notice)
+	}
 	if a.notice != "model response event" {
 		t.Fatalf("response event omitted during continuation: %s", a.notice)
 	}

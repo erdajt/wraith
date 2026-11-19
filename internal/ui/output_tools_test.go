@@ -150,7 +150,9 @@ func TestFailedPollSaveDoesNotAdvanceCursor(t *testing.T) {
 	a.Store.Root = path
 	a.pendingTool = &contextual.ToolRequest{Tool: "poll", ID: r.ID}
 
-	if cmd := a.runPendingTool(); cmd != nil || a.pollNext[r.ID] != 0 || len(a.Session.Messages) != 0 {
+	a.runPendingTool()
+	drain(t, a)
+	if a.pollNext[r.ID] != 0 || len(a.Session.Messages) != 0 {
 		t.Fatal("failed save consumed output")
 	}
 }

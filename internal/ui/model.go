@@ -150,6 +150,7 @@ type App struct {
 	editing                           bool
 	receiptSession, receiptGeneration string
 
+	outputRead  *outputReadState
 	pendingTool *contextual.ToolRequest
 	agentReads  int
 	lastPoll    map[string]time.Time
@@ -313,6 +314,7 @@ func (a *App) ticker() tea.Cmd {
 // Close cancels active work and closes owned shell panes once.
 func (a *App) Close() {
 	a.once.Do(func() {
+		a.cancelOutputRead()
 		a.reconcileWorkspaceQueries(true)
 		if a.pluginLoadCancel != nil {
 			a.pluginLoadCancel()

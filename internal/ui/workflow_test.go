@@ -25,7 +25,7 @@ func drain(t *testing.T, a *App) {
 	polling := time.NewTicker(5 * time.Millisecond)
 	defer polling.Stop()
 
-	for a.busy {
+	for a.busy || a.outputRead != nil {
 		select {
 		case now := <-polling.C:
 			a.Update(tick(now))
