@@ -16,6 +16,10 @@ function M.start(method, arguments, completed)
   end
   control.id = wraith.fs[method .. "_async"](unpack(values))
 
+  function control.retained()
+    return wait.retained(control.id, waiting)
+  end
+
   function control.abandon()
     wait.abandon(control.id, waiting)
   end

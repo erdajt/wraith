@@ -22,6 +22,12 @@ function M.finish(id, completed)
   return function() return poll or id end
 end
 
+function M.retained(id, waiting)
+  if pcall(wraith.resource.status, id) then return true end
+  local receipt = waiting and waiting()
+  return receipt ~= nil and receipt ~= id and pcall(wraith.resource.status, receipt) or false
+end
+
 function M.abandon(id, waiting)
   pcall(wraith.resource.cancel, id)
   pcall(wraith.resource.release, id)

@@ -53,6 +53,10 @@ function M.start(argv, options, completed)
     waiting = wait.finish(control.id, finish)
   end)
 
+  function control.retained()
+    return wait.retained(control.id, waiting)
+  end
+
   function control.abandon()
     wait.abandon(control.id, waiting)
   end

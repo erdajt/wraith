@@ -11,6 +11,7 @@ function M.new(specs, settings)
   for _, spec in ipairs(specs) do configured[#configured + 1] = descriptor(spec) end
   assert(#configured <= 63, "package graph exceeds 63 entries")
   local api, plans, order, serial, active, latest = {}, {}, {}, 0, nil, nil
+  local retired = {}
   local identity = tostring({}):gsub("[^%w]", "")
 
   local function notify(callback, value)
@@ -19,7 +20,23 @@ function M.new(specs, settings)
     if not ok then pcall(wraith.notify, "package observer: " .. wraith.ui.decode(tostring(err):sub(1, 2048))) end
   end
 
+  local function retire(operation)
+    local receipt = { control = operation.control, dispatching = true }
+    retired[#retired + 1] = receipt
+    return receipt
+  end
+
   local function reconcile()
+    for index = #retired, 1, -1 do
+      local receipt = retired[index]
+      if not receipt.dispatching then
+        if receipt.control.retained() then
+          pcall(receipt.control.abandon)
+        else
+          table.remove(retired, index)
+        end
+      end
+    end
     if not active or not active.control then return end
     local id = active.control.resource()
     if not id then return end
@@ -36,9 +53,10 @@ function M.new(specs, settings)
     else
       latest.state, latest.error = "failed", reason .. "; create a fresh plan"
     end
-    local callback = active.completed
+    local callback, receipt = active.completed, retire(active)
     active = nil
     notify(callback, latest)
+    receipt.dispatching = false
   end
 
   function api.inspect()
@@ -61,6 +79,7 @@ function M.new(specs, settings)
   function api.execute(id, observer, completed)
     reconcile()
     assert(not active, "a package operation is already running")
+    assert(#retired < 16, "package cleanup is awaiting host acceptance; check status and retry")
     assert(observer == nil or type(observer) == "function", "package observer must be a function")
     assert(completed == nil or type(completed) == "function", "package completion must be a function")
     local plan = assert(plans[id], "unknown or expired package plan")
@@ -90,9 +109,11 @@ function M.new(specs, settings)
       status.message = result.message or status.message
       status.restart_required = result.restart_required or wraith.json.array()
       status.generation, status.cleanup_warning = result.generation, result.cleanup_warning
+      local receipt = retire(operation)
       active = nil
       notify(observer, status)
       notify(completed, status)
+      receipt.dispatching = false
     end)
     if not ok then
       active = nil

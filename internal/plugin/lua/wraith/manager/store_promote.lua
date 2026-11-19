@@ -66,6 +66,10 @@ function M.install(item, stage, root, options, completed)
     return last
   end
 
+  function control.retained()
+    return current and current.retained() or previous and previous.retained() or false
+  end
+
   function control.abandon()
     cancelled = true
     if current then current.abandon() end

@@ -31,6 +31,10 @@ function M.new(completed)
     last = flow.resource()
   end
 
+  function flow.retained()
+    return current and current.retained() or previous and previous.retained() or false
+  end
+
   function flow.abandon()
     cancelled = true
     if current then current.abandon() end
