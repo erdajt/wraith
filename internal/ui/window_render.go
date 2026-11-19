@@ -36,6 +36,13 @@ func (a *App) drawConversations(rows []string, p palette) {
 		}
 		if len(a.Session.Messages) == 0 && !a.busy {
 			welcome := a.welcome(place.width, place.height, p)
+			if region, ok := a.surfaceRegion("welcome"); ok {
+				width := place.width
+				if region.Width > 0 {
+					width = min(width, region.Width)
+				}
+				welcome = regionLines(region, width, min(place.height, len(region.Lines)), p)
+			}
 			y := max(0, (place.height-len(welcome))/2)
 			for _, line := range welcome {
 				if y >= len(frame) {

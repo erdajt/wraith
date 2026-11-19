@@ -63,6 +63,9 @@ func (a *App) View() string {
 	}
 	rows[inputY] = base(p, ink(p.Border, "╭─"+label+strings.Repeat("─", max(0, mainW-ansi.StringWidth(label)-3))+"╮"), mainW) + base(p, "", w-mainW)
 	lines := a.promptLines(mainW - 4)
+	if region, ok := a.surfaceRegion("prompt"); ok {
+		lines = regionLines(region, mainW-4, 4, p)
+	}
 	for y := 0; y < 4; y++ {
 		text := ""
 		if y < len(lines) {
@@ -90,6 +93,8 @@ func (a *App) View() string {
 	}
 	rows[a.height-2] = base(p, ink(p.Muted, fit(footer, w)), w)
 	rows[a.height-1] = base(p, ink(p.Border, "  "+clean(a.Session.Title)+"  ·  "+a.Session.ID[:8]), w)
+
+	a.drawSurfaceRegions(rows, p)
 
 	if pane := a.panes[1]; pane != nil && pane.Visible {
 		pw, ph := a.paneSize(1)

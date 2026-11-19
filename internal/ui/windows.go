@@ -7,7 +7,7 @@ import (
 
 // windowPlaces measures conversation leaves inside the shared workspace body.
 func (a *App) windowPlaces() []windowPlace {
-	places := a.windowTree.layout(windowRect{0, 3, a.mainWidth(), a.bodyHeight()}, a.windowID)
+	places := a.windowTree.layout(windowRect{0, 3, a.conversationWidth(), a.bodyHeight()}, a.windowID)
 	var floating []uint64
 	for id, view := range a.windows {
 		if view.surface != nil && view.surface.window.Kind == "float" {
@@ -17,8 +17,8 @@ func (a *App) windowPlaces() []windowPlace {
 	slices.Sort(floating)
 	for _, id := range floating {
 		window := a.windows[id].surface.window
-		x, y := min(max(0, window.Column), max(0, a.mainWidth()-3)), min(max(0, window.Row), max(0, a.bodyHeight()-3))
-		width, height := min(max(3, window.Width), a.mainWidth()-x), min(max(3, window.Height), a.bodyHeight()-y)
+		x, y := min(max(0, window.Column), max(0, a.conversationWidth()-3)), min(max(0, window.Row), max(0, a.bodyHeight()-3))
+		width, height := min(max(3, window.Width), a.conversationWidth()-x), min(max(3, window.Height), a.bodyHeight()-y)
 		places = append(places, windowPlace{id, windowRect{x, y + 3, width, height}})
 	}
 	return places
