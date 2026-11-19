@@ -28,11 +28,20 @@ type Page = session.OutputPage
 
 // ReadOutput returns a bounded, redacted search window only when output sharing is allowed.
 func ReadOutput(record Record, query Query, snapshot variables.Snapshot) (Page, error) {
-	page := Page{Lines: []OutputLine{}, Truncated: record.Truncated}
-
 	if !record.ShareOutput || record.OutputHidden {
-		return page, errors.New("output is private; user sharing is required")
+		return Page{Lines: []OutputLine{}, Truncated: record.Truncated}, errors.New("output is private; user sharing is required")
 	}
+	return readOutput(record, query, snapshot)
+}
+
+// ReadLocalOutput inspects trusted local output without changing model-sharing policy.
+func ReadLocalOutput(record Record, query Query) (Page, error) {
+	return readOutput(record, query, variables.Snapshot{})
+}
+
+// readOutput applies the shared bounded search and display normalization rules.
+func readOutput(record Record, query Query, snapshot variables.Snapshot) (Page, error) {
+	page := Page{Lines: []OutputLine{}, Truncated: record.Truncated}
 
 	if len(query.Pattern) > 4096 || query.From < 0 || query.Before < 0 || query.After < 0 || query.Before > 10 || query.After > 10 || query.Limit < 0 || query.Limit > 200 {
 		return page, errors.New("invalid output query bounds")
