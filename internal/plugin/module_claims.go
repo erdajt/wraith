@@ -64,7 +64,7 @@ func (e *engine) poisonModule(name, reason string) error {
 func (e *engine) closingModuleValue(L *lua.LState, name string, pkg, loaded, preload *lua.LTable) (lua.LValue, error) {
 	if !e.closing || pkg == nil || loaded == nil || preload == nil || L.GetGlobal("package") != pkg ||
 		pkg.RawGetString("loaded") != loaded || pkg.RawGetString("preload") != preload ||
-		L.Get(lua.RegistryIndex).(*lua.LTable).RawGetString("_LOADED") != loaded {
+		L.Get(lua.RegistryIndex).(*lua.LTable).RawGetString("_LOADED") != loaded || L.GetMetatable(loaded) != lua.LNil {
 		return lua.LNil, errors.New("module tables changed during cleanup; use /reload")
 	}
 	value := loaded.RawGetString(name)

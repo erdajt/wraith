@@ -34,7 +34,7 @@ func TestModuleCheckRestoresCoroutineAfterRollback(t *testing.T) {
 		return 0
 	})
 	main.SetGlobal("check", main.NewFunction(func(L *lua.LState) int {
-		if err := e.checkModuleResolution(L, "target", resolution); err != nil {
+		if _, err := e.checkModuleResolution(L, "target", resolution, moduleVerification{phase: "before"}); err != nil {
 			L.RaiseError("%v", err)
 		}
 		return 0
@@ -67,7 +67,7 @@ func TestModuleCheckRejectsChangedRegistrations(t *testing.T) {
 				e.moduleProviders[0].resolve = e.L.NewFunction(func(*lua.LState) int { return 0 })
 			}
 			before := e.moduleProviders[0]
-			if err := e.checkModuleResolution(e.L, "target", resolution); err == nil {
+			if _, err := e.checkModuleResolution(e.L, "target", resolution, moduleVerification{phase: "before"}); err == nil {
 				t.Fatal("accepted changed registration")
 			}
 			if e.moduleProviders[0] != before || when == "before" && calls != 0 || when == "after" && calls != 1 {
@@ -88,11 +88,11 @@ function verify(name) assert(name=="target"); pcall(dispatch,"child"); return fa
 		t.Fatal(err)
 	}
 	resolution := &moduleResolution{provider: e.moduleProviders[0], plugin: "provider", check: e.L.GetGlobal("verify").(*lua.LFunction)}
-	if err := e.checkModuleResolution(e.L, "target", resolution); err == nil || len(e.manifest.Diagnostics) != 0 || e.moduleViolation != nil {
+	if _, err := e.checkModuleResolution(e.L, "target", resolution, moduleVerification{phase: "before"}); err == nil || len(e.manifest.Diagnostics) != 0 || e.moduleViolation != nil {
 		t.Fatal("caught nested violation escaped or leaked")
 	}
 	resolution.check = e.L.NewFunction(func(L *lua.LState) int { L.Push(lua.LFalse); return 1 })
-	if err := e.checkModuleResolution(e.L, "target", resolution); err != nil {
+	if _, err := e.checkModuleResolution(e.L, "target", resolution, moduleVerification{phase: "before"}); err != nil {
 		t.Fatalf("check treated its ignored return as a rejection: %v", err)
 	}
 }
@@ -110,7 +110,7 @@ func TestModuleCheckUnwindsDeadline(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
 	defer cancel()
 	e.L.SetContext(ctx)
-	if err := e.checkModuleResolution(e.L, "target", resolution); err == nil {
+	if _, err := e.checkModuleResolution(e.L, "target", resolution, moduleVerification{phase: "before"}); err == nil {
 		t.Fatal("check exceeded deadline without failure")
 	}
 	if e.owner != "config" || len(e.moduleResolving) != 0 || len(e.packageCalls) != 0 || e.moduleViolation != nil || e.L.GetTop() != 0 {

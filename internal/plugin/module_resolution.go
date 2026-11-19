@@ -15,6 +15,12 @@ type moduleResolution struct {
 	activate, check *lua.LFunction
 }
 
+type moduleVerification struct {
+	phase    string
+	proof    lua.LValue
+	executed bool
+}
+
 // decodeModuleResolution detaches a strict continuation from mutable resolver output.
 func decodeModuleResolution(L *lua.LState, value lua.LValue, provider moduleProvider) (*moduleResolution, error) {
 	if value == lua.LNil {
@@ -137,14 +143,22 @@ func (e *engine) resolveModuleProvider(L *lua.LState, name string) (result *modu
 }
 
 // checkModuleResolution validates a captured continuation under its original resolver owner.
-func (e *engine) checkModuleResolution(L *lua.LState, name string, resolution *moduleResolution) error {
-	return e.withModuleMetadata(L, name, func() error {
+func (e *engine) checkModuleResolution(L *lua.LState, name string, resolution *moduleResolution, verification moduleVerification) (lua.LValue, error) {
+	if !slices.Contains([]string{"validate", "before", "after"}, verification.phase) {
+		return lua.LNil, errors.New("invalid module verification phase")
+	}
+	if verification.proof == nil {
+		verification.proof = lua.LNil
+	}
+	value := lua.LValue(lua.LNil)
+	err := e.withModuleMetadata(L, name, func() error {
 		if resolution == nil || resolution.check == nil || !slices.Contains(e.moduleProviders, resolution.provider) {
 			return errors.New("module resolver registration changed")
 		}
 		e.owner = resolution.provider.owner
 		e.packageCalls = append(e.packageCalls, resolution.provider.owner)
-		if err := L.CallByParam(lua.P{Fn: resolution.check, NRet: 0, Protect: true}, lua.LString(name)); err != nil {
+		if err := L.CallByParam(lua.P{Fn: resolution.check, NRet: 1, Protect: true},
+			lua.LString(name), lua.LString(verification.phase), verification.proof, lua.LBool(verification.executed)); err != nil {
 			return err
 		}
 		if ctx := L.Context(); ctx != nil && ctx.Err() != nil {
@@ -153,6 +167,11 @@ func (e *engine) checkModuleResolution(L *lua.LState, name string, resolution *m
 		if !slices.Contains(e.moduleProviders, resolution.provider) {
 			return errors.New("module resolver registration changed")
 		}
+		value = L.Get(-1)
 		return nil
 	})
+	if err != nil {
+		return lua.LNil, err
+	}
+	return value, nil
 }
