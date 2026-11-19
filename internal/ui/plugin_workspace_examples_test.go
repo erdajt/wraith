@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -12,7 +13,11 @@ import (
 // exampleFixture loads the shipped module through the real package lifecycle.
 func exampleFixture(t *testing.T, name, options, extra string) *App {
 	t.Helper()
-	path, err := filepath.Abs(filepath.Join("..", "..", "examples", "plugins", name+".lua"))
+	root := os.Getenv("WRAITH_TEST_EXAMPLES")
+	if root == "" {
+		root = filepath.Join("..", "..", "examples", "plugins")
+	}
+	path, err := filepath.Abs(filepath.Join(root, name+".lua"))
 	if err != nil {
 		t.Fatal(err)
 	}

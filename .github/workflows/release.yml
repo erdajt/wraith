@@ -37,14 +37,9 @@ jobs:
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-z0-9.]+)?$ ]]
           mkdir -p dist
           for arch in amd64 arm64; do
-            package="wraith_${RELEASE_TAG}_linux_${arch}"
-            mkdir -p "dist/$package"
-            GOARCH="$arch" go build -trimpath -ldflags "-s -w -X main.version=$RELEASE_TAG" -o "dist/$package/wraith" ./cmd/wraith
-            cp README.md LICENSE NOTICE "dist/$package/"
-            mkdir -p "dist/$package/licenses"
-            cp third_party/gopher-lua/LICENSE "dist/$package/licenses/gopher-lua.txt"
-            cp -R docs "dist/$package/"
-            tar -C dist -czf "dist/$package.tar.gz" "$package"
+            binary="$RUNNER_TEMP/wraith-$arch"
+            GOARCH="$arch" go build -trimpath -ldflags "-s -w -X main.version=$RELEASE_TAG" -o "$binary" ./cmd/wraith
+            tools/package-release.sh "$RELEASE_TAG" "$arch" "$binary" dist
           done
           cd dist || exit 1
           sha256sum ./*.tar.gz > checksums.txt

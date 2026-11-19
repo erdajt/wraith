@@ -1,8 +1,11 @@
 # lua runtime
 
-`gopher-lua/` contains [gopher-lua v1.1.2](https://github.com/yuin/gopher-lua/tree/v1.1.2).
-its [mit license](gopher-lua/LICENSE) and upstream tests remain included.
-the root `go.mod` selects this copy through a local replacement.
+in a source checkout, `gopher-lua/` contains [gopher-lua v1.1.2](https://github.com/yuin/gopher-lua/tree/v1.1.2).
+the checkout includes its [mit license](gopher-lua/LICENSE) and upstream tests.
+the checkout's root `go.mod` selects this copy through a local replacement.
+
+binary archives include this provenance note and the license. they do not include
+the runtime source or tests; use a source checkout at the matching release tag.
 
 the patch fixes protected-call unwinding:
 
@@ -14,7 +17,7 @@ the patch fixes protected-call unwinding:
 both generator sources and generated sources carry the same changes. upstream
 formatting and comments remain unchanged outside the patch.
 
-run the runtime and application regressions from the repository root:
+run the runtime and application regressions from the source checkout root:
 
 ```sh
 go test github.com/yuin/gopher-lua

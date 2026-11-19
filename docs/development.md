@@ -31,7 +31,16 @@ fuzz corpus entries that reproduce bugs belong beside the affected package. test
 
 [checks](../.github/workflows/ci.yml) runs on pushes and pull requests. it installs checksum-pinned LuaLS 3.19.1, verifies modules, formatting and vet; runs race/integration tests; fuzzes terminal parsing, modal editing and lua json validation; builds linux amd64 and arm64; and uploads coverage. it can also be called by the release workflow.
 
-[release](../.github/workflows/release.yml) handles version tags matching `v*`, then validates a semantic version before packaging. it runs the reusable checks first, builds both linux binaries with the version embedded, bundles the documentation, license, copyright notice and bundled lua runtime notice, and writes sha256 checksums. it creates a draft github release for review. nothing is published by a local build.
+[release](../.github/workflows/release.yml) handles version tags matching `v*`, then validates a semantic version before packaging. it runs the reusable checks first, builds both linux binaries with the version embedded, bundles the documentation, executable example packages, license, copyright notice and lua runtime provenance, and writes sha256 checksums. it creates a draft github release for review. nothing is published by a local build.
+
+[`tools/package-release.sh`](../tools/package-release.sh) is the shared archive builder. run it with a version, architecture, built binary and output directory:
+
+```sh
+tools/package-release.sh v1.0.0 amd64 bin/wraith dist
+go test -race ./internal/ui -run '^TestReleaseArchive'
+```
+
+artifact tests build and extract both architecture layouts, compare documentation and examples against the checkout, check example installation links and license paths, then run the extracted task, history, files and scope packages through their lifecycle tests. the git example uses a temporary local repository. these tests validate archive contents; cross-built binaries are not executed by this check.
 
 actions are pinned to commit hashes, dependency updates are scheduled through dependabot, and only the packaging job has repository write permission. the workflow files require a github remote and a push before github can execute them; local tests do not establish that a hosted run passed.
 
