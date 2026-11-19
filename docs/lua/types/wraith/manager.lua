@@ -21,9 +21,9 @@
 ---@field description? string
 ---@class Wraith.PackageSpec
 ---@field [1]? string repository shorthand, remote url, local path or existing package name
----@field repo? string same source forms as the first position; choose one source
+---@field repo? string same source forms as the first position; choose one repository field
 ---@field url? string explicit https, ssh, scp-style or file remote
----@field dir? string absolute, home-relative or relative to the effective config directory
+---@field dir? string local checkout override; absolute, home-relative or relative to the effective config directory
 ---@field name? string defaults to lowercase repository/directory basename
 ---@field main? string explicit entrypoint; otherwise infer from the selected plugin's lua directory
 ---@field dependencies? Wraith.PackageDeclarations bare dependency names refer to existing declarations
@@ -50,6 +50,9 @@
 ---@field source Wraith.PackageSource
 ---@field selector Wraith.PackageSelector
 ---@field pin boolean
+---@field declared_source Wraith.PackageSource original repository or standalone local source
+---@field declared_selector Wraith.PackageSelector original revision intent before local override
+---@field declared_pin boolean original pin before local override
 ---@field main? string declared entrypoint, remains nil when inferred
 ---@field dependencies string[]
 ---@field enabled boolean

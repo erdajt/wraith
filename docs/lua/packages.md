@@ -46,7 +46,7 @@ this URL illustrates the format; it is not a published package. open `/packages`
 
 ## specification
 
-choose exactly one source:
+choose a repository or local directory. a repository declaration may also specify `dir` to use a local checkout:
 
 | field | meaning |
 | --- | --- |
@@ -56,7 +56,15 @@ choose exactly one source:
 | `url = "..."` | HTTPS, SSH, SCP-style SSH, `file://` or an absolute local git repository path |
 | `dir = "packages/review"` | local module root relative to the effective config directory; home expansion, absolute paths and explicit symlinks also work |
 
-HTTP, remote helper protocols, embedded URL credentials, query strings, fragments and control characters are rejected. local directories are never installed, rewritten or deleted. they cannot select or pin git revisions.
+HTTP, remote helper protocols, embedded URL credentials, query strings, fragments and control characters are rejected. local directories are never installed, rewritten or deleted. a standalone local package cannot select or pin git revisions. a repository with a local override retains its declared revision settings but uses an unpinned local source operationally.
+
+```lua
+{ "owner/review", branch = "work", dir = "~/projects/review" }
+```
+
+this keeps the repository identity `review`, even if the directory has a different basename. remove `dir` to use the declared Git source again. `{ name = "review", dir = "..." }` and `{ "review", dir = "..." }` fragments can supply the override before or after the repository declaration. a positional local path cannot also specify `dir`.
+
+normalized callback specifications expose `source`, `selector` and `pin` for the effective checkout, plus `declared_source`, `declared_selector` and `declared_pin` for the original intent. those declared fields do not enter the installation descriptor or lock file. changing an exposed source still requires `/reload`.
 
 | field | default and behavior |
 | --- | --- |
@@ -183,7 +191,7 @@ later scalar fields replace earlier values, including `false`; absent values rem
 
 nested option maps merge; lists replace unless their dotted path is in `opts_extend`. its value is inherited by later fragments, not applied retroactively. `wraith.json.null` removes a map field. callbacks run on activation with detached arguments; returning a table replaces the options, while returning `nil` retains mutations. `enabled` runs during normalization, once per effective contribution and dependency revision. pruning can change that revision; unchanged predicates do not run again. callbacks receive detached merged fields and effective dependency names, without recursive `specs` declarations. normalization stops after 1,024 combined `cond` and `enabled` predicate calls.
 
-the first surviving source stays selected. remote `.git` suffix variants match, but different transports or local directories conflict. choose one revision selector across the merged plugin; unlike lazy.nvim, a later branch does not silently coexist with an earlier commit. option recipes and callback results have a 4096-entry, depth-16 structural limit; declarations allow 256 fragments and 63 enabled plugins.
+the first surviving repository stays selected. remote `.git` suffix variants match, but different repositories or transports conflict. the last surviving `dir` overrides the checkout; removing its scope restores the previous directory or repository. a removed repository cannot supply metadata to a surviving local declaration. choose one revision selector across the merged plugin; unlike lazy.nvim, a later branch does not silently coexist with an earlier commit. merged selectors, trigger counts and option bounds are validated before evaluating gates for that revision. option recipes and callback results have a 4096-entry, depth-16 structural limit; declarations allow 256 fragments and 63 enabled plugins.
 
 ## package view
 

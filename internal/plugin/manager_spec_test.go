@@ -94,7 +94,7 @@ func TestManagerSpecsRejectInvalidGraphsBeforeInitialization(t *testing.T) {
  rejects({{"owner/app",keys={{"<Enter>","command.help"},{"<CR>","command.help"}}}},"duplicate key trigger")
  assert(spec.normalize({{"owner/prefix",keys={{"z","command.help"},{"zz","command.help"}}}}))
  rejects({{"owner/app",unknown=true}},"unknown package field")
- rejects({{name="empty",dir=""}},"nonempty string")
+ rejects({{name="empty",dir=""}},"invalid local package directory")
  for _,field in ipairs({"name","main","priority","keys","dependencies"}) do
   local value={"owner/app"}; value[field]=false
   local ok=pcall(spec.normalize,{value}); assert(not ok,field)
