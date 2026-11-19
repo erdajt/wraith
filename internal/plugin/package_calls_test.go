@@ -129,6 +129,11 @@ func TestPackageMethodsKeepInvocationChildrenAndTargetOwnership(t *testing.T) {
 	if result.Err != nil || len(result.Effects) != 1 || result.Invocation != call.ID || result.Effects[0].Owner == "config" {
 		t.Fatalf("method lost invocation or target ownership: %+v", result)
 	}
+	if result.Manifest != nil {
+		if err := r.Acknowledge(result.Revision, true); err != nil {
+			t.Fatal(err)
+		}
+	}
 	pending, err = r.Submit(result.Effects[0].Argument, "", nil, r.Manifest().Config)
 	if err != nil {
 		t.Fatal(err)
