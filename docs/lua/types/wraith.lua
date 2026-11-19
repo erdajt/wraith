@@ -45,6 +45,7 @@ wraith = wraith or {}
 wraith.api_version = 2
 wraith.capabilities = {
   trusted_lua = true, runtimepath = true, stdpath = true, modules = true, module_sources = true, module_loading = true,
+  module_providers = true,
   live_registration = true, custom_events = true, plugin_lifecycle = true,
   scheduling = true, json = true, filesystem = true, http = true,
   timers = true, managed_resources = true, process = true,
@@ -171,8 +172,26 @@ function wraith.runtimepath.remove(path) end
 ---@field path? string absolute source path for files
 ---@field identity string opaque source identity, stable within this runtime
 ---@field load fun(): ... runs the bound source afresh and preserves all return values
+
+---@alias Wraith.ModuleCheckPhase 'validate'|'before'|'after'
+---@alias Wraith.ModuleCheck fun(name: string, phase: Wraith.ModuleCheckPhase, proof: any, executed: boolean): any
+---@class Wraith.ModuleResolution
+---@field plugin string selected lifecycle module
+---@field activate fun(name: string) loads the selected plugin under the resolver owner
+---@field check Wraith.ModuleCheck verifies source/cache ownership; before returns the token passed to after
+---@alias Wraith.ModuleResolver fun(name: string): Wraith.ModuleResolution?
+
 ---@class Wraith.ModulesAPI
 wraith.modules = wraith.modules or {}
+--- registers owned metadata resolution; nil means a miss, at most 32 providers.
+---@param resolve Wraith.ModuleResolver
+---@return string provider_id opaque id, never reused within this runtime
+function wraith.modules.provider(resolve) end
+
+--- removes a live provider owned by the caller; prior claims and poison remain.
+---@param provider_id string
+function wraith.modules.remove_provider(provider_id) end
+
 --- reports the native require marker without evaluating a module or exposing its cache value.
 ---@param name string dotted module name, at most 128 bytes
 ---@return boolean loading

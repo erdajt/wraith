@@ -31,3 +31,23 @@ end)
 ---@type Wraith.PackageOperation
 local operation = { id = "invalid", phase = "publishing", state = "invented", restart_required = {} } -- expect: assign-type-mismatch
 print(operation)
+
+wraith.modules.provider(false) -- expect: param-type-mismatch
+wraith.modules.remove_provider(1) -- expect: param-type-mismatch
+
+---@type Wraith.ModuleCheckPhase
+local phase = "resolve" -- expect: assign-type-mismatch
+---@type Wraith.ModuleResolution
+local descriptor = { plugin = false, activate = function() end, check = function() end } -- expect: assign-type-mismatch
+---@type Wraith.ModuleResolver
+local invalid_resolver = function() return false end -- expect: return-type-mismatch
+---@type Wraith.ModuleResolution
+local invalid_activation = { plugin = "review", activate = false, check = function() end } -- expect: assign-type-mismatch
+---@type Wraith.ModuleCheck
+local invalid_check = function(name, current, proof, executed)
+  ---@type string
+  local text = executed -- expect: assign-type-mismatch
+  print(name, current, proof, text)
+end
+invalid_check("review", "before", nil, "yes") -- expect: param-type-mismatch
+print(phase, descriptor, invalid_resolver, invalid_activation, invalid_check)

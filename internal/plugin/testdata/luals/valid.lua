@@ -136,3 +136,29 @@ for _, operation in ipairs(operations) do
     print(operation.error, manager.recover().root)
   end
 end
+
+---@type Wraith.ModuleCheck
+local verify_source = function(name, phase, proof, executed)
+  if phase == "before" then
+    return { name = name, executed = executed }
+  elseif phase == "after" then
+    assert(proof.name == name and proof.executed == executed)
+  else
+    assert(phase == "validate" and proof == nil and not executed)
+  end
+end
+---@type Wraith.ModuleResolver
+local resolve_source = function(name)
+  if name ~= "review" then
+    return nil
+  end
+  return {
+    plugin = "plugins.review",
+    activate = function(module_name)
+      wraith.plugins.load("plugins." .. module_name)
+    end,
+    check = verify_source,
+  }
+end
+local provider_id = wraith.modules.provider(resolve_source)
+wraith.modules.remove_provider(provider_id)
