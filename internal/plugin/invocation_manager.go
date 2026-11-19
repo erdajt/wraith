@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -45,7 +46,7 @@ func (m *invocationManager) begin(parent context.Context, request InvocationRequ
 	}
 	m.serial++
 	id := fmt.Sprintf("%s.invocation.%d", m.prefix, m.serial)
-	record := &invocationRecord{context: ctx, binding: request.Binding, cancel: cancel, wake: make(chan struct{}, 1), children: map[string]bool{}}
+	record := &invocationRecord{context: ctx, binding: request.Binding, data: bytes.Clone(data), cancel: cancel, wake: make(chan struct{}, 1), children: map[string]bool{}}
 	m.records[id] = record
 	select {
 	case m.starts <- InvocationStart{ID: id, Binding: request.Binding, Data: data}:

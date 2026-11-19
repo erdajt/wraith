@@ -30,7 +30,8 @@ func (e *engine) installDialogs(api *lua.LTable) {
 			e.serial++
 			dialog.ID = fmt.Sprintf("lua.schedule.%d", e.serial)
 			dialog.Owner, dialog.Lease = e.owner, e.surfaceLease()
-			e.scheduled[dialog.ID] = scheduledCall{function: callback, owner: e.owner}
+			dialog.Invocation = e.invocationID
+			e.scheduled[dialog.ID] = scheduledCall{function: callback, owner: e.owner, invocation: e.invocationID}
 			published := false
 			defer func() {
 				if !published {

@@ -162,6 +162,7 @@ func (e *engine) emit(L *lua.LState, effect Effect) {
 		L.RaiseError("invalid input mode: %s", effect.Argument)
 	}
 	effect.Owner, effect.Lease = e.owner, e.surfaceLease()
+	effect.Invocation = e.invocationID
 	e.effects = append(e.effects, effect)
 }
 

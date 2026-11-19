@@ -10,8 +10,9 @@ import (
 )
 
 type resourceCallback struct {
-	function *lua.LFunction
-	owner    string
+	function   *lua.LFunction
+	owner      string
+	invocation string
 }
 
 type resourceState struct {
@@ -37,7 +38,7 @@ func (e *engine) reserveResource(L *lua.LState, kind string, callback *lua.LFunc
 	if err != nil {
 		L.RaiseError("%v", err)
 	}
-	e.resources[id] = resourceCallback{function: callback, owner: e.owner}
+	e.resources[id] = resourceCallback{function: callback, owner: e.owner, invocation: e.invocationID}
 	if e.setup {
 		e.manifest.Resources = append(e.manifest.Resources, id)
 	} else {
@@ -115,7 +116,7 @@ func (r *Runtime) SubmitResource(event ResourceEvent, snapshot any, c config.Con
 		return nil, err
 	}
 	event.Data = detached.(map[string]any)
-	return r.submit("", "", snapshot, c, &event)
+	return r.submit("", "", snapshot, c, &event, nil)
 }
 
 // callbackContext attaches a copied worker event to current workspace state on the VM owner.

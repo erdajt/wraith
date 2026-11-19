@@ -37,15 +37,17 @@ type Manifest struct {
 type Effect struct {
 	Name, Argument string
 	Owner, Lease   string
+	Invocation     string
 	Config         *config.Config
 	Data           any
 }
 
 type Result struct {
-	Effects  []Effect
-	Err      error
-	Manifest *Manifest
-	Revision uint64
+	Invocation string
+	Effects    []Effect
+	Err        error
+	Manifest   *Manifest
+	Revision   uint64
 }
 
 type request struct {
@@ -55,6 +57,7 @@ type request struct {
 	reply           *completion
 	revision        uint64
 	resource        *ResourceEvent
+	invocation      *InvocationStart
 }
 
 type completion struct {
@@ -68,6 +71,7 @@ func (c *completion) resolve(result Result) {
 }
 
 type Runtime struct {
+	invocations                             *invocationManager
 	hooks                                   chan hookCall
 	startupInstalled                        bool
 	startupReady                            chan struct{}
@@ -90,7 +94,10 @@ type Runtime struct {
 }
 
 type engine struct {
-	jsonCodec jsonCodec
+	invocations        *invocationManager
+	invocationID       string
+	acceptedExtensions map[string]bool
+	jsonCodec          jsonCodec
 	extensionState
 	pureHook      bool
 	hookViolation error
@@ -141,10 +148,12 @@ func Open(parent context.Context, directory string, c config.Config, actions []s
 	}
 	r.services = newResourceManager(ctx)
 	r.surfaces = newSurfaceStore(r.services.prefix)
+	r.invocations = newInvocationManager(r.services.prefix, r.services.discard)
 	ready := make(chan error, 1)
 	go r.serve(directory, detached, actions, ready)
 	go func() {
 		<-ctx.Done()
+		r.invocations.close()
 		r.services.close()
 		r.surfaces.close()
 		r.cancelWaiters()
@@ -171,11 +180,11 @@ func (r *Runtime) Manifest() Manifest {
 
 // Submit queues a callback or coalesced event without blocking the ui or retaining mutable state.
 func (r *Runtime) Submit(callback, event string, snapshot any, c config.Config) (<-chan Result, error) {
-	return r.submit(callback, event, snapshot, c, nil)
+	return r.submit(callback, event, snapshot, c, nil, nil)
 }
 
 // submit queues detached state while preserving an optional managed resource identity.
-func (r *Runtime) submit(callback, event string, snapshot any, c config.Config, resource *ResourceEvent) (<-chan Result, error) {
+func (r *Runtime) submit(callback, event string, snapshot any, c config.Config, resource *ResourceEvent, invocation *InvocationStart) (<-chan Result, error) {
 	data, err := json.Marshal(snapshot)
 	if err != nil || len(data) > 1<<20 {
 		return nil, errors.New("plugin snapshot exceeds value limits")
@@ -194,7 +203,7 @@ func (r *Runtime) submit(callback, event string, snapshot any, c config.Config, 
 		return nil, err
 	}
 	reply := &completion{channel: make(chan Result, 1)}
-	req := request{callback: callback, event: event, data: data, config: copy, reply: reply, revision: r.revision, resource: resource}
+	req := request{callback: callback, event: event, data: data, config: copy, reply: reply, revision: r.revision, resource: resource, invocation: invocation}
 	if previous, ok := r.pending[event]; (event == "window_changed" || event == "session_changed" || event == "buffer_changed") && ok {
 		previous.reply.resolve(Result{})
 		delete(r.waiting, previous.reply)
@@ -217,6 +226,7 @@ func (r *Runtime) submit(callback, event string, snapshot any, c config.Config, 
 // Close cancels queued and running callbacks; teardown continues on the VM owner.
 func (r *Runtime) Close() {
 	r.cancel()
+	r.invocations.close()
 	r.services.close()
 	r.surfaces.close()
 	r.cancelWaiters()
@@ -231,7 +241,7 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 	defer close(r.notices)
 	defer r.cancel()
 	defer r.cancelWaiters()
-	e, err := load(r.ctx, directory, c, actions, runtimeHosts{r.services, r.surfaces})
+	e, err := load(r.ctx, directory, c, actions, runtimeHosts{r.services, r.surfaces, r.invocations})
 	if err != nil {
 		ready <- err
 		return

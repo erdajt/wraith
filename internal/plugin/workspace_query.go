@@ -8,6 +8,7 @@ import (
 )
 
 type WorkspaceQuery struct {
+	Invocation             string
 	ID, Owner, Lease, Kind string
 	Options                WorkspaceOptions
 }

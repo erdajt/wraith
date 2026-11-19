@@ -17,8 +17,9 @@ import (
 )
 
 type runtimeHosts struct {
-	services *resourceManager
-	surfaces *SurfaceStore
+	services    *resourceManager
+	surfaces    *SurfaceStore
+	invocations *invocationManager
 }
 
 // load initializes trusted user code without sourcing project files or environment module paths.
@@ -30,10 +31,11 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	L := lua.NewState(lua.Options{SkipOpenLibs: true})
 	e := &engine{L: L, manifest: Manifest{Config: c}, functions: map[string]*lua.LFunction{}, events: map[string][]string{}, actions: map[string]bool{}, builtins: map[string]bool{}, setup: true}
 	if len(hosts) > 0 {
-		e.services, e.surfaces = hosts[0].services, hosts[0].surfaces
+		e.services, e.surfaces, e.invocations = hosts[0].services, hosts[0].surfaces, hosts[0].invocations
 	} else {
 		e.services = newResourceManager(parent)
 		e.surfaces = newSurfaceStore(e.services.prefix)
+		e.invocations = newInvocationManager(e.services.prefix, e.services.discard)
 	}
 	e.surfaceOwners = map[string]string{"config": e.surfaces.OwnerLease("config"), "core": e.surfaces.OwnerLease("core")}
 	e.initOwnership()
@@ -44,6 +46,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	ok := false
 	defer func() {
 		if !ok {
+			e.invocations.close()
 			e.services.close()
 			e.surfaces.close()
 			err = errors.Join(err, e.teardown(0))

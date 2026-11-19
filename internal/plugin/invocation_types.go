@@ -57,6 +57,7 @@ type Invocation struct {
 type invocationRecord struct {
 	context  context.Context
 	binding  InvocationBinding
+	data     json.RawMessage
 	cancel   context.CancelFunc
 	stop     func() bool
 	wake     chan struct{}

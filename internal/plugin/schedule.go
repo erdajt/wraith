@@ -10,8 +10,9 @@ import (
 )
 
 type scheduledCall struct {
-	function *lua.LFunction
-	owner    string
+	function   *lua.LFunction
+	owner      string
+	invocation string
 }
 
 type schedulerState struct {
@@ -64,7 +65,7 @@ func (e *engine) installSchedule(api *lua.LTable) {
 		}
 		e.serial++
 		id := fmt.Sprintf("lua.schedule.%d", e.serial)
-		e.scheduled[id] = scheduledCall{function: function, owner: e.owner}
+		e.scheduled[id] = scheduledCall{function: function, owner: e.owner, invocation: e.invocationID}
 		if e.setup {
 			e.startup = append(e.startup, id)
 		} else {

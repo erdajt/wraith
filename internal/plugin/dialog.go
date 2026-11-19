@@ -19,6 +19,7 @@ type DialogItem struct {
 
 // Dialog describes an owned select or input request without retaining Lua values in the UI.
 type Dialog struct {
+	Invocation       string
 	ID, Owner, Lease string
 	Kind, Title      string
 	Initial          string

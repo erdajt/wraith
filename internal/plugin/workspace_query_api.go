@@ -39,7 +39,8 @@ func (e *engine) installWorkspaceQueries(api *lua.LTable) {
 			e.serial++
 			query.ID = fmt.Sprintf("lua.schedule.%d", e.serial)
 			query.Owner, query.Lease = e.owner, e.surfaceLease()
-			e.scheduled[query.ID] = scheduledCall{function: callback, owner: e.owner}
+			query.Invocation = e.invocationID
+			e.scheduled[query.ID] = scheduledCall{function: callback, owner: e.owner, invocation: e.invocationID}
 			published := false
 			defer func() {
 				if !published {
