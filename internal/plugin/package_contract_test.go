@@ -44,7 +44,16 @@ func TestShroudPackageContracts(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
 			options := managerOptions(t)
 			script := filepath.Join(options.Packages[0].Directory, "tests", file.Name())
-			openManagerRuntime(t, fmt.Sprintf("dofile(%q)", script), options)
+			r := openManagerRuntime(t, fmt.Sprintf(`local check=dofile(%q)
+if check~=nil then
+ assert(type(check)=="function","contract must return a function or nil")
+ wraith.commands.create("contract.check",check)
+end`, script), options)
+			for _, command := range r.Manifest().Commands {
+				if command.Name == "contract.check" {
+					managerCommand(t, r, command.Name, "")
+				}
+			}
 		})
 	}
 	if count == 0 {

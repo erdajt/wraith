@@ -36,7 +36,7 @@
 ---@field init? fun(spec: Wraith.NormalizedPackage): Wraith.PackageCleanup?
 ---@field opts_extend? string[] dotted list paths, inherited by later fragments
 ---@field opts? table|fun(spec: Wraith.NormalizedPackage, opts: table): table? nil retains in-place changes
----@field config? boolean|fun(spec: Wraith.NormalizedPackage, opts: table): Wraith.PackageCleanup? false skips module setup
+---@field config? boolean|fun(spec: Wraith.NormalizedPackage, opts: table): Wraith.PackageCleanup? false skips configuration only without opts
 ---@field branch? string choose one branch, tag or commit
 ---@field tag? string
 ---@field commit? string full lowercase commit id

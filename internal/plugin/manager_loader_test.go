@@ -73,10 +73,15 @@ func TestManagerLoaderOwnsInitActivationAndDependencyCleanup(t *testing.T) {
 	}
 }
 
-func TestManagerLazyCommandRetriesAfterRejectedActivation(t *testing.T) {
+// TestManagerLazyCommandRetriesAfterFailedAndRejectedActivation preserves the original trigger across both rollback paths.
+func TestManagerLazyCommandRetriesAfterFailedAndRejectedActivation(t *testing.T) {
 	r := openManagerRuntime(t, `local loader, attempts= nil,0
  package.preload.app=function() return {setup=function()
   attempts=attempts+1
+  if attempts==1 then
+   wraith.commands.create("partial",function() end)
+   error("setup failed")
+  end
   wraith.commands.create("app",function(ctx) wraith.notify(attempts..":"..ctx.argument) end,"app",{arguments=true})
  end} end
  package.preload.manager_test=function() return {setup=function() end,
@@ -102,21 +107,28 @@ func TestManagerLazyCommandRetriesAfterRejectedActivation(t *testing.T) {
 			t.Fatal(err)
 		}
 		result := receiveResult(t, ch)
-		if result.Err != nil {
-			t.Fatal(result.Err)
-		}
 		return result
 	}
+	failed := submit("failed")
+	if failed.Err == nil || failed.Manifest != nil || len(failed.Effects) != 0 {
+		t.Fatalf("failed setup published changes: %+v", failed)
+	}
+	for _, command := range r.Manifest().Commands {
+		if command.Name == "partial" {
+			t.Fatal("failed setup retained its partial command")
+		}
+	}
+
 	first := submit("rejected")
-	if first.Manifest == nil || r.Acknowledge(first.Revision, false) != nil {
+	if first.Err != nil || first.Manifest == nil || r.Acknowledge(first.Revision, false) != nil {
 		t.Fatalf("first activation did not request publication: %+v", first)
 	}
 	second := submit("accepted")
-	if second.Manifest == nil || r.Acknowledge(second.Revision, true) != nil || len(second.Effects) != 1 || second.Effects[0].Argument != "accepted" {
+	if second.Err != nil || second.Manifest == nil || r.Acknowledge(second.Revision, true) != nil || len(second.Effects) != 1 || second.Effects[0].Argument != "accepted" {
 		t.Fatalf("restored lazy stub did not retry original command: %+v", second)
 	}
 	final := submit("delivered")
-	if len(final.Effects) != 1 || final.Effects[0].Argument != "2:delivered" {
+	if final.Err != nil || len(final.Effects) != 1 || final.Effects[0].Argument != "3:delivered" {
 		t.Fatalf("final package callback did not replace restored stub: %+v", final)
 	}
 }

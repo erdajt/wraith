@@ -74,11 +74,11 @@ HTTP, remote helper protocols, embedded URL credentials, query strings, fragment
 | `init` | function receiving a copied specification; runs during manager setup, before activation |
 | `opts` | nested maps merge across fragments; lists replace; a function mutates inherited options or returns their replacement |
 | `opts_extend` | dotted option paths whose lists append from this declaration onward |
-| `config` | function receiving `(spec, opts)`, or `false` to require the module without calling its setup function |
+| `config` | function receiving `(spec, opts)`, or `true` for automatic setup; `false` skips configuration only when `opts` is absent |
 
-without a custom `config`, activation requires `main` and calls `module.setup(opts)` if that field exists. a module can also be a library with no setup function. `config = function(spec, opts) ... end` controls loading itself and may require a different module. the installer does not assume a conventional module entry point or run build scripts.
+`opts` or `config = true` requests automatic setup. the entry module must return a table with callable `setup`; missing setup is an error. `config = false` with options still requests setup, matching lazy.nvim. without options or a truthy config, activation exposes the runtime path without requiring a module. `main` and `opts_extend` alone do not request setup. `config = function(spec, opts) ... end` controls loading itself and may require a different module.
 
-`init` and setup/config may return a cleanup function. automatic module loading also calls `module.teardown()` when present. owned registrations, views and managed resources are released by the host. arbitrary file writes, module-cache changes and other external effects cannot be rolled back.
+`init` and setup/config may return a cleanup function. automatic setup also calls `module.teardown()` when present; custom config does not gain an implicit module teardown. failed setup rejects activation and rolls back owned registrations, unlike lazy.nvim’s logged setup errors. lazy triggers remain available for retry. arbitrary file writes, module-cache changes and other external effects cannot be rolled back.
 
 ```lua
 {
