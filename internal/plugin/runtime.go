@@ -21,6 +21,7 @@ type Command struct {
 var ErrQueueFull = errors.New("plugin callback queue is full")
 
 type Manifest struct {
+	Surface     []SurfaceMutation
 	Resources   []string
 	Config      config.Config
 	Events      []string
@@ -63,6 +64,7 @@ func (c *completion) resolve(result Result) {
 }
 
 type Runtime struct {
+	surfaces                                *SurfaceStore
 	services                                *resourceManager
 	discarded                               map[string]bool
 	diagnostics                             []string
@@ -83,6 +85,8 @@ type engine struct {
 	ownershipLayers
 	schedulerState
 	resourceState
+	surfaceState
+	surfaces       *SurfaceStore
 	services       *resourceManager
 	L              *lua.LState
 	manifest       Manifest
@@ -122,11 +126,13 @@ func Open(parent context.Context, directory string, c config.Config, actions []s
 		pending: map[string]request{}, waiting: map[*completion]struct{}{},
 	}
 	r.services = newResourceManager(ctx)
+	r.surfaces = newSurfaceStore(r.services.prefix)
 	ready := make(chan error, 1)
 	go r.serve(directory, detached, actions, ready)
 	go func() {
 		<-ctx.Done()
 		r.services.close()
+		r.surfaces.close()
 		r.cancelWaiters()
 	}()
 	select {
@@ -198,6 +204,7 @@ func (r *Runtime) submit(callback, event string, snapshot any, c config.Config, 
 func (r *Runtime) Close() {
 	r.cancel()
 	r.services.close()
+	r.surfaces.close()
 	r.cancelWaiters()
 }
 
@@ -210,7 +217,7 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 	defer close(r.notices)
 	defer r.cancel()
 	defer r.cancelWaiters()
-	e, err := load(r.ctx, directory, c, actions, r.services)
+	e, err := load(r.ctx, directory, c, actions, runtimeHosts{r.services, r.surfaces})
 	if err != nil {
 		ready <- err
 		return

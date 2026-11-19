@@ -25,7 +25,6 @@ type SurfaceStore struct {
 	serial   uint64
 	closed   bool
 	owners   map[string]string
-	revoked  map[string]bool
 	reserved map[string]surfaceReservation
 	buffers  map[string]*surfaceBufferRecord
 	windows  map[string]SurfaceWindow
@@ -35,7 +34,7 @@ type SurfaceStore struct {
 // newSurfaceStore separates persistent display resources from managed worker capacity.
 func newSurfaceStore(prefix string) *SurfaceStore {
 	s := &SurfaceStore{
-		prefix: prefix, owners: map[string]string{}, revoked: map[string]bool{},
+		prefix: prefix, owners: map[string]string{},
 		reserved: map[string]surfaceReservation{}, buffers: map[string]*surfaceBufferRecord{},
 		windows: map[string]SurfaceWindow{}, regions: map[string]SurfaceRegion{},
 	}
@@ -44,11 +43,11 @@ func newSurfaceStore(prefix string) *SurfaceStore {
 	return s
 }
 
-// registerOwner issues one lease for an active package generation and never revives a revoked owner.
+// registerOwner issues a fresh lease after the VM owner verifies the package is still loaded.
 func (s *SurfaceStore) registerOwner(owner string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.closed || owner == "" || s.revoked[owner] {
+	if s.closed || owner == "" {
 		return "", errors.New("surface owner is no longer active")
 	}
 	if lease := s.owners[owner]; lease != "" {
@@ -120,7 +119,6 @@ func (s *SurfaceStore) RevokeOwner(owner string) SurfaceDelta {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.owners, owner)
-	s.revoked[owner] = true
 	delta := SurfaceDelta{Operation: "owner.delete"}
 	for id, reservation := range s.reserved {
 		if reservation.owner == owner {

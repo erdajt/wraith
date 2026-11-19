@@ -54,6 +54,11 @@ func (e *engine) unloadPlugin(name string) error {
 	e.effects = slices.DeleteFunc(e.effects, func(effect Effect) bool {
 		return effect.Name == "resource.activate" && slices.Contains(e.released, effect.Argument)
 	})
+	if _, ok := e.surfaceOwners[record.owner]; ok {
+		e.surfaceReleased = append(e.surfaceReleased, record.owner)
+		delete(e.surfaceOwners, record.owner)
+	}
+	e.manifest.Surface = slices.DeleteFunc(e.manifest.Surface, func(mutation SurfaceMutation) bool { return mutation.Owner == record.owner })
 	e.removeOwnerRegistrations(record.owner)
 	for key, layers := range e.bindingLayers {
 		e.bindingLayers[key] = slices.DeleteFunc(layers, func(layer ownedBinding) bool {

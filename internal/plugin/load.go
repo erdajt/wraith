@@ -16,19 +16,26 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+type runtimeHosts struct {
+	services *resourceManager
+	surfaces *SurfaceStore
+}
+
 // load initializes trusted user code without sourcing project files or environment module paths.
-func load(parent context.Context, directory string, c config.Config, actions []string, managers ...*resourceManager) (out *engine, err error) {
+func load(parent context.Context, directory string, c config.Config, actions []string, hosts ...runtimeHosts) (out *engine, err error) {
 	directory, err = filepath.Abs(directory)
 	if err != nil {
 		return nil, err
 	}
 	L := lua.NewState(lua.Options{SkipOpenLibs: true})
 	e := &engine{L: L, manifest: Manifest{Config: c}, functions: map[string]*lua.LFunction{}, events: map[string][]string{}, actions: map[string]bool{}, builtins: map[string]bool{}, setup: true}
-	if len(managers) > 0 {
-		e.services = managers[0]
+	if len(hosts) > 0 {
+		e.services, e.surfaces = hosts[0].services, hosts[0].surfaces
 	} else {
 		e.services = newResourceManager(parent)
+		e.surfaces = newSurfaceStore(e.services.prefix)
 	}
+	e.surfaceOwners = map[string]string{"config": e.surfaces.OwnerLease("config"), "core": e.surfaces.OwnerLease("core")}
 	e.initOwnership()
 	for _, name := range actions {
 		e.actions[name] = true
@@ -38,6 +45,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	defer func() {
 		if !ok {
 			e.services.close()
+			e.surfaces.close()
 			err = errors.Join(err, e.teardown(0))
 			L.Close()
 		}
@@ -96,6 +104,10 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	slices.Sort(e.manifest.Events)
 	e.services.discard(e.released)
 	e.released = nil
+	for _, owner := range e.surfaceReleased {
+		e.surfaces.RevokeOwner(owner)
+	}
+	e.surfaceReleased = nil
 	hooks := e.disposing
 	e.disposing = nil
 	if err := e.disposeHooks(hooks); err != nil {

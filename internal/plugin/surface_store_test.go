@@ -29,8 +29,9 @@ func TestSurfaceReservationsAndOwnerLeases(t *testing.T) {
 	if store.Valid(mutation) || len(store.reserved) != 0 {
 		t.Fatal("revoked owner retained work")
 	}
-	if _, err := store.registerOwner("config"); err == nil {
-		t.Fatal("revoked package generation revived")
+	lease, err := store.registerOwner("config")
+	if err != nil || lease == mutation.Lease || store.Valid(mutation) {
+		t.Fatal("fresh owner lease accepted an obsolete receipt")
 	}
 	store.close()
 	if store.OwnerValid("core", store.OwnerLease("core")) {

@@ -19,6 +19,7 @@ type registryState struct {
 	ownershipLayers
 	schedulerState
 	resourceState
+	surfaceState
 	manifest        Manifest
 	functions       map[string]*lua.LFunction
 	events          map[string][]string
@@ -45,7 +46,7 @@ func (e *engine) captureRegistry() registryState {
 		events[name] = slices.Clone(ids)
 	}
 	return registryState{
-		ownershipLayers: e.cloneOwnership(), schedulerState: e.cloneScheduler(), resourceState: e.cloneResources(),
+		ownershipLayers: e.cloneOwnership(), schedulerState: e.cloneScheduler(), resourceState: e.cloneResources(), surfaceState: e.cloneSurfaces(),
 		manifest: cloneManifest(e.manifest), functions: maps.Clone(e.functions), events: events,
 		actions: maps.Clone(e.actions), loaded: maps.Clone(e.loaded), packages: e.clonePackages(),
 		cleanup: slices.Clone(e.cleanup), disposing: slices.Clone(e.disposing),
@@ -77,6 +78,7 @@ func (e *engine) restoreRegistry(s registryState) []cleanupHook {
 		}
 	}
 	e.services.discard(abandoned)
+	e.restoreSurfaces(s.surfaceState)
 	e.resourceState = s.resourceState
 	e.schedulerState = s.schedulerState
 	e.packages = s.packages
@@ -148,6 +150,10 @@ func (r *Runtime) publish(e *engine, revision uint64) bool {
 		e.rollback = nil
 		e.services.discard(e.released)
 		e.released = nil
+		for _, owner := range e.surfaceReleased {
+			e.surfaces.RevokeOwner(owner)
+		}
+		e.surfaceReleased = nil
 		r.mu.Lock()
 		r.manifest, r.revision = cloneManifest(e.manifest), revision
 		r.mu.Unlock()
