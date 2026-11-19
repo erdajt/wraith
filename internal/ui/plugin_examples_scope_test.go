@@ -23,6 +23,20 @@ func TestScopePackageChecksApprovedEditsAndUnloadsPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 	runScheduledProgram(t, a, tea.Batch(a.callPlugin("", "ready", ""), a.startPluginResources()))
+	applyPluginEvents(t, a, a.runCommand("scope"))
+	for range 3 {
+		applyPluginEvents(t, a, a.runAction("window.close", ""))
+		applyPluginEvents(t, a, a.runCommand("scope"))
+	}
+	count := 0
+	for _, buffer := range a.plugins.Surfaces().Index().Buffers {
+		if buffer.Name == "scope" {
+			count++
+		}
+	}
+	if count != 1 || a.focusedSurfaceView() == nil {
+		t.Fatal("scope did not reuse its closed view")
+	}
 	a.Update(a.approve(proposal{Command: "printf allowed"})())
 	if a.popup == nil || a.popup.Kind != "approval" {
 		t.Fatalf("allowed command missing approval: %s", a.notice)

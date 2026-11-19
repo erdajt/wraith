@@ -37,6 +37,12 @@ func TestFilesPackageReadsRealGitStateAndReleasesSurfaces(t *testing.T) {
 	if !found {
 		t.Fatalf("real git output missing: %s", a.notice)
 	}
+	applyPluginEvents(t, a, a.runAction("window.close", ""))
+	a.notice = ""
+	runScheduledProgram(t, a, tea.Batch(a.runCommand("changed-files"), a.watchPluginResources(a.plugins)))
+	if a.focusedSurfaceView() == nil {
+		t.Fatal("closed changed-files view did not reopen")
+	}
 	applyPluginEvents(t, a, a.runCommand("unloadproof"))
 	for _, item := range a.plugins.Surfaces().Index().Buffers {
 		if item.Name == "changed files" {

@@ -1,6 +1,7 @@
 return {
   setup = function(options)
     assert(type(options.path) == "string", "scope requires a policy file")
+    local buffer, window
     local policy, failure, revision = nil, "policy has not been loaded", 0
     local function reload()
       policy, failure = nil, "policy is loading"
@@ -36,8 +37,16 @@ return {
       else
         lines[#lines + 1] = failure
       end
-      local buffer = wraith.buffers.create({ name = "scope", lines = lines })
-      wraith.windows.open(buffer, { position = "right", focus = true, title = "scope" })
+      if buffer and pcall(wraith.buffers.get, buffer) then
+        wraith.buffers.set_lines(buffer, 0, -1, lines)
+      else
+        buffer = wraith.buffers.create({ name = "scope", lines = lines })
+      end
+      if window and pcall(wraith.windows.get, window) then
+        wraith.windows.focus(window)
+      else
+        window = wraith.windows.open(buffer, { position = "right", focus = true, title = "scope" })
+      end
     end)
     wraith.hooks.add("before_command", function(ctx)
       if not policy then return { decision = "deny", reason = failure } end

@@ -1,12 +1,19 @@
 return {
   setup = function(options)
-    local buffer, process
-    local function refresh()
-      if process then return end
+    local buffer, window, process
+    local function refresh(context)
+      if buffer and not pcall(wraith.buffers.get, buffer) then buffer = nil end
       if not buffer then
         buffer = wraith.buffers.create({ name = "changed files", lines = { "reading git status" } })
-        wraith.windows.open(buffer, { position = "right", focus = true, title = "changed files" })
       end
+      if context then
+        if window and pcall(wraith.windows.get, window) then
+          wraith.windows.focus(window)
+        else
+          window = wraith.windows.open(buffer, { position = "right", focus = true, title = "changed files" })
+        end
+      end
+      if process then return end
       process = wraith.process.start({
         argv = { "git", "status", "--porcelain=v1", "-z" },
         cwd = options.directory or wraith.session.get().directory,
