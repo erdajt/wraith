@@ -172,3 +172,29 @@ func TestStartupSchedulingSharesPendingCapacityWithReadyCallbacks(t *testing.T) 
 		t.Fatalf("ready callbacks failed: %v", r.Diagnostics())
 	}
 }
+
+func TestUnloadingQueuedOwnerReclaimsDeferredEffectCapacity(t *testing.T) {
+	r := openTestRuntime(t, `
+ package.preload.retired=function() return {setup=function()
+ wraith.events.on("ready",function() for i=1,64 do wraith.schedule(function() error("retired") end) end end)
+ end} end
+ wraith.plugins.load("retired")
+ wraith.events.on("ready",function() wraith.plugins.unload("retired") end)
+ wraith.events.on("ready",function() for i=1,64 do wraith.schedule(function() end) end end)
+ for i=1,64 do wraith.schedule(function() end) end
+ `)
+	ch, err := r.Submit("", "ready", nil, r.Manifest().Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := receiveResult(t, ch)
+	if got.Err != nil || len(got.Effects) != 128 || got.Manifest == nil {
+		t.Fatalf("retired work occupied delivery slots: %+v", got)
+	}
+	if err := r.Acknowledge(got.Revision, true); err != nil {
+		t.Fatal(err)
+	}
+	if len(r.Diagnostics()) != 0 {
+		t.Fatalf("ready callbacks failed: %v", r.Diagnostics())
+	}
+}

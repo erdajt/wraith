@@ -58,7 +58,8 @@ func (e *engine) unloadPlugin(name string) error {
 		e.refreshOwnedCommand(key)
 	}
 	e.effects = slices.DeleteFunc(e.effects, func(effect Effect) bool {
-		return e.callbackOwners[effect.Name] == record.owner
+		_, pending := e.scheduled[effect.Argument]
+		return e.callbackOwners[effect.Name] == record.owner || (effect.Name == "schedule.callback" && !pending)
 	})
 	e.cleanup = slices.DeleteFunc(e.cleanup, func(hook cleanupHook) bool {
 		if hook.owner != record.owner {
