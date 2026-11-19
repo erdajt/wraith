@@ -43,6 +43,24 @@ func TestRuntimeRejectsSyntax(t *testing.T) {
 	}
 }
 
+func TestManagedCapabilitiesExposeCallableServices(t *testing.T) {
+	openTestRuntime(t, `local services = {
+ json={"json", "encode", "decode", "array", "object"},
+ filesystem={"fs", "read", "read_async", "write", "write_async", "stat", "list", "mkdir", "remove", "rename"},
+ http={"http", "request"}, timers={"timer", "start"},
+ managed_resources={"resource", "status", "cancel", "release"},
+ process={"process", "start", "write", "close_stdin", "output"},
+}
+for capability, methods in pairs(services) do
+ assert(wraith.capabilities[capability], "missing capability: " .. capability)
+ local service = wraith[methods[1]]
+ for index = 2, #methods do
+  assert(type(service[methods[index]]) == "function", "missing method: " .. methods[index])
+ end
+end
+assert(wraith.json.decode(wraith.json.encode(wraith.json.array({1, wraith.json.null})))[2] == wraith.json.null)`)
+}
+
 func TestTrustedRuntimeReadsExternalFilesAndModules(t *testing.T) {
 	dir, external := t.TempDir(), t.TempDir()
 	module := filepath.Join(external, "answer.lua")
