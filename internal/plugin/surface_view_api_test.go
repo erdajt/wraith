@@ -53,3 +53,32 @@ assert(type(wraith.ui.select) == "function" and type(wraith.ui.input) == "functi
 		t.Fatalf("failed creates retained reservations: %+v", runtime.Surfaces().reserved)
 	}
 }
+
+func TestLuaWindowsPreserveNativeAndOwnedHandles(t *testing.T) {
+	r := openTestRuntime(t, `
+local b = wraith.buffers.create({lines={"owned"}})
+local w = wraith.windows.open(b)
+wraith.commands.create("mixed",function()
+ local windows = wraith.windows.list()
+ assert(#windows == 2 and windows[1].id == 7 and windows[2].id == w)
+ wraith.windows.split("vertical")
+ wraith.windows.focus(windows[1].id)
+ wraith.windows.close()
+ wraith.windows.focus(w)
+end)
+`)
+	manifest := r.Manifest()
+	for _, mutation := range manifest.Surface {
+		if _, err := r.Surfaces().Apply(mutation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pending, err := r.Submit(manifest.Commands[0].Callback, "", map[string]any{"windows": []any{map[string]any{"id": 7}}}, manifest.Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := receiveResult(t, pending)
+	if got.Err != nil || len(got.Effects) != 4 || got.Effects[0].Name != "window.split_vertical" || got.Effects[1].Argument != "7" || got.Effects[2].Argument != "0" || got.Effects[3].Name != "surface.apply" {
+		t.Fatalf("mixed window actions: %+v", got)
+	}
+}

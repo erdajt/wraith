@@ -5,7 +5,8 @@ import lua "github.com/yuin/gopher-lua"
 // installWindows exposes independent views over shared buffers with staged layout changes.
 func (e *engine) installWindows(api *lua.LTable) {
 	L := e.L
-	methods := L.NewTable()
+	methods := api.RawGetString("windows").(*lua.LTable)
+	nativeFocus, nativeClose := methods.RawGetString("focus"), methods.RawGetString("close")
 	methods.RawSetString("open", L.NewFunction(func(L *lua.LState) int {
 		bufferID := L.CheckString(1)
 		window := SurfaceWindow{Kind: "split", Position: "right"}
@@ -19,10 +20,32 @@ func (e *engine) installWindows(api *lua.LTable) {
 		return 1
 	}))
 	methods.RawSetString("list", L.NewFunction(func(L *lua.LState) int {
-		return pushSurface(L, e.previewSurfaces().Index().Windows)
+		result := L.NewTable()
+		if !e.setup && !e.closing {
+			if native, ok := e.snapshotValue(L, "windows").(*lua.LTable); ok {
+				native.ForEach(func(_, value lua.LValue) { result.Append(value) })
+			}
+		}
+		pushSurface(L, e.previewSurfaces().Index().Windows)
+		if owned, ok := L.Get(-1).(*lua.LTable); ok {
+			owned.ForEach(func(_, value lua.LValue) { result.Append(value) })
+		}
+		L.Pop(1)
+		L.Push(result)
+		return 1
 	}))
 	for _, kind := range []string{"get", "configure", "focus", "close"} {
 		methods.RawSetString(kind, L.NewFunction(func(L *lua.LState) int {
+			if (kind == "focus" || kind == "close") && L.Get(1).Type() != lua.LTString {
+				function := nativeFocus
+				if kind == "close" {
+					function = nativeClose
+				}
+				if err := L.CallByParam(lua.P{Fn: function, NRet: 0, Protect: true}, L.Get(1)); err != nil {
+					L.RaiseError("%v", err)
+				}
+				return 0
+			}
 			id := L.CheckString(1)
 			window, err := e.previewSurfaces().Window(id)
 			if err != nil {
