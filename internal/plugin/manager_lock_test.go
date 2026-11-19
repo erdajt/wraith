@@ -11,11 +11,8 @@ import (
 func TestManagerLockPreservesExactBaselineAndRejectsCorruption(t *testing.T) {
 	directory := t.TempDir()
 	lock := filepath.Join(directory, "wraith-lock.json")
-	path, err := filepath.Abs("lua/wraith/manager")
-	if err != nil {
-		t.Fatal(err)
-	}
-	openTestRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.spec"]=assert(loadfile(%q))
+	path := managerModule(t, "")
+	openManagerRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.spec"]=assert(loadfile(%q))
 local codec=dofile(%q)
 local empty,baseline=codec.read(%q)
 assert(empty.version==1 and next(empty.packages)==nil and baseline==nil)
@@ -53,11 +50,8 @@ func TestManagerLockRejectsSymlinkAndOversizedInputs(t *testing.T) {
 	if err := os.Symlink(target, link); err != nil {
 		t.Fatal(err)
 	}
-	path, err := filepath.Abs("lua/wraith/manager")
-	if err != nil {
-		t.Fatal(err)
-	}
-	openTestRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.spec"]=assert(loadfile(%q))
+	path := managerModule(t, "")
+	openManagerRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.spec"]=assert(loadfile(%q))
 local codec=dofile(%q)
 assert(not pcall(codec.read,%q))
 assert(not pcall(codec.read,%q))`, filepath.Join(path, "spec.lua"), filepath.Join(path, "store_lock.lua"), link, target))

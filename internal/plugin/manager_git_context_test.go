@@ -27,7 +27,7 @@ func TestManagerGitDoesNotExecuteCurrentRepositoryConfiguration(t *testing.T) {
 	managerGit(t, repository, "config", "core.sshCommand", quote(filepath.Join(directory, "project-ssh")))
 	t.Chdir(repository)
 	t.Setenv("PATH", directory+string(os.PathListSeparator)+os.Getenv("PATH"))
-	r := openTestRuntime(t, `require("wraith.manager.store_git_command").run(
+	r := openManagerRuntime(t, `require("wraith.manager.store_git_command").run(
  {"ls-remote","--exit-code","--","ssh://example.invalid/repository","HEAD"},nil,{},function(result)
   assert(result.state=="failed")
   wraith.notify("complete")
@@ -49,7 +49,7 @@ func TestManagerGitInitializesExplicitCheckoutOutsideCurrentRepository(t *testin
 	managerGit(t, repository, "config", "init.defaultBranch", "unrelated")
 	t.Chdir(repository)
 	target := filepath.Join(t.TempDir(), "checkout")
-	r := openTestRuntime(t, fmt.Sprintf(`require("wraith.manager.store_git").prepare(
+	r := openManagerRuntime(t, fmt.Sprintf(`require("wraith.manager.store_git").prepare(
  {source={kind="git",url=%q},selector={kind="head"}},%q,{},function(result)
   assert(result.state=="completed" and result.commit==%q,result.error)
   wraith.notify("complete")

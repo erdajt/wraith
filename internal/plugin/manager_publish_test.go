@@ -25,7 +25,7 @@ func managerPublication(t *testing.T, directory, id, baseline string) (string, s
 // managerPublishRuntime invokes the shipped transaction through actual managed flock and shell processes.
 func managerPublishRuntime(t *testing.T, directory, id, before, candidate, expected string, absent bool) *Runtime {
 	t.Helper()
-	return openTestRuntime(t, fmt.Sprintf(`require("wraith.manager.store_publish").commit({
+	return openManagerRuntime(t, fmt.Sprintf(`require("wraith.manager.store_publish").commit({
  lockfile=%q,guard=%q,baseline=%q,candidate=%q,generation=%q,absent=%t}, {},function(result)
  assert(result.state==%q,result.error)
  wraith.notify("complete")
@@ -96,7 +96,7 @@ func TestManagerPublicationSerializesConcurrentChildren(t *testing.T) {
 			t.Run(id, func(t *testing.T) {
 				t.Parallel()
 				before, candidate := managerPublication(t, directory, id, "")
-				r := openTestRuntime(t, fmt.Sprintf(`require("wraith.manager.store_publish").commit({
+				r := openManagerRuntime(t, fmt.Sprintf(`require("wraith.manager.store_publish").commit({
  lockfile=%q,guard=%q,baseline=%q,candidate=%q,generation=%q,absent=true},{},function(result)
  assert(result.state=="installed" or result.state=="conflict",result.error)
  wraith.fs.write(%q,result.state)
@@ -141,7 +141,7 @@ func TestManagerPublicationTimesOutAndRecoversAfterHolderExit(t *testing.T) {
 		t.Fatalf("lock holder: %q, %v", ready, err)
 	}
 	before, candidate := managerPublication(t, directory, "waiting", "")
-	r := openTestRuntime(t, fmt.Sprintf(`require("wraith.manager.store_publish").commit({
+	r := openManagerRuntime(t, fmt.Sprintf(`require("wraith.manager.store_publish").commit({
  lockfile=%q,guard=%q,baseline=%q,candidate=%q,generation="waiting",absent=true},{lock_timeout_ms=20},function(result)
  assert(result.state=="failed" and result.error:find("timed out",1,true),result.error)
  wraith.notify("complete")
@@ -183,7 +183,7 @@ func TestManagerPublicationReconcilesCancellation(t *testing.T) {
   end
  end,{repeat_ms=10})`
 			}
-			r := openTestRuntime(t, fmt.Sprintf(`local operation=require("wraith.manager.store_publish").commit({
+			r := openManagerRuntime(t, fmt.Sprintf(`local operation=require("wraith.manager.store_publish").commit({
  lockfile=%q,guard=%q,baseline=%q,candidate=%q,generation="cancelled",absent=true},{},function(result)
  assert(result.state==%q,result.error)
  wraith.notify("complete")

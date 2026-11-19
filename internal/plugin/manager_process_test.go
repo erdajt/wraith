@@ -12,11 +12,8 @@ func TestManagerProcessUsesControlledEnvironmentAndLiteralArguments(t *testing.T
 	t.Setenv("GIT_CONFIG_KEY_0", "remote.origin.url")
 	t.Setenv("GIT_CONFIG_VALUE_0", "ext::untrusted")
 	t.Setenv("GIT_DIR", "/unexpected/repository")
-	path, err := filepath.Abs("lua/wraith/manager/store_process.lua")
-	if err != nil {
-		t.Fatal(err)
-	}
-	r := openTestRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
+	path := managerModule(t, "store_process.lua")
+	r := openManagerRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
 local process = dofile(%q)
 assert(not pcall(process.environment,{GIT_CONFIG_GLOBAL="/unexpected"}))
 assert(not pcall(process.environment,{GIT_DIR="/unexpected"}))
@@ -31,11 +28,8 @@ end)`, filepath.Join(filepath.Dir(path), "store_wait.lua"), path))
 
 // TestManagerProcessWaitsForReapingAfterCancellation keeps cleanup behind actual worker completion.
 func TestManagerProcessWaitsForReapingAfterCancellation(t *testing.T) {
-	path, err := filepath.Abs("lua/wraith/manager/store_process.lua")
-	if err != nil {
-		t.Fatal(err)
-	}
-	r := openTestRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
+	path := managerModule(t, "store_process.lua")
+	r := openManagerRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
 local process = dofile(%q)
 local operation
 operation=process.start({"/bin/sh","-c","printf ready; sleep 10"},{},function(result)
@@ -110,11 +104,8 @@ func runManagerEvents(t *testing.T, r *Runtime) {
 
 // TestManagerProcessRetainsBoundedFailureOutput keeps diagnostics without accepting truncated protocol data.
 func TestManagerProcessRetainsBoundedFailureOutput(t *testing.T) {
-	path, err := filepath.Abs("lua/wraith/manager/store_process.lua")
-	if err != nil {
-		t.Fatal(err)
-	}
-	r := openTestRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
+	path := managerModule(t, "store_process.lua")
+	r := openManagerRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
 local process = dofile(%q)
 process.start({"/bin/sh","-c","printf '%%070000d' 1; printf failure >&2; exit 7"},{},function(result)
  assert(result.state=="failed" and result.exit_code==7)
@@ -135,11 +126,8 @@ func TestManagerProcessCompletesWithoutStarting(t *testing.T) {
 		{"missing directory", `{"/bin/sh","-c","exit 0"}`, `{cwd="/missing/wraith-test-directory"}`, "", "failed"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			path, err := filepath.Abs("lua/wraith/manager")
-			if err != nil {
-				t.Fatal(err)
-			}
-			r := openTestRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
+			path := managerModule(t, "")
+			r := openManagerRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
 local process=dofile(%q)
 local operation=process.start(%s,%s,function(result)
  assert(result.state==%q and result.error)
@@ -154,7 +142,7 @@ end)
 
 // TestManagerProcessExposesReapCallbackFailure tracks the timer that owns a delayed completion callback.
 func TestManagerProcessExposesReapCallbackFailure(t *testing.T) {
-	r := openTestRuntime(t, `local status=wraith.resource.status
+	r := openManagerRuntime(t, `local status=wraith.resource.status
  local delayed=false
  wraith.resource.status=function(id)
   local value=status(id)

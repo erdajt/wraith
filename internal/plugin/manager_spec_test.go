@@ -2,16 +2,12 @@ package plugin
 
 import (
 	"fmt"
-	"path/filepath"
 	"testing"
 )
 
 func TestManagerDescriptorsDetachSourcesAndRejectUnsafeRefs(t *testing.T) {
-	path, err := filepath.Abs("lua/wraith/manager/spec.lua")
-	if err != nil {
-		t.Fatal(err)
-	}
-	openTestRuntime(t, fmt.Sprintf(`local spec=dofile(%q)
+	path := managerModule(t, "spec.lua")
+	openManagerRuntime(t, fmt.Sprintf(`local spec=dofile(%q)
  local input={name="app",source={kind="git",url="https://example.com/app"},selector={kind="branch",value="feature/status"},dependencies={"lib"}}
  local result=spec.descriptor(input)
  input.source.url="https://changed.example/app"; input.dependencies[1]="changed"
@@ -37,7 +33,7 @@ func TestManagerDescriptorsDetachSourcesAndRejectUnsafeRefs(t *testing.T) {
 }
 
 func TestManagerSpecsResolveNestedImportsAndDependencyOrder(t *testing.T) {
-	openTestRuntime(t, `local spec=require("wraith.manager.spec")
+	openManagerRuntime(t, `local spec=require("wraith.manager.spec")
  package.preload["settings.tools"]=function() return {{"owner/app",dependencies={"library"},cmd="app",opts={nested={value=1}}}} end
  local enabled=0
  local input={{{name="library",dir="/tmp/library",priority=-10}}, {import="settings.tools"},
@@ -59,7 +55,7 @@ func TestManagerSpecsResolveNestedImportsAndDependencyOrder(t *testing.T) {
 }
 
 func TestManagerSpecsRejectInvalidGraphsBeforeInitialization(t *testing.T) {
-	openTestRuntime(t, `local spec=require("wraith.manager.spec")
+	openManagerRuntime(t, `local spec=require("wraith.manager.spec")
  local initialized=0
  local function rejects(value, expected)
   local ok,err=pcall(spec.normalize,value)

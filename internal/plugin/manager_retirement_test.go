@@ -9,7 +9,7 @@ import (
 // TestManagerRetainsCompletedReceiptsAcrossRejectedPublications retries cleanup until the host accepts its releases.
 func TestManagerRetainsCompletedReceiptsAcrossRejectedPublications(t *testing.T) {
 	directory := t.TempDir()
-	r := openTestRuntime(t, fmt.Sprintf(`local store=require("wraith.manager.store").new({}, {root=%q,lockfile=%q})
+	r := openManagerRuntime(t, fmt.Sprintf(`local store=require("wraith.manager.store").new({}, {root=%q,lockfile=%q})
  store.execute((store.plan("install")),function(result)
   if result.state=="installed" then wraith.commands.create("installed",function() end) end
  end)

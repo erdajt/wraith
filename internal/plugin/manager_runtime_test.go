@@ -9,7 +9,7 @@ const managerLocalStore = `package.preload["wraith.manager.store"]=function() re
 `
 
 func TestManagerSetupCanRetryAfterHostRejectsPublication(t *testing.T) {
-	r := openTestRuntime(t, managerLocalStore+`
+	r := openManagerRuntime(t, managerLocalStore+`
  package.preload.app=function() return {setup=function() wraith.commands.create("app",function() wraith.notify("loaded") end) end} end
  wraith.commands.create("configure",function()
   require("wraith.manager").setup({{name="app",dir="/tmp/app",cmd="app"}})
@@ -47,7 +47,7 @@ func TestManagerSetupCanRetryAfterHostRejectsPublication(t *testing.T) {
 }
 
 func TestManagerValidatesViewBeforeInitializingPackages(t *testing.T) {
-	openTestRuntime(t, managerLocalStore+`
+	openManagerRuntime(t, managerLocalStore+`
  local initialized=0
  local specs={{name="app",dir="/tmp/app",lazy=true,init=function() initialized=initialized+1 end}}
  local manager=require("wraith.manager")
@@ -67,7 +67,7 @@ func TestManagerValidatesViewBeforeInitializingPackages(t *testing.T) {
 }
 
 func TestManagerRejectsInvalidOptionsWithoutPublishingPartialSetup(t *testing.T) {
-	r := openTestRuntime(t, managerLocalStore+`
+	r := openManagerRuntime(t, managerLocalStore+`
  local attempts=0
  package.preload.app=function() return {setup=function(opts)
   assert(opts.value=="ready")
@@ -95,7 +95,7 @@ func TestManagerRejectsInvalidOptionsWithoutPublishingPartialSetup(t *testing.T)
 }
 
 func TestManagerLazyEventsReplayOnlyNewListenersAfterPublication(t *testing.T) {
-	r := openTestRuntime(t, managerLocalStore+`
+	r := openManagerRuntime(t, managerLocalStore+`
  wraith.events.on("test.load",function(ctx) wraith.notify("existing:"..ctx.data.value) end)
  package.preload.app=function() return {setup=function()
   wraith.events.on("test.load",function(ctx) wraith.notify("new:"..ctx.data.value) end)

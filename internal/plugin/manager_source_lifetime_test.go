@@ -45,7 +45,7 @@ func TestManagerRejectsChangedCachedSources(t *testing.T) {
 		`spec.name="renamed"`,
 	} {
 		t.Run(change, func(t *testing.T) {
-			openTestRuntime(t, managerSourceFixture(t)+`
+			openManagerRuntime(t, managerSourceFixture(t)+`
     manager.setup({spec}); manager.load("app")
     assert(require("app").version=="a")
     reset()
@@ -63,7 +63,7 @@ func TestManagerRejectsChangedCachedSources(t *testing.T) {
 func TestManagerReconfigurationDistinguishesUnexposedAndCachedModules(t *testing.T) {
 	for _, mode := range []string{"unexposed", "cached", "failed"} {
 		t.Run(mode, func(t *testing.T) {
-			r := openTestRuntime(t, managerSourceFixture(t)+fmt.Sprintf(`
+			r := openManagerRuntime(t, managerSourceFixture(t)+fmt.Sprintf(`
     local mode=%q
     if mode=="failed" then spec.opts.fail=true end
     manager.setup({spec})
@@ -108,7 +108,7 @@ func TestManagerReconfigurationDistinguishesUnexposedAndCachedModules(t *testing
 
 // TestManagerRejectedActivationStillReservesItsModuleSource retains provenance when raw require state survives rollback.
 func TestManagerRejectedActivationStillReservesItsModuleSource(t *testing.T) {
-	r := openTestRuntime(t, managerSourceFixture(t)+`
+	r := openManagerRuntime(t, managerSourceFixture(t)+`
   manager.setup({spec})
   wraith.commands.create("operate",function(ctx)
    if ctx.argument=="load" then manager.load("app"); return end

@@ -3,7 +3,7 @@ package plugin
 import "testing"
 
 func TestManagerViewValidatesBindingsBeforeRegisteringResources(t *testing.T) {
-	openTestRuntime(t, `local view=require("wraith.manager.view")
+	openManagerRuntime(t, `local view=require("wraith.manager.view")
 for _, options in ipairs({
  false, 1, "invalid", {position=false}, {keys=false},
  {unknown=true}, {position="diagonal"}, {keys={missing="m"}},

@@ -9,7 +9,7 @@ import (
 // TestManagerObserverSaturationPreservesCompletion keeps lifecycle release ahead of best-effort diagnostics.
 func TestManagerObserverSaturationPreservesCompletion(t *testing.T) {
 	directory := t.TempDir()
-	r := openTestRuntime(t, fmt.Sprintf(`local store=require("wraith.manager.store").new({}, {root=%q,lockfile=%q})
+	r := openManagerRuntime(t, fmt.Sprintf(`local store=require("wraith.manager.store").new({}, {root=%q,lockfile=%q})
  local completed=false
  store.execute((store.plan("install")),function(result)
   if result.state=="installed" then for i=1,65 do wraith.notify("observer notice") end end

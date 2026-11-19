@@ -36,7 +36,7 @@ func TestManagerPromotionNeverReplacesExistingObjects(t *testing.T) {
 			if state == "dirty" || state == "symlink" {
 				expected = "failed"
 			}
-			r := openTestRuntime(t, fmt.Sprintf(`require("wraith.manager.store_promote").install(
+			r := openManagerRuntime(t, fmt.Sprintf(`require("wraith.manager.store_promote").install(
  {name="app",source={url=%q},commit=%q},%q,%q,{},function(result)
  assert(result.state==%q,result.error)
  if result.state=="completed" then assert(result.path==%q and result.reused==%t) end
@@ -63,7 +63,7 @@ func TestManagerPromotionRejectsParentSymlinks(t *testing.T) {
 	if err := os.Symlink(outside, filepath.Join(root, "objects")); err != nil {
 		t.Fatal(err)
 	}
-	r := openTestRuntime(t, fmt.Sprintf(`require("wraith.manager.store_promote").install(
+	r := openManagerRuntime(t, fmt.Sprintf(`require("wraith.manager.store_promote").install(
  {name="app",source={url="/unused"},commit=string.rep("1",40)},%q,%q,{},function(result)
  assert(result.state=="failed" and result.error:find("not a symlink",1,true))
  wraith.notify("complete")

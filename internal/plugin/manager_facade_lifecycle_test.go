@@ -9,7 +9,7 @@ import (
 // TestManagerStorageRecoversDiscardedActivation permits a new plan after host rejection removed its resource.
 func TestManagerStorageRecoversDiscardedActivation(t *testing.T) {
 	directory := t.TempDir()
-	r := openTestRuntime(t, fmt.Sprintf(`local store=require("wraith.manager.store").new({}, {root=%q,lockfile=%q})
+	r := openManagerRuntime(t, fmt.Sprintf(`local store=require("wraith.manager.store").new({}, {root=%q,lockfile=%q})
  local first
  wraith.commands.create("begin",function()
   first=store.execute((store.plan("install")))
@@ -54,7 +54,7 @@ func TestManagerStorageRecoversDiscardedActivation(t *testing.T) {
 // TestManagerStorageClearsSynchronousReservationFailures permits retry after the worker limit is released.
 func TestManagerStorageClearsSynchronousReservationFailures(t *testing.T) {
 	directory := t.TempDir()
-	r := openTestRuntime(t, fmt.Sprintf(`local store=require("wraith.manager.store").new({}, {root=%q,lockfile=%q})
+	r := openManagerRuntime(t, fmt.Sprintf(`local store=require("wraith.manager.store").new({}, {root=%q,lockfile=%q})
  wraith.commands.create("saturate",function()
   for i=1,32 do wraith.timer.start(3600000,function() end) end
   local plan=store.plan("install")
@@ -100,7 +100,7 @@ func TestManagerStorageClearsSynchronousReservationFailures(t *testing.T) {
 // TestManagerStorageAbandonsFailedNestedCallbacks releases rolled-back source and child receipts before retry.
 func TestManagerStorageAbandonsFailedNestedCallbacks(t *testing.T) {
 	directory := t.TempDir()
-	r := openTestRuntime(t, fmt.Sprintf(`local mkdir=wraith.fs.mkdir_async
+	r := openManagerRuntime(t, fmt.Sprintf(`local mkdir=wraith.fs.mkdir_async
  local failed=false
  wraith.fs.mkdir_async=function(path,options,callback)
   return mkdir(path,options,function(ctx)

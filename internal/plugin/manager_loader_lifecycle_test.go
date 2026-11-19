@@ -7,7 +7,7 @@ import (
 func TestManagerLazyKeysRunOnlyAfterAcceptedActivation(t *testing.T) {
 	for _, target := range []string{"initial", "changed"} {
 		t.Run(target, func(t *testing.T) {
-			r := openTestRuntime(t, `local loader,count=nil,0
+			r := openManagerRuntime(t, `local loader,count=nil,0
  package.preload.app=function() return {} end
  package.preload.manager_test=function() return {setup=function() end,
   configure=function()
@@ -74,7 +74,7 @@ func TestManagerLazyKeysRunOnlyAfterAcceptedActivation(t *testing.T) {
 }
 
 func TestManagerReloadKeepsOldAndNewCleanupClosuresSeparate(t *testing.T) {
-	r := openTestRuntime(t, `local loader,serial,trace=nil,0,{}
+	r := openManagerRuntime(t, `local loader,serial,trace=nil,0,{}
  package.preload.app=function() return {setup=function()
   serial=serial+1; local current=serial
   wraith.commands.create("alive",function() wraith.notify(current) end)
@@ -117,7 +117,7 @@ func TestManagerReloadKeepsOldAndNewCleanupClosuresSeparate(t *testing.T) {
 }
 
 func TestManagerFailedAndRejectedSetupCleanEachActivationOnce(t *testing.T) {
-	r := openTestRuntime(t, `local loader,attempt,cleanup,teardown= nil,0,0,0
+	r := openManagerRuntime(t, `local loader,attempt,cleanup,teardown= nil,0,0,0
  package.preload.app=function() return {setup=function()
   attempt=attempt+1
   if attempt==1 then error("first setup failed") end

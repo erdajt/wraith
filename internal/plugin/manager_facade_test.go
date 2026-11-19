@@ -11,7 +11,7 @@ import (
 func TestManagerStorageFreezesPlansAndIsolatesReentrantObservers(t *testing.T) {
 	source, commit := managerGitFixture(t)
 	directory := t.TempDir()
-	r := openTestRuntime(t, fmt.Sprintf(`local store=require("wraith.manager.store").new({
+	r := openManagerRuntime(t, fmt.Sprintf(`local store=require("wraith.manager.store").new({
  {name="app",source={kind="git",url=%q},selector={kind="head"},pin=false}
  },{root=%q,lockfile=%q})
  local first,summary=store.plan("install")
@@ -37,7 +37,7 @@ func TestManagerStorageFreezesPlansAndIsolatesReentrantObservers(t *testing.T) {
 // TestManagerStorageCancelsFromInitialProgress remembers cancellation before its controller exists.
 func TestManagerStorageCancelsFromInitialProgress(t *testing.T) {
 	directory := t.TempDir()
-	r := openTestRuntime(t, fmt.Sprintf(`local store=require("wraith.manager.store").new({}, {root=%q,lockfile=%q})
+	r := openManagerRuntime(t, fmt.Sprintf(`local store=require("wraith.manager.store").new({}, {root=%q,lockfile=%q})
  local id=store.plan("install")
  store.execute(id,function(progress)
   if progress.state=="preparing" then assert(store.cancel(progress.id)) end
@@ -65,7 +65,7 @@ func TestManagerStorageRecoversReadOnlyNames(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	openTestRuntime(t, fmt.Sprintf(`local store=require("wraith.manager.store").new({}, {root=%q,lockfile=%q})
+	openManagerRuntime(t, fmt.Sprintf(`local store=require("wraith.manager.store").new({}, {root=%q,lockfile=%q})
  assert(store.status()==nil)
  local report=store.recover()
  assert(#report.staging==1 and report.staging[1]=="txn.example")

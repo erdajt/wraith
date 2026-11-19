@@ -45,7 +45,7 @@ func TestManagerLockReadsConcurrentPublication(t *testing.T) {
 				}
 			}
 
-			openTestRuntime(t, fmt.Sprintf(`
+			openManagerRuntime(t, fmt.Sprintf(`
 local codec = require("wraith.manager.store_lock")
 local path, staged, expected = %q, %q, %q
 local stat, calls = wraith.fs.stat, 0
@@ -79,7 +79,7 @@ func TestManagerLockBoundsConflictingObservations(t *testing.T) {
 	for _, schedule := range []string{"inspection failure", "repeated removal"} {
 		t.Run(schedule, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "lock.json")
-			openTestRuntime(t, fmt.Sprintf(`
+			openManagerRuntime(t, fmt.Sprintf(`
 local codec = require("wraith.manager.store_lock")
 local path, schedule = %q, %q
 local stat, list, calls, scans = wraith.fs.stat, wraith.fs.list, 0, 0
@@ -112,7 +112,7 @@ assert(calls == 3 and scans == 3 and raw == nil)
 // TestManagerLockRejectsFailedParentInspection keeps inaccessible parents distinct from absent locks.
 func TestManagerLockRejectsFailedParentInspection(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "lock.json")
-	openTestRuntime(t, fmt.Sprintf(`
+	openManagerRuntime(t, fmt.Sprintf(`
 local codec = require("wraith.manager.store_lock")
 wraith.fs.list = function() error("parent access denied") end
 local ok, err, raw = pcall(codec.read, %q)

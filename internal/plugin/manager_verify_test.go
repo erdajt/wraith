@@ -54,7 +54,7 @@ func TestManagerVerificationPreservesExistingObjects(t *testing.T) {
 				test.change(t, root)
 			}
 			before := managerGit(t, root, "status", "--porcelain=v1", "--untracked-files=all", "--ignored=matching")
-			r := openTestRuntime(t, fmt.Sprintf(`require("wraith.manager.store_verify").check(
+			r := openManagerRuntime(t, fmt.Sprintf(`require("wraith.manager.store_verify").check(
  {source={url=%q},commit=%q},%q,{},function(result)
  assert(result.state==%q,result.error)
  wraith.notify("complete")
@@ -80,7 +80,7 @@ func TestManagerVerificationRejectsWrongRevisionAndRootSymlink(t *testing.T) {
 		{root, strings.Repeat("1", 40), "revision differs"},
 		{alias, commit, "not a symlink"},
 	} {
-		r := openTestRuntime(t, fmt.Sprintf(`require("wraith.manager.store_verify").check(
+		r := openManagerRuntime(t, fmt.Sprintf(`require("wraith.manager.store_verify").check(
  {source={url=%q},commit=%q},%q,{},function(result)
  assert(result.state=="failed" and result.error:find(%q,1,true),result.error)
  wraith.notify("complete")

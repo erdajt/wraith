@@ -41,7 +41,7 @@ func TestReadmeManagerExample(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	r, err := Open(t.Context(), directory, config.Default(), nil, config.Paths{Config: directory, Data: t.TempDir(), Cache: t.TempDir()})
+	r, err := OpenWithOptions(t.Context(), directory, config.Default(), nil, managerOptions(t))
 	if err != nil {
 		t.Fatal(err)
 	}

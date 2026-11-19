@@ -11,7 +11,7 @@ import (
 // TestManagerStorageOptionsValidateWithoutCreatingDirectories keeps configuration passive and detached.
 func TestManagerStorageOptionsValidateWithoutCreatingDirectories(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "absent")
-	openTestRuntime(t, fmt.Sprintf(`local options=require("wraith.manager.store_options")
+	openManagerRuntime(t, fmt.Sprintf(`local options=require("wraith.manager.store_options")
  local original={root=%q,git_env={GIT_ASKPASS="/user/askpass"}}
  local result=options.normalize(original)
  original.git_env.GIT_ASKPASS="changed"
@@ -39,7 +39,7 @@ func TestManagerInspectionDetachesRowsAndRejectsUnavailableRoots(t *testing.T) {
 	if err := os.WriteFile(lockfile, []byte(data), 0600); err != nil {
 		t.Fatal(err)
 	}
-	openTestRuntime(t, fmt.Sprintf(`local specs={
+	openManagerRuntime(t, fmt.Sprintf(`local specs={
  {name="installed",source={kind="git",url="/repo"},selector={kind="head"},pin=false},
  {name="changed",source={kind="git",url="/new"},selector={kind="head"},pin=false},
  {name="missing",source={kind="git",url="/missing"},selector={kind="head"},pin=false},
@@ -70,7 +70,7 @@ func TestManagerInspectionRefusesManagedParentAliases(t *testing.T) {
 	if err := os.WriteFile(lockfile, []byte(data), 0600); err != nil {
 		t.Fatal(err)
 	}
-	openTestRuntime(t, fmt.Sprintf(`local rows=require("wraith.manager.store_inspect").read(
+	openManagerRuntime(t, fmt.Sprintf(`local rows=require("wraith.manager.store_inspect").read(
  {{name="app",source={kind="git",url="/repo"},selector={kind="head"},pin=false}},{root=%q,lockfile=%q})
  assert(rows[1].state=="missing" and not rows[1].path and rows[1].error)`, root, lockfile))
 }

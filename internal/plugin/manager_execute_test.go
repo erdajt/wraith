@@ -11,7 +11,7 @@ import (
 // managerExecute builds a frozen plan and runs the real storage pipeline without UI substitutes.
 func managerExecute(t *testing.T, directory, specs, action, expected string) {
 	t.Helper()
-	r := openTestRuntime(t, fmt.Sprintf(`local options=require("wraith.manager.store_options").normalize({root=%q,lockfile=%q})
+	r := openManagerRuntime(t, fmt.Sprintf(`local options=require("wraith.manager.store_options").normalize({root=%q,lockfile=%q})
  local codec=require("wraith.manager.store_lock")
  local baseline,raw=codec.read(options.lockfile)
  local plan=require("wraith.manager.store_plan").create(%s,baseline,%q)
@@ -101,7 +101,7 @@ func TestManagerRestoreRejectsAChangedBaseline(t *testing.T) {
 	specs := fmt.Sprintf(`{{name="app",source={kind="git",url=%q},selector={kind="head"},pin=false}}`, source)
 	managerExecute(t, directory, specs, "install", "installed")
 	lockfile := filepath.Join(directory, "lock.json")
-	r := openTestRuntime(t, fmt.Sprintf(`local options=require("wraith.manager.store_options").normalize({root=%q,lockfile=%q})
+	r := openManagerRuntime(t, fmt.Sprintf(`local options=require("wraith.manager.store_options").normalize({root=%q,lockfile=%q})
  local baseline,raw=require("wraith.manager.store_lock").read(options.lockfile)
  local plan=require("wraith.manager.store_plan").create(%s,baseline,"restore")
  plan.baseline_raw=raw

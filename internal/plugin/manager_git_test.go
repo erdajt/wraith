@@ -48,7 +48,7 @@ func TestManagerGitStagesExactOfflineRevisions(t *testing.T) {
 	for _, selector := range []string{`selector={kind="head"}`, `selector={kind="branch",value="main"}`, `selector={kind="tag",value="v1"}`, `selector={kind="head"},commit="` + commit + `"`} {
 		t.Run(selector, func(t *testing.T) {
 			target := filepath.Join(t.TempDir(), "checkout")
-			r := openTestRuntime(t, fmt.Sprintf(`local git=require("wraith.manager.store_git")
+			r := openManagerRuntime(t, fmt.Sprintf(`local git=require("wraith.manager.store_git")
 git.prepare({source={kind="git",url=%q},%s},%q,{},function(result)
  assert(result.state=="completed",result.error)
  assert(result.commit==%q and result.path==%q)
@@ -69,7 +69,7 @@ func TestManagerGitRejectsMissingRevisions(t *testing.T) {
 	for _, selector := range []string{`selector={kind="branch",value="absent"}`, `selector={kind="head"},commit="` + strings.Repeat("1", 40) + `"`} {
 		t.Run(selector, func(t *testing.T) {
 			target := filepath.Join(t.TempDir(), "checkout")
-			r := openTestRuntime(t, fmt.Sprintf(`local git=require("wraith.manager.store_git")
+			r := openManagerRuntime(t, fmt.Sprintf(`local git=require("wraith.manager.store_git")
 git.prepare({source={kind="git",url=%q},%s},%q,{},function(result)
  assert(result.state=="failed" and (result.error or result.stderr))
  wraith.notify("complete")
@@ -91,7 +91,7 @@ func TestManagerGitSupportsSHA256(t *testing.T) {
 	managerGit(t, source, "commit", "--quiet", "--allow-empty", "-m", "fixture")
 	commit := managerGit(t, source, "rev-parse", "HEAD")
 	target := filepath.Join(t.TempDir(), "checkout")
-	r := openTestRuntime(t, fmt.Sprintf(`local git=require("wraith.manager.store_git")
+	r := openManagerRuntime(t, fmt.Sprintf(`local git=require("wraith.manager.store_git")
 git.prepare({source={kind="git",url=%q},selector={kind="head"}},%q,{},function(result)
  assert(result.state=="completed",result.error)
  assert(result.commit==%q and #result.commit==64)
@@ -104,7 +104,7 @@ end)`, source, target, commit))
 func TestManagerGitCancellationDoesNotInitializeCheckout(t *testing.T) {
 	source, _ := managerGitFixture(t)
 	target := filepath.Join(t.TempDir(), "checkout")
-	r := openTestRuntime(t, fmt.Sprintf(`local git=require("wraith.manager.store_git")
+	r := openManagerRuntime(t, fmt.Sprintf(`local git=require("wraith.manager.store_git")
 local operation=git.prepare({source={kind="git",url=%q},selector={kind="head"}},%q,{},function(result)
  assert(result.state=="cancelled",result.error)
  wraith.notify("complete")
@@ -118,17 +118,18 @@ operation.cancel()`, source, target))
 
 // TestManagerGitRejectsTruncatedProtocolOutput refuses a successful child with incomplete ref data.
 func TestManagerGitRejectsTruncatedProtocolOutput(t *testing.T) {
+	options := managerOptions(t)
 	bin := t.TempDir()
 	if err := os.WriteFile(filepath.Join(bin, "git"), []byte("#!/bin/sh\nprintf '%070000d' 1\n"), 0700); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	target := filepath.Join(t.TempDir(), "checkout")
-	r := openTestRuntime(t, fmt.Sprintf(`local git=require("wraith.manager.store_git")
+	r := openManagerRuntime(t, fmt.Sprintf(`local git=require("wraith.manager.store_git")
 git.prepare({source={kind="git",url="/unused"},selector={kind="head"}},%q,{},function(result)
  assert(result.state=="failed" and result.error=="git output exceeded its capture limit")
  wraith.notify("complete")
-end)`, target))
+end)`, target), options)
 	runManagerResources(t, r)
 	if _, err := os.Stat(target); !os.IsNotExist(err) {
 		t.Fatalf("truncated ref initialized checkout: %v", err)
@@ -139,7 +140,7 @@ end)`, target))
 func TestManagerGitReportsCompletionCallbackFailure(t *testing.T) {
 	source, _ := managerGitFixture(t)
 	target := filepath.Join(t.TempDir(), "checkout")
-	r := openTestRuntime(t, fmt.Sprintf(`require("wraith.manager.store_git").prepare(
+	r := openManagerRuntime(t, fmt.Sprintf(`require("wraith.manager.store_git").prepare(
  {source={kind="git",url=%q},selector={kind="head"}},%q,{},function() error("completion failed") end)`, source, target))
 	manifest := r.Manifest()
 	if err := r.Activate(manifest.Resources); err != nil {

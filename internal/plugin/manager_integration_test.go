@@ -79,7 +79,7 @@ func TestManagerLoadsImportedLocalDependenciesRelativeToConfig(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	r, err := Open(t.Context(), directory, config.Default(), nil)
+	r, err := OpenWithOptions(t.Context(), directory, config.Default(), nil, managerOptions(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +143,7 @@ func TestManagerPublicInstallAndUpdateKeepRunningCodeUntilFreshRuntime(t *testin
   assert(report.root==%q and type(report.staging)=="table" and type(report.publication)=="table")
  end)
  `, source, root, lockfile, root)
-	before := openTestRuntime(t, setup)
+	before := openManagerRuntime(t, setup)
 	for _, path := range []string{root, lockfile} {
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
 			t.Fatalf("passive setup created %s: %v", path, err)
@@ -157,7 +157,7 @@ func TestManagerPublicInstallAndUpdateKeepRunningCodeUntilFreshRuntime(t *testin
 	}
 	before.Close()
 
-	running := openTestRuntime(t, setup)
+	running := openManagerRuntime(t, setup)
 	result = managerCommand(t, running, "version", "")
 	if len(result.Effects) != 1 || result.Effects[0].Argument != "first" {
 		t.Fatalf("locked initial code did not load: %+v", result)
@@ -175,7 +175,7 @@ func TestManagerPublicInstallAndUpdateKeepRunningCodeUntilFreshRuntime(t *testin
 	}
 	managerCommand(t, running, "recover", "")
 
-	fresh := openTestRuntime(t, setup)
+	fresh := openManagerRuntime(t, setup)
 	result = managerCommand(t, fresh, "version", "")
 	if len(result.Effects) != 1 || result.Effects[0].Argument != "second" {
 		t.Fatalf("fresh runtime ignored updated lock: %+v", result)

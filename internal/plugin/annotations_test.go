@@ -35,7 +35,7 @@ end
 
 // TestLuaAnnotationsMatchRuntime compares executable declarations with the actual public exports.
 func TestLuaAnnotationsMatchRuntime(t *testing.T) {
-	runtime := openTestRuntime(t, annotationInventory+`print(wraith.json.encode(inventory()))`)
+	runtime := openManagerRuntime(t, annotationInventory+`print(wraith.json.encode(inventory()))`)
 	diagnostics := runtime.Diagnostics()
 	if len(diagnostics) != 1 {
 		t.Fatalf("runtime inventory diagnostics: %v", diagnostics)

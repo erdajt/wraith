@@ -2,17 +2,13 @@ package plugin
 
 import (
 	"fmt"
-	"path/filepath"
 	"testing"
 )
 
 // TestManagerPlanFreezesDependencySelection exercises the shipped Lua planner without filesystem mutation.
 func TestManagerPlanFreezesDependencySelection(t *testing.T) {
-	path, err := filepath.Abs("lua/wraith/manager/store_plan.lua")
-	if err != nil {
-		t.Fatal(err)
-	}
-	openTestRuntime(t, fmt.Sprintf(`local planner = dofile(%q)
+	path := managerModule(t, "store_plan.lua")
+	openManagerRuntime(t, fmt.Sprintf(`local planner = dofile(%q)
 local specs = {
  {name="app",source={kind="git",url="https://example.com/app"},selector={kind="branch",value="main"},pin=false,dependencies={"lib"}},
  {name="lib",source={kind="git",url="https://example.com/lib"},selector={kind="tag",value="v1"},pin=true,dependencies={}},
@@ -32,11 +28,8 @@ assert(plan.baseline.packages.lib.commit==string.rep("a",40))`, path))
 
 // TestManagerPlanRejectsConflictsBeforeInstallation keeps invalid graphs from reaching process execution.
 func TestManagerPlanRejectsConflictsBeforeInstallation(t *testing.T) {
-	path, err := filepath.Abs("lua/wraith/manager/store_plan.lua")
-	if err != nil {
-		t.Fatal(err)
-	}
-	openTestRuntime(t, fmt.Sprintf(`local planner = dofile(%q)
+	path := managerModule(t, "store_plan.lua")
+	openManagerRuntime(t, fmt.Sprintf(`local planner = dofile(%q)
 local spec={name="app",source={kind="git",url="https://example.com/app"},selector={kind="branch",value="main"},pin=false,dependencies={}}
 local lock={version=1,generation="before",packages={}}
 assert(not pcall(planner.create,{spec},lock,"remove"))
@@ -57,11 +50,8 @@ assert(planner.create({spec},lock,"restore").packages[1].commit==string.rep("a",
 
 // TestManagerPlanSeparatesLocalPinnedAndMovingSelections covers each installer revision policy.
 func TestManagerPlanSeparatesLocalPinnedAndMovingSelections(t *testing.T) {
-	path, err := filepath.Abs("lua/wraith/manager/store_plan.lua")
-	if err != nil {
-		t.Fatal(err)
-	}
-	openTestRuntime(t, fmt.Sprintf(`local planner = dofile(%q)
+	path := managerModule(t, "store_plan.lua")
+	openManagerRuntime(t, fmt.Sprintf(`local planner = dofile(%q)
 local specs={
  {name="app",source={kind="git",url="https://example.com/app"},selector={kind="branch",value="main"},pin=false,dependencies={"local-lib"}},
  {name="local-lib",source={kind="local",dir="/explicit/development"},selector={kind="head"},pin=false,dependencies={}},
@@ -81,11 +71,8 @@ assert(update.packages[2].previous==string.rep("a",40))`, path))
 
 // TestManagerPlanListsRetiredSelectionsWithoutChangingBaseline makes declarative lock pruning explicit.
 func TestManagerPlanListsRetiredSelectionsWithoutChangingBaseline(t *testing.T) {
-	path, err := filepath.Abs("lua/wraith/manager/store_plan.lua")
-	if err != nil {
-		t.Fatal(err)
-	}
-	openTestRuntime(t, fmt.Sprintf(`local planner=dofile(%q)
+	path := managerModule(t, "store_plan.lua")
+	openManagerRuntime(t, fmt.Sprintf(`local planner=dofile(%q)
 local source={kind="git",url="https://example.com/repo"}
 local selector={kind="head"}
 local entry={source=source,selector=selector,pin=false,commit=string.rep("a",40)}

@@ -5,7 +5,7 @@ import (
 )
 
 func TestManagerLoaderOwnsInitActivationAndDependencyCleanup(t *testing.T) {
-	r := openTestRuntime(t, `local loader
+	r := openManagerRuntime(t, `local loader
  local graph=require("wraith.manager.spec").normalize({
   {name="dependency",dir="/tmp/dependency",lazy=true},
   {name="app",dir="/tmp/app",dependencies={"dependency"},cmd="app",init=function()
@@ -74,7 +74,7 @@ func TestManagerLoaderOwnsInitActivationAndDependencyCleanup(t *testing.T) {
 }
 
 func TestManagerLazyCommandRetriesAfterRejectedActivation(t *testing.T) {
-	r := openTestRuntime(t, `local loader, attempts= nil,0
+	r := openManagerRuntime(t, `local loader, attempts= nil,0
  package.preload.app=function() return {setup=function()
   attempts=attempts+1
   wraith.commands.create("app",function(ctx) wraith.notify(attempts..":"..ctx.argument) end,"app",{arguments=true})

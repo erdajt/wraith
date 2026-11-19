@@ -37,7 +37,7 @@ func TestManagerCleanupPreservesConfirmedOutcome(t *testing.T) {
 	for _, mode := range []string{"cancel", "failure"} {
 		t.Run(mode, func(t *testing.T) {
 			directory := t.TempDir()
-			r := openTestRuntime(t, fmt.Sprintf(`local mode=%q
+			r := openManagerRuntime(t, fmt.Sprintf(`local mode=%q
  local remove=wraith.fs.remove_async
  if mode=="failure" then
   wraith.fs.remove_async=function(path,options,callback)
@@ -63,7 +63,7 @@ func TestManagerCleanupPreservesConfirmedOutcome(t *testing.T) {
 // TestManagerCleanupCallbackFailureRetainsInstalledStatus reconciles failed cleanup without denying a committed graph.
 func TestManagerCleanupCallbackFailureRetainsInstalledStatus(t *testing.T) {
 	directory := t.TempDir()
-	r := openTestRuntime(t, fmt.Sprintf(`local remove=wraith.fs.remove_async
+	r := openManagerRuntime(t, fmt.Sprintf(`local remove=wraith.fs.remove_async
  local failed=false
  wraith.fs.remove_async=function(path,options,callback)
   return remove(path,options,function(ctx)

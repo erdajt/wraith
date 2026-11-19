@@ -9,12 +9,9 @@ import (
 
 // TestManagerFilesChainOwnedAtomicWrites uses the same async lifecycle as installer staging.
 func TestManagerFilesChainOwnedAtomicWrites(t *testing.T) {
-	path, err := filepath.Abs("lua/wraith/manager")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path := managerModule(t, "")
 	target := filepath.Join(t.TempDir(), "candidate.json")
-	r := openTestRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
+	r := openManagerRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
 local files=dofile(%q)
 files.start("write",{%q,"candidate",{overwrite=false}},function(write)
  assert(write.state=="completed" and write.result.bytes==9)
@@ -31,15 +28,12 @@ end)`, filepath.Join(path, "store_wait.lua"), filepath.Join(path, "store_files.l
 
 // TestManagerFilesPreservesExistingCandidate reports no-replace failures without discarding earlier data.
 func TestManagerFilesPreservesExistingCandidate(t *testing.T) {
-	path, err := filepath.Abs("lua/wraith/manager")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path := managerModule(t, "")
 	target := filepath.Join(t.TempDir(), "candidate.json")
 	if err := os.WriteFile(target, []byte("keep"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	r := openTestRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
+	r := openManagerRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
 local files=dofile(%q)
 files.start("write",{%q,"replace",{overwrite=false}},function(result)
  assert(result.state=="failed" and result.error)
@@ -54,12 +48,9 @@ end)`, filepath.Join(path, "store_wait.lua"), filepath.Join(path, "store_files.l
 
 // TestManagerFilesCancelsUnacceptedWrites leaves no staged file when cancellation precedes activation.
 func TestManagerFilesCancelsUnacceptedWrites(t *testing.T) {
-	path, err := filepath.Abs("lua/wraith/manager")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path := managerModule(t, "")
 	target := filepath.Join(t.TempDir(), "candidate.json")
-	r := openTestRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
+	r := openManagerRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
 local files=dofile(%q)
 local operation=files.start("write",{%q,"cancelled"},function(result)
  assert(result.state=="cancelled" and result.error)

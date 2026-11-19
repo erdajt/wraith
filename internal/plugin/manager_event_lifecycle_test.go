@@ -5,7 +5,7 @@ import "testing"
 func TestManagerQueuedEventsStayWithinTheirActivationCohort(t *testing.T) {
 	for _, intervening := range []string{"app", "unrelated", "retired"} {
 		t.Run(intervening, func(t *testing.T) {
-			r := openTestRuntime(t, managerLocalStore+`
+			r := openManagerRuntime(t, managerLocalStore+`
  package.preload.app=function() return {setup=function()
   wraith.events.on("test.load",function(ctx) wraith.notify("app:"..ctx.data.value) end)
  end} end
@@ -82,7 +82,7 @@ func TestManagerQueuedEventsStayWithinTheirActivationCohort(t *testing.T) {
 }
 
 func TestManagerEagerChainPublishesBeforeTargetedReadyDelivery(t *testing.T) {
-	r := openTestRuntime(t, managerLocalStore+`
+	r := openManagerRuntime(t, managerLocalStore+`
  wraith.events.on("ready",function() wraith.notify("existing") end)
  for _,name in ipairs({"first","second"}) do
   package.preload[name]=function() return {setup=function()
