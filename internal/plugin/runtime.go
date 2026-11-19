@@ -103,6 +103,7 @@ type engine struct {
 	moduleClaims       map[string]*moduleClaim
 	moduleDisposals    [][]moduleExecution
 	moduleInvocations  int
+	moduleActivating   []string
 	moduleResolving    []string
 	moduleViolation    error
 	moduleSources      map[string]moduleSource

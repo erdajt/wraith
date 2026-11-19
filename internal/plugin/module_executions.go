@@ -7,10 +7,10 @@ import (
 )
 
 type moduleExecution struct {
-	name, owner string
-	cache       *lua.LTable
-	value       lua.LValue
-	serial      uint64
+	name, owner, plugin string
+	cache               *lua.LTable
+	value               lua.LValue
+	serial              uint64
 }
 
 type registryDisposal struct {
@@ -23,11 +23,14 @@ func (e *engine) recordModuleExecution(name, owner string, cache *lua.LTable) er
 	if e.closing || owner == "" || cache == nil || len(name) > 128 || !namespaceName.MatchString(name) {
 		return errors.New("invalid module execution receipt")
 	}
-	owned := false
-	for _, record := range e.packages {
-		owned = owned || record.owner == owner
+	plugin := ""
+	for name, record := range e.packages {
+		if record.owner == owner {
+			plugin = name
+			break
+		}
 	}
-	if !owned {
+	if plugin == "" {
 		return errors.New("module execution requires a live plugin owner")
 	}
 	if _, exists := e.moduleExecutions[name]; !exists && len(e.moduleExecutions) >= 1024 {
@@ -37,7 +40,7 @@ func (e *engine) recordModuleExecution(name, owner string, cache *lua.LTable) er
 		e.moduleExecutions = map[string]moduleExecution{}
 	}
 	e.serial++
-	e.moduleExecutions[name] = moduleExecution{name: name, owner: owner, cache: cache, value: cache.RawGetString(name), serial: e.serial}
+	e.moduleExecutions[name] = moduleExecution{name: name, owner: owner, plugin: plugin, cache: cache, value: cache.RawGetString(name), serial: e.serial}
 	return nil
 }
 
