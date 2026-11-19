@@ -34,51 +34,90 @@ func (e *engine) installModuleDiscovery(api *lua.LTable) {
 			}
 			result := L.NewTable()
 			for _, source := range sources {
-				record := L.NewTable()
-				record.RawSetString("name", lua.LString(source.name))
-				kind, identity := "file", "file:"+source.path
-				if source.preload != nil {
-					kind, identity = "preload", fmt.Sprintf("preload:%s:%p", source.name, source.preload)
-				} else {
-					record.RawSetString("path", lua.LString(source.path))
-				}
-				record.RawSetString("kind", lua.LString(kind))
-				record.RawSetString("identity", lua.LString(identity))
-				record.RawSetString("load", L.NewFunction(func(L *lua.LState) int {
-					if e.pureHook {
-						e.hookViolation = errors.New("modules.load is unavailable during pure hooks")
-						L.RaiseError("%v", e.hookViolation)
-					}
-					if ctx := L.Context(); ctx != nil && ctx.Err() != nil {
-						L.RaiseError("module %s: %v", source.name, ctx.Err())
-					}
-					chunk := source.preload
-					if chunk == nil {
-						path, err := modulePath(source.root, source.path)
-						if err != nil {
-							L.RaiseError("module %s: %v", source.name, err)
-						}
-						chunk, err = loadFile(L, path)
-						if err != nil {
-							L.RaiseError("module %s: %v", source.name, err)
-						}
-					}
-					if ctx := L.Context(); ctx != nil && ctx.Err() != nil {
-						L.RaiseError("module %s: %v", source.name, ctx.Err())
-					}
-					L.SetTop(0)
-					if err := L.CallByParam(lua.P{Fn: chunk, NRet: lua.MultRet, Protect: true}, lua.LString(source.name)); err != nil {
-						L.RaiseError("module %s: %v", source.name, err)
-					}
-					return L.GetTop()
-				}))
-				result.Append(record)
+				result.Append(e.moduleRecord(L, source))
 			}
 			L.Push(result)
 			return 1
 		},
+		"catalog": func(L *lua.LState) int {
+			ctx := L.Context()
+			if ctx == nil {
+				ctx = context.Background()
+			}
+			sources, err := catalogModules(ctx, L.CheckString(1))
+			if err != nil {
+				L.RaiseError("modules.catalog: %v", err)
+			}
+			result := L.NewTable()
+			for _, source := range sources {
+				result.Append(e.moduleRecord(L, source))
+			}
+			L.Push(result)
+			return 1
+		},
+		"source": func(L *lua.LState) int {
+			ctx := L.Context()
+			if ctx == nil {
+				ctx = context.Background()
+			}
+			source, err := resolveModuleSource(ctx, L.CheckString(1), L.CheckString(2))
+			if err != nil {
+				L.RaiseError("modules.source: %v", err)
+			}
+			if source == nil {
+				L.Push(lua.LNil)
+			} else {
+				L.Push(e.moduleRecord(L, *source))
+			}
+			return 1
+		},
 	}))
-	api.RawGetString("capabilities").(*lua.LTable).RawSetString("modules", lua.LTrue)
+	capabilities := api.RawGetString("capabilities").(*lua.LTable)
+	capabilities.RawSetString("modules", lua.LTrue)
+	capabilities.RawSetString("module_sources", lua.LTrue)
+}
+
+// moduleRecord binds source identity and loading independently of mutable lua metadata.
+func (e *engine) moduleRecord(L *lua.LState, source moduleSource) *lua.LTable {
+	record := L.NewTable()
+	record.RawSetString("name", lua.LString(source.name))
+	kind, identity := "file", "file:"+source.path
+	if source.preload != nil {
+		kind, identity = "preload", fmt.Sprintf("preload:%s:%p", source.name, source.preload)
+	} else {
+		record.RawSetString("path", lua.LString(source.path))
+	}
+	record.RawSetString("kind", lua.LString(kind))
+	record.RawSetString("identity", lua.LString(identity))
+	record.RawSetString("load", L.NewFunction(func(L *lua.LState) int {
+		if e.pureHook {
+			e.hookViolation = errors.New("modules.load is unavailable during pure hooks")
+			L.RaiseError("%v", e.hookViolation)
+		}
+		if ctx := L.Context(); ctx != nil && ctx.Err() != nil {
+			L.RaiseError("module %s: %v", source.name, ctx.Err())
+		}
+		chunk := source.preload
+		if chunk == nil {
+			path, err := modulePath(source.root, source.path)
+			if err != nil {
+				L.RaiseError("module %s: %v", source.name, err)
+			}
+			chunk, err = loadFile(L, path)
+			if err != nil {
+				L.RaiseError("module %s: %v", source.name, err)
+			}
+		}
+		if ctx := L.Context(); ctx != nil && ctx.Err() != nil {
+			L.RaiseError("module %s: %v", source.name, ctx.Err())
+		}
+		L.SetTop(0)
+		if err := L.CallByParam(lua.P{Fn: chunk, NRet: lua.MultRet, Protect: true}, lua.LString(source.name)); err != nil {
+			L.RaiseError("module %s: %v", source.name, err)
+		}
+		return L.GetTop()
+	}))
+	return record
 }
 
 // selectedNamespace distinguishes a missing bound source from an ordinary runtime module.
@@ -213,6 +252,17 @@ func discoverModuleFiles(ctx context.Context, root, relative, name string) ([]mo
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, false, err
 	}
+	children, found, err := moduleDirectory(ctx, root, relative, name)
+	return append(sources, children...), len(sources) > 0 || found, err
+}
+
+// moduleDirectory reads immediate source candidates for imports and root catalogs.
+func moduleDirectory(ctx context.Context, root, relative, name string) ([]moduleSource, bool, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, false, err
+	}
+	base := filepath.Join(root, relative)
+	var sources []moduleSource
 	directory, err := modulePath(root, base)
 	if errors.Is(err, os.ErrNotExist) {
 		return sources, len(sources) > 0, nil
@@ -239,9 +289,13 @@ func discoverModuleFiles(ctx context.Context, root, relative, name string) ([]mo
 		if entry.Type()&os.ModeSymlink != 0 {
 			return nil, false, fmt.Errorf("module child path is a symlink: %s", filepath.Join(directory, entry.Name()))
 		}
-		child, module := filepath.Join(base, entry.Name()), name+"."+strings.TrimSuffix(entry.Name(), ".lua")
+		prefix := name
+		if prefix != "" {
+			prefix += "."
+		}
+		child, module := filepath.Join(base, entry.Name()), prefix+strings.TrimSuffix(entry.Name(), ".lua")
 		if entry.IsDir() {
-			module = name + "." + entry.Name()
+			module = prefix + entry.Name()
 			child = filepath.Join(child, "init.lua")
 			if _, err := modulePath(root, child); errors.Is(err, os.ErrNotExist) {
 				continue
@@ -250,7 +304,7 @@ func discoverModuleFiles(ctx context.Context, root, relative, name string) ([]mo
 			}
 		} else if !strings.HasSuffix(entry.Name(), ".lua") {
 			continue
-		} else if entry.Name() == "init.lua" {
+		} else if name != "" && entry.Name() == "init.lua" {
 			module = name
 		}
 		sources = append(sources, moduleSource{name: module, path: child, root: root})

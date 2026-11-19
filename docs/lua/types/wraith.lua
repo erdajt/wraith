@@ -44,7 +44,7 @@
 wraith = wraith or {}
 wraith.api_version = 2
 wraith.capabilities = {
-  trusted_lua = true, runtimepath = true, stdpath = true, modules = true,
+  trusted_lua = true, runtimepath = true, stdpath = true, modules = true, module_sources = true,
   live_registration = true, custom_events = true, plugin_lifecycle = true,
   scheduling = true, json = true, filesystem = true, http = true,
   timers = true, managed_resources = true, process = true,
@@ -177,3 +177,14 @@ wraith.modules = wraith.modules or {}
 ---@param name string dotted module name, at most 128 bytes
 ---@return Wraith.ModuleSource[] sources sorted by name, at most 256
 function wraith.modules.discover(name) end
+
+--- lists immediate file modules in one explicit root's lua directory without evaluating them.
+---@param root string absolute existing directory; explicit root symlinks are followed
+---@return Wraith.ModuleSource[] sources sorted by name, at most 256
+function wraith.modules.catalog(root) end
+
+--- binds one file module from an explicit root, checking lua layout before legacy root files.
+---@param root string absolute existing directory
+---@param name string dotted module name
+---@return Wraith.ModuleSource? source nil only when neither layout contains the module
+function wraith.modules.source(root, name) end

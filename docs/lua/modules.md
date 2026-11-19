@@ -28,3 +28,28 @@ names use dotted identifiers and are limited to 128 bytes. discovery checks at m
 explicit roots may be symlinks. discovered child components cannot be symlinks. file loads require regular, text-only sources within 1 mib and observe the current callback deadline. errors name the source. captured loaders remain unavailable inside pure hooks.
 
 a loader binds a selected path or preload function. editable files are not immutable snapshots; changing or removing a file can change or fail a later load. this API does not sandbox trusted plugin code.
+
+## explicit plugin roots
+
+`wraith.modules.catalog(root)` lists immediate Lua entry modules inside an explicit root's `lua/` directory. `wraith.modules.source(root, name)` resolves one exact module there, then checks the legacy root layout if neither exact source exists. both return bound file records without evaluating code:
+
+```lua
+local root = wraith.paths.stdpath('config') .. '/packages/review'
+for _, source in ipairs(wraith.modules.catalog(root)) do
+  print(source.name, source.path)
+end
+local source = wraith.modules.source(root, 'review')
+if source then
+  local module = source.load()
+end
+```
+
+roots must be existing absolute directories, at most 4096 bytes, without nul, semicolons or question marks. root symlinks are followed; child symlinks are rejected. these operations do not consult runtime paths, selected package namespaces, preloads or require caches. check `wraith.capabilities.module_sources` before using them on older hosts.
+
+catalog includes immediate `.lua` files and immediate directories containing `init.lua`. `lua/init.lua` is the module named `init`. directories without an entry module are ignored. a missing `lua/` directory yields an empty list; other filesystem errors fail. automatic catalogs exclude legacy root files and native modules.
+
+exact lookup converts dots to directory separators. it checks `lua/name.lua` and `lua/name/init.lua`, then `name.lua` and `name/init.lua`. two matching forms in one layout are ambiguous. an empty Lua directory does not suppress an exact legacy match. absence returns `nil`; invalid types, symlinks and I/O failures do not fall through.
+
+catalog records retain their physical paths. a physical `lua/tool.extra.lua` record loads that file directly, while `source(root, 'tool.extra')` looks for `lua/tool/extra.lua` or `lua/tool/extra/init.lua`. use the catalog record's loader instead of reconstructing its path.
+
+both APIs preserve the discovery limits and bound-loader behavior above. they do not install preload wrappers or change require caching. package managers must define their own entry-point ownership and cache policy.
