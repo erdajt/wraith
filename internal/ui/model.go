@@ -66,13 +66,19 @@ type modelsMsg struct {
 	Err    error
 }
 type streamMsg struct {
-	Rejected session.Message
-	Serial   uint64
-	Retry    int
-	Problem  string
-	Chunk    ollama.Response
-	Final    bool
-	Err      error
+	Submission *chatSubmission
+	Rejected   session.Message
+	Serial     uint64
+	Retry      int
+	Problem    string
+	Chunk      ollama.Response
+	Final      bool
+	Err        error
+}
+
+type chatSubmission struct {
+	Before session.Session
+	Draft  string
 }
 type compactMsg struct {
 	Session session.Session

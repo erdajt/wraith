@@ -90,11 +90,16 @@ func (a *App) submit() tea.Cmd {
 		a.notice = err.Error()
 		return nil
 	}
-	return a.startChat()
+	return a.startChatSubmission(&chatSubmission{Before: original, Draft: draft})
 }
 
 // startChat prepares session context and starts a cancellable response stream with corrective retries.
 func (a *App) startChat() tea.Cmd {
+	return a.startChatSubmission(nil)
+}
+
+// startChatSubmission retains the submitted draft until transformed context has passed validation.
+func (a *App) startChatSubmission(submission *chatSubmission) tea.Cmd {
 	if a.loading {
 		a.notice = "model is loading"
 		return nil
@@ -160,7 +165,7 @@ func (a *App) startChat() tea.Cmd {
 			case <-a.done:
 			}
 		})
-		a.post(streamMsg{Serial: serial, Chunk: r, Final: true, Err: e})
+		a.post(streamMsg{Serial: serial, Chunk: r, Final: true, Err: e, Submission: submission})
 	}()
 	return a.next()
 }
@@ -206,6 +211,10 @@ func (a *App) receive(m streamMsg) tea.Cmd {
 
 	a.busy = false
 	a.cancel = nil
+	var overflow *provider.ContextError
+	if errors.As(m.Err, &overflow) && a.partial.Content == "" && a.partial.Thinking == "" && m.Chunk.Message.Content == "" && m.Chunk.Message.Thinking == "" {
+		return a.recoverTransformedBudget(m)
+	}
 
 	if m.Err != nil {
 		if m.Chunk.Message.Content != "" || m.Chunk.Message.Thinking != "" {
