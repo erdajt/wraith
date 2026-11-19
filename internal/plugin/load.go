@@ -74,6 +74,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	e.installSchedule(api)
 	e.installDialogs(api)
 	e.installBuffers(api)
+	e.installBufferMappings(api)
 	e.installWindows(api)
 	e.installRegions(api)
 	e.installResources(api)

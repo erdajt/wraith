@@ -74,19 +74,20 @@ type SurfaceRegion struct {
 
 // SurfaceMutation carries an ordered edit and the caller lease that created it.
 type SurfaceMutation struct {
-	Operation string          `json:"operation"`
-	ID        string          `json:"id"`
-	Owner     string          `json:"owner"`
-	Lease     string          `json:"lease"`
-	Expected  uint64          `json:"expected"`
-	Buffer    *SurfaceBuffer  `json:"buffer,omitempty"`
-	Window    *SurfaceWindow  `json:"window,omitempty"`
-	Region    *SurfaceRegion  `json:"region,omitempty"`
-	Start     int             `json:"start,omitempty"`
-	End       int             `json:"end,omitempty"`
-	Lines     []string        `json:"lines,omitempty"`
-	Spans     []SurfaceSpan   `json:"spans,omitempty"`
-	Binding   *keymap.Binding `json:"binding,omitempty"`
+	TargetOwner string          `json:"target_owner,omitempty"`
+	Operation   string          `json:"operation"`
+	ID          string          `json:"id"`
+	Owner       string          `json:"owner"`
+	Lease       string          `json:"lease"`
+	Expected    uint64          `json:"expected"`
+	Buffer      *SurfaceBuffer  `json:"buffer,omitempty"`
+	Window      *SurfaceWindow  `json:"window,omitempty"`
+	Region      *SurfaceRegion  `json:"region,omitempty"`
+	Start       int             `json:"start,omitempty"`
+	End         int             `json:"end,omitempty"`
+	Lines       []string        `json:"lines,omitempty"`
+	Spans       []SurfaceSpan   `json:"spans,omitempty"`
+	Binding     *keymap.Binding `json:"binding,omitempty"`
 }
 
 // SurfaceDelta reports committed changes for the UI cache without executing renderer callbacks.

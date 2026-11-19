@@ -12,11 +12,16 @@ type surfaceDecoration struct {
 	owner string
 	spans []SurfaceSpan
 }
+type surfaceBinding struct {
+	ownedBinding
+	targetOwner string
+}
+
 type surfaceBufferRecord struct {
 	SurfaceBuffer
 	bytes       int
 	decorations []surfaceDecoration
-	bindings    map[string][]ownedBinding
+	bindings    map[string][]surfaceBinding
 }
 
 // SurfaceStore owns committed display data without holding Lua values or running callbacks.
@@ -139,7 +144,7 @@ func (s *SurfaceStore) RevokeOwner(owner string) SurfaceDelta {
 		}
 		bindingsChanged := false
 		for key, layers := range buffer.bindings {
-			kept := slices.DeleteFunc(layers, func(layer ownedBinding) bool { return layer.owner == owner })
+			kept := slices.DeleteFunc(layers, func(layer surfaceBinding) bool { return layer.owner == owner || layer.targetOwner == owner })
 			bindingsChanged = bindingsChanged || len(kept) != len(layers)
 			if len(kept) == 0 {
 				delete(buffer.bindings, key)

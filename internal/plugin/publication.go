@@ -167,7 +167,17 @@ func (r *Runtime) publish(e *engine, revision uint64) bool {
 
 // pruneCallbacks releases functions once no registration or pending effect can invoke them.
 func (e *engine) pruneCallbacks() {
-	retained := map[string]bool{}
+	retained := e.surfaces.callbackReferences()
+	if e.surfacePreview != nil {
+		for id := range e.surfacePreview.callbackReferences() {
+			retained[id] = true
+		}
+	}
+	for id := range retained {
+		if slices.Contains(e.surfaceReleased, e.callbackOwners[id]) {
+			delete(retained, id)
+		}
+	}
 	e.retainOwnerCallbacks(retained)
 	for _, command := range e.manifest.Commands {
 		retained[command.Callback] = true

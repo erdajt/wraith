@@ -25,10 +25,10 @@ func setBufferKeymap(buffer *surfaceBufferRecord, mutation SurfaceMutation) erro
 		}
 	}
 	if buffer.bindings == nil {
-		buffer.bindings = map[string][]ownedBinding{}
+		buffer.bindings = map[string][]surfaceBinding{}
 	}
-	layers := slices.DeleteFunc(slices.Clone(buffer.bindings[identity]), func(layer ownedBinding) bool { return layer.owner == mutation.Owner })
-	layers = append(layers, ownedBinding{owner: mutation.Owner, binding: binding, deleted: deleted})
+	layers := slices.DeleteFunc(slices.Clone(buffer.bindings[identity]), func(layer surfaceBinding) bool { return layer.owner == mutation.Owner })
+	layers = append(layers, surfaceBinding{ownedBinding: ownedBinding{owner: mutation.Owner, binding: binding, deleted: deleted}, targetOwner: mutation.TargetOwner})
 	if len(buffer.bindings) >= 512 && len(buffer.bindings[identity]) == 0 {
 		return errors.New("buffer keymap limit reached")
 	}

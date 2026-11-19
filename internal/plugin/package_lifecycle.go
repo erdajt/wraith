@@ -58,6 +58,12 @@ func (e *engine) unloadPlugin(name string) error {
 		e.surfaceReleased = append(e.surfaceReleased, record.owner)
 		delete(e.surfaceOwners, record.owner)
 	}
+	if e.surfacePreview != nil {
+		e.surfacePreview.RevokeOwner(record.owner)
+	}
+	e.effects = slices.DeleteFunc(e.effects, func(effect Effect) bool {
+		return effect.Owner == record.owner && (effect.Name == "surface.apply" || effect.Name == "dialog.open")
+	})
 	e.manifest.Surface = slices.DeleteFunc(e.manifest.Surface, func(mutation SurfaceMutation) bool { return mutation.Owner == record.owner })
 	e.removeOwnerRegistrations(record.owner)
 	for key, layers := range e.bindingLayers {
