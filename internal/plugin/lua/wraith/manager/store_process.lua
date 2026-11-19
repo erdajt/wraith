@@ -1,3 +1,4 @@
+local wait = require("wraith.manager.store_wait")
 local M = {}
 local inherited = {
   "PATH", "HOME", "SSH_AUTH_SOCK", "SSH_AGENT_PID", "HTTP_PROXY", "HTTPS_PROXY",
@@ -20,19 +21,20 @@ end
 function M.start(argv, options, completed)
   assert(type(completed) == "function", "package process callback is required")
   options = options or {}
-  local control, finished, poll = {}, false, nil
+  local control, finished, started = {}, false, false
 
   local function finish(status)
     if finished then return end
     finished = true
-    local stdout = wraith.process.output(control.id, { stream = "stdout", max_bytes = 65536 })
-    local stderr = wraith.process.output(control.id, { stream = "stderr", max_bytes = 65536 })
-    if poll then
-      wraith.resource.cancel(poll)
-      wraith.resource.release(poll)
-      poll = nil
+    local function output(stream)
+      local ok, value = pcall(wraith.process.output, control.id, { stream = stream, max_bytes = 65536 })
+      if ok then return value end
+      if not started and (status.state == "cancelled" or status.state == "failed") and tostring(value):find("process.output: process has not started", 1, true) then
+        return { data = "", truncated = false }
+      end
+      error(value)
     end
-    wraith.resource.release(control.id)
+    local stdout, stderr = output("stdout"), output("stderr")
     completed({
       state = status.state, error = status.error, exit_code = status.result and status.result.exit_code,
       stdout = stdout.data, stderr = stderr.data, truncated = stdout.truncated or stderr.truncated,
@@ -43,13 +45,9 @@ function M.start(argv, options, completed)
     argv = argv, cwd = options.cwd, clear_env = true, env = M.environment(options.git_env),
     timeout_ms = options.timeout_ms or 300000, max_output_bytes = 65536,
   }, function(ctx)
+    if ctx.resource.kind == "started" then started = true end
     if not ctx.resource.final then return end
-    local status = wraith.resource.status(control.id)
-    if status.done then finish(status); return end
-    poll = wraith.timer.start(20, function()
-      local current = wraith.resource.status(control.id)
-      if current.done then finish(current) end
-    end, { repeat_ms = 20 })
+    wait.finish(control.id, finish)
   end)
 
   function control.cancel()

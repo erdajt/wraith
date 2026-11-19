@@ -16,7 +16,8 @@ func TestManagerProcessUsesControlledEnvironmentAndLiteralArguments(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := openTestRuntime(t, fmt.Sprintf(`local process = dofile(%q)
+	r := openTestRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
+local process = dofile(%q)
 assert(not pcall(process.environment,{GIT_CONFIG_GLOBAL="/unexpected"}))
 assert(not pcall(process.environment,{GIT_DIR="/unexpected"}))
 process.start({"/bin/sh","-c",'test -z "$GIT_CONFIG_COUNT$GIT_DIR" && test "$GIT_CONFIG_GLOBAL" = /dev/null && test "$GIT_TERMINAL_PROMPT" = 0 && printf "%%s" "$1" && printf diagnostic >&2',"manager","literal $(false); 'quoted'"}, {}, function(result)
@@ -24,8 +25,8 @@ process.start({"/bin/sh","-c",'test -z "$GIT_CONFIG_COUNT$GIT_DIR" && test "$GIT
  assert(result.stdout=="literal $(false); 'quoted'" and result.stderr=="diagnostic")
  assert(not result.truncated)
  wraith.notify("complete")
-end)`, path))
-	runManagerProcess(t, r)
+end)`, filepath.Join(filepath.Dir(path), "store_wait.lua"), path))
+	runManagerResources(t, r)
 }
 
 // TestManagerProcessWaitsForReapingAfterCancellation keeps cleanup behind actual worker completion.
@@ -34,7 +35,8 @@ func TestManagerProcessWaitsForReapingAfterCancellation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := openTestRuntime(t, fmt.Sprintf(`local process = dofile(%q)
+	r := openTestRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
+local process = dofile(%q)
 local operation
 operation=process.start({"/bin/sh","-c","printf ready; sleep 10"},{},function(result)
  assert(result.state=="cancelled")
@@ -48,12 +50,12 @@ timer=wraith.timer.start(10,function()
   wraith.resource.release(timer)
   operation.cancel()
  end
-end,{repeat_ms=10})`, path))
-	runManagerProcess(t, r)
+end,{repeat_ms=10})`, filepath.Join(filepath.Dir(path), "store_wait.lua"), path))
+	runManagerResources(t, r)
 }
 
-// runManagerProcess delivers actual managed events and applies the public lifecycle effects.
-func runManagerProcess(t *testing.T, r *Runtime) {
+// runManagerResources delivers actual managed events and applies the public lifecycle effects.
+func runManagerResources(t *testing.T, r *Runtime) {
 	t.Helper()
 	manifest := r.Manifest()
 	if err := r.Activate(manifest.Resources); err != nil {
@@ -105,12 +107,40 @@ func TestManagerProcessRetainsBoundedFailureOutput(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := openTestRuntime(t, fmt.Sprintf(`local process = dofile(%q)
+	r := openTestRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
+local process = dofile(%q)
 process.start({"/bin/sh","-c","printf '%%070000d' 1; printf failure >&2; exit 7"},{},function(result)
  assert(result.state=="failed" and result.exit_code==7)
  assert(result.truncated and #result.stdout==65536 and result.stdout:sub(-1)=="1")
  assert(result.stderr=="failure" and result.error)
  wraith.notify("complete")
-end)`, path))
-	runManagerProcess(t, r)
+end)`, filepath.Join(filepath.Dir(path), "store_wait.lua"), path))
+	runManagerResources(t, r)
+}
+
+// TestManagerProcessCompletesWithoutStarting reports cancellation and launch failures without querying absent streams.
+func TestManagerProcessCompletesWithoutStarting(t *testing.T) {
+	for _, test := range []struct {
+		name, argv, options, cancel, state string
+	}{
+		{"cancelled reservation", `{"/bin/sh","-c","exit 0"}`, `{}`, `operation.cancel()`, "cancelled"},
+		{"missing executable", `{"/missing/wraith-test-executable"}`, `{}`, "", "failed"},
+		{"missing directory", `{"/bin/sh","-c","exit 0"}`, `{cwd="/missing/wraith-test-directory"}`, "", "failed"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			path, err := filepath.Abs("lua/wraith/manager")
+			if err != nil {
+				t.Fatal(err)
+			}
+			r := openTestRuntime(t, fmt.Sprintf(`package.preload["wraith.manager.store_wait"]=assert(loadfile(%q))
+local process=dofile(%q)
+local operation=process.start(%s,%s,function(result)
+ assert(result.state==%q and result.error)
+ assert(result.stdout=="" and result.stderr=="" and not result.truncated)
+ wraith.notify("complete")
+end)
+%s`, filepath.Join(path, "store_wait.lua"), filepath.Join(path, "store_process.lua"), test.argv, test.options, test.state, test.cancel))
+			runManagerResources(t, r)
+		})
+	}
 }
