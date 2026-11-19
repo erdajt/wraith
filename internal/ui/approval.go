@@ -15,6 +15,10 @@ func (a *App) approvalAction(action string) tea.Cmd {
 		return nil
 	}
 
+	if a.proposal.Extension != nil {
+		return a.extensionAction(action)
+	}
+
 	switch action {
 	case "run":
 		return a.runApproved()

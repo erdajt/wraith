@@ -83,7 +83,7 @@ func (a *App) edit(kind, language, text string, index int) tea.Cmd {
 			return nil
 		}
 		text = a.messageAt(index)
-	case "block", "run", "staged":
+	case "block", "run", "staged", "extension-tool":
 		ext = editor.Extension(language)
 		if kind == "block" || kind == "staged" {
 			if err := a.refreshVariables(); err != nil {
@@ -267,6 +267,19 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 		applied = true
 		a.Session = candidate
 		a.notice = "response edited · original archived"
+	case "extension-tool":
+		if a.proposal == nil || a.proposal.Extension == nil {
+			a.notice = "tool approval expired"
+			return nil
+		}
+		arguments, err := resolveToolArguments([]byte(text), a.proposal.Variables, a.proposal.Extension.Schema)
+		if err != nil {
+			a.notice = "edited tool arguments: " + err.Error()
+			return nil
+		}
+		a.proposal.Extension.Arguments = arguments
+		applied = true
+		return a.runExtension(*a.proposal)
 	case "run":
 		if a.proposal == nil {
 			a.notice = "command approval expired"

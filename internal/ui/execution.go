@@ -18,6 +18,7 @@ import (
 )
 
 type proposal struct {
+	Extension                               *extensionProposal
 	Command, Language, Text, Source, Reason string
 	Continue, Background, HideOutput        bool
 	Resolved                                string
@@ -39,6 +40,9 @@ func (a *App) history() runner.History {
 
 // approve prepares a command and opens its approval menu without executing it.
 func (a *App) approve(p proposal) tea.Cmd {
+	if p.Extension != nil {
+		return a.showExtensionApproval(p)
+	}
 	if a.demo || a.busy {
 		a.notice = "finish the current operation before running commands"
 		return nil
@@ -113,8 +117,13 @@ func (a *App) launchApproved(p proposal) tea.Cmd {
 		return nil
 	}
 
+	return a.acceptJob(record, p.Continue)
+}
+
+// acceptJob records a successful launch and schedules agent evidence without blocking input.
+func (a *App) acceptJob(record runner.Record, continueAgent bool) tea.Cmd {
 	a.agentStopped = false
-	if p.Continue {
+	if continueAgent {
 		a.agentSteps++
 	}
 

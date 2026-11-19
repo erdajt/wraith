@@ -27,7 +27,11 @@ func (a *App) approvalFrame() []string {
 	if roomy {
 		content = append(content, "")
 	}
-	content = append(content, bold(p.Second, "COMMAND"))
+	label := "COMMAND"
+	if request.Extension != nil {
+		label = "EXTENSION TOOL · " + clean(request.Extension.Definition.Owner)
+	}
+	content = append(content, bold(p.Second, label))
 
 	reason, _ := request.Variables.Expand(request.Reason)
 	if reason == "" {
