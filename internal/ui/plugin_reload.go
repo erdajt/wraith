@@ -121,5 +121,5 @@ func (a *App) finishPluginReload(m pluginReloadMsg) tea.Cmd {
 	if len(manifest.Diagnostics) > 0 {
 		a.notice += " · lua: " + strings.ReplaceAll(clean(strings.Join(manifest.Diagnostics, " · ")), "\n", " ")
 	}
-	return tea.Batch(cmd, a.callPlugin("", "ready", ""), a.watchPluginNotices(a.plugins), a.startPluginResources())
+	return tea.Batch(cmd, a.callPlugin("", "ready", ""), a.watchPluginNotices(a.plugins), a.startPluginResources(), a.watchPluginInvocations(a.plugins))
 }

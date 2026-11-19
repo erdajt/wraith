@@ -10,6 +10,14 @@ import (
 // update dispatches ui, provider and terminal events to their state handlers.
 func (a *App) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m := msg.(type) {
+	case pluginInvocationMsg:
+		return a, a.callPluginInvocation(m)
+	case pluginInvocationResultMsg:
+		cmd := a.applyPluginResult(m.Result)
+		if m.Result.Runtime != a.plugins {
+			return a, cmd
+		}
+		return a, tea.Batch(cmd, a.watchPluginInvocations(m.Result.Runtime))
 	case workspaceQueryMsg:
 		return a, a.deliverWorkspaceQuery(m)
 	case commandPolicyMsg:

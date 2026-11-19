@@ -18,7 +18,7 @@ type pluginDecisionMsg struct {
 
 // openPluginDialog creates an owned modal buffer without replacing an existing approval or picker.
 func (a *App) openPluginDialog(runtime *plugin.Runtime, spec plugin.Dialog) tea.Cmd {
-	if runtime != a.plugins || !runtime.Surfaces().OwnerValid(spec.Owner, spec.Lease) {
+	if runtime != a.plugins || !runtime.Surfaces().OwnerValid(spec.Owner, spec.Lease) || spec.Invocation != "" && !runtime.InvocationValid(spec.Invocation) {
 		runtime.DiscardScheduled([]string{spec.ID})
 		return nil
 	}
@@ -69,7 +69,7 @@ func (a *App) finishPluginDialog(data map[string]any) tea.Cmd {
 
 // submitPluginDecision retries queue pressure without dropping or invoking a decision twice.
 func (a *App) submitPluginDecision(m pluginDecisionMsg) tea.Cmd {
-	if m.runtime != a.plugins || !m.runtime.Surfaces().OwnerValid(m.dialog.Owner, m.dialog.Lease) {
+	if m.runtime != a.plugins || !m.runtime.Surfaces().OwnerValid(m.dialog.Owner, m.dialog.Lease) || m.dialog.Invocation != "" && !m.runtime.InvocationValid(m.dialog.Invocation) {
 		m.runtime.DiscardScheduled([]string{m.dialog.ID})
 		return nil
 	}
@@ -107,6 +107,9 @@ func (a *App) reconcilePluginDialog() tea.Cmd {
 		d.runtime.DiscardScheduled([]string{d.spec.ID})
 		a.pluginDialog = nil
 		return nil
+	}
+	if d.spec.Invocation != "" && !d.runtime.InvocationValid(d.spec.Invocation) {
+		return a.finishPluginDialog(map[string]any{"cancelled": true, "reason": "invocation ended"})
 	}
 	if a.popup != nil || a.proposal != nil || a.editing {
 		return a.finishPluginDialog(map[string]any{"cancelled": true, "reason": "superseded"})

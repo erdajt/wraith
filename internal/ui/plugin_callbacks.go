@@ -15,6 +15,7 @@ import (
 )
 
 type pluginResultMsg struct {
+	Invocation       string
 	Parent           *pluginResultMsg
 	Scheduled        []string
 	PendingSchedules []string
@@ -71,7 +72,14 @@ func (a *App) queuePluginData(callback, event, argument string, data any) (tea.C
 	}
 	snapshot := a.pluginSnapshot(argument, event, data)
 	m := pluginResultMsg{Runtime: a.plugins, Owner: a.keyOwner(), Draft: a.Prompt.String(), Digest: configDigest(a.Config), Target: a.pluginTarget(), Keys: keymapDigest(a.Config), Depth: a.pluginDepth + 1}
-	result, err := a.plugins.Submit(callback, event, snapshot, a.Config)
+	var result <-chan plugin.Result
+	var err error
+	if a.pluginInvocation != "" {
+		m.Invocation = a.pluginInvocation
+		result, err = a.plugins.SubmitWithinInvocation(m.Invocation, callback, event, snapshot, a.Config)
+	} else {
+		result, err = a.plugins.Submit(callback, event, snapshot, a.Config)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -90,16 +98,29 @@ func (a *App) queuePluginData(callback, event, argument string, data any) (tea.C
 // applyPluginResult rejects stale targets and routes effects through ordinary workspace guards.
 func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 	transferred := false
+	previousInvocation := a.pluginInvocation
+	defer func() { a.pluginInvocation = previousInvocation }()
+	if m.Invocation == "" {
+		m.Invocation = m.Result.Invocation
+	}
+	a.pluginInvocation = m.Invocation
 	m.Result.Effects = slices.Clone(m.Result.Effects)
 	for _, effect := range m.Result.Effects {
 		m.Explicit = m.Explicit || effect.Name == "surface.apply" || effect.Name == "dialog.open" || effect.Name == "workspace.query" || effect.Name == "workspace.cancel"
 	}
-	background := m.Explicit || m.Resource != nil || m.Lease != ""
+	background := m.Invocation != "" || m.Explicit || m.Resource != nil || m.Lease != ""
 	defer func() {
 		if m.Result.Revision != 0 {
 			_ = m.Runtime.Acknowledge(m.Result.Revision, false)
 		}
 		if !transferred {
+			if m.Invocation != "" {
+				err := m.Result.Err
+				if err == nil {
+					err = errors.New("extension callback effects were discarded")
+				}
+				m.Runtime.AbortInvocation(m.Invocation, err)
+			}
 			discardPluginSchedules(m)
 			discardPluginResources(m)
 			discardPluginSurfaces(m)
@@ -108,7 +129,10 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 			}
 		}
 	}()
-	if m.Runtime != a.plugins || m.Parent == nil && m.Result.Err == nil && len(m.Result.Effects) == 0 && len(m.Scheduled) == 0 && len(m.PendingSchedules) == 0 && m.Result.Manifest == nil {
+	if m.Runtime != a.plugins || m.Invocation == "" && m.Parent == nil && m.Result.Err == nil && len(m.Result.Effects) == 0 && len(m.Scheduled) == 0 && len(m.PendingSchedules) == 0 && m.Result.Manifest == nil {
+		return nil
+	}
+	if m.Invocation != "" && !m.Runtime.InvocationValid(m.Invocation) {
 		return nil
 	}
 	if !background && !a.pluginOwns(m) || m.Resource != nil && !m.Runtime.ResourceValid(*m.Resource) || m.Lease != "" && !m.Runtime.Surfaces().OwnerValid(m.LeaseOwner, m.Lease) {
@@ -142,6 +166,25 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 		m.Keys = keymapDigest(a.Config)
 	}
 	for i, effect := range m.Result.Effects {
+		invocation := effect.Invocation
+		if invocation == "" {
+			invocation = m.Invocation
+		}
+		if invocation != "" && !m.Runtime.InvocationValid(invocation) {
+			return nil
+		}
+		if effect.Name == "invocation.reply" {
+			reply, ok := effect.Data.(plugin.InvocationEffect)
+			if !ok || reply.ID != invocation {
+				a.notice = "lua invocation: invalid reply"
+				return nil
+			}
+			if err := m.Runtime.CommitInvocation(reply); err != nil {
+				a.notice = "lua invocation: " + err.Error()
+				return nil
+			}
+			continue
+		}
 		owned := a.pluginOwns(m)
 		if background && !owned {
 			switch effect.Name {
@@ -258,11 +301,15 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 				result := cmd()
 				if child, ok := result.(pluginResultMsg); ok {
 					child.Parent = &m
+					child.Invocation = m.Invocation
 					child.Explicit, child.LeaseOwner, child.Lease = m.Explicit, m.LeaseOwner, m.Lease
 					if m.Resource != nil {
 						child.Resource, child.Keys = m.Resource, keys
 					}
 					return child
+				}
+				if m.Invocation != "" {
+					m.Runtime.AbortInvocation(m.Invocation, errors.New("extension callback chain ended without a result"))
 				}
 				discardPluginSchedules(m)
 				discardPluginResources(m)

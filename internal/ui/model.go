@@ -103,6 +103,7 @@ type App struct {
 	bufferEventPending bool
 	bufferEventRuntime *plugin.Runtime
 	pluginDepth        int
+	pluginInvocation   string
 	policySerial       uint64
 	policyCancel       context.CancelFunc
 	pluginQueries      map[string]*workspaceQueryState
@@ -301,7 +302,7 @@ func (a *App) Init() tea.Cmd {
 	if a.demo {
 		return a.ticker()
 	}
-	return tea.Batch(a.ticker(), a.probe(), a.callPlugin("", "ready", ""), a.watchPluginNotices(a.plugins), a.startPluginResources())
+	return tea.Batch(a.ticker(), a.probe(), a.callPlugin("", "ready", ""), a.watchPluginNotices(a.plugins), a.startPluginResources(), a.watchPluginInvocations(a.plugins))
 }
 
 // ticker schedules the next animation and job-update tick.
