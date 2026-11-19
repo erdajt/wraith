@@ -25,7 +25,7 @@
 ---@field url? string explicit https, ssh, scp-style or file remote
 ---@field dir? string absolute, home-relative or relative to the effective config directory
 ---@field name? string defaults to lowercase repository/directory basename
----@field main? string defaults to repository/directory basename without .git
+---@field main? string explicit entrypoint; otherwise infer from the selected plugin's lua directory
 ---@field dependencies? Wraith.PackageDeclarations bare dependency names refer to existing declarations
 ---@field enabled? boolean|fun(spec: Wraith.PackageSpec): boolean
 ---@field priority? integer default 50, within -1000000..1000000
@@ -48,7 +48,7 @@
 ---@field source Wraith.PackageSource
 ---@field selector Wraith.PackageSelector
 ---@field pin boolean
----@field main string
+---@field main? string declared entrypoint, remains nil when inferred
 ---@field dependencies string[]
 ---@field enabled boolean
 ---@field priority integer
@@ -100,6 +100,11 @@
 ---@field installed boolean
 ---@field lazy boolean
 ---@field loaded_commit? string commit chosen by the active runtime
+---@field requested_main? string explicitly declared entrypoint
+---@field selected_main? string bound entrypoint, retained after unload or failure
+---@field loaded_main? string entrypoint of active automatic setup
+---@field main_source_kind? 'file'|'preload' a preload's code is independent of the checkout commit
+---@field main_source_path? string selected file path
 ---@field restart_required boolean disk selection differs from this runtime's frozen source
 ---@class Wraith.PackageOperation
 ---@field id string

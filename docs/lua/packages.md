@@ -61,7 +61,7 @@ HTTP, remote helper protocols, embedded URL credentials, query strings, fragment
 | field | default and behavior |
 | --- | --- |
 | `name` | lowercase source basename without `.git`; identity across fragments, at most 64 bytes, using lowercase letters, digits, `.`, `_` and `-`, starting with a letter or digit |
-| `main` | source basename without `.git`; module passed to `require` |
+| `main` | explicit setup module; otherwise infer from the plugin's `lua/` entrypoints |
 | `branch`, `tag`, `commit` | at most one; omitted means remote HEAD; commits require a full 40- or 64-digit hexadecimal object id |
 | `pin` | `false`; keep the locked revision during update, except when an explicit commit selector changes |
 | `dependencies` | package names or nested specifications; loaded before the dependent package |
@@ -79,6 +79,12 @@ HTTP, remote helper protocols, embedded URL credentials, query strings, fragment
 `opts` or `config = true` requests automatic setup. the entry module must return a table with callable `setup`; missing setup is an error. `config = false` with options still requests setup, matching lazy.nvim. without options or a truthy config, activation exposes the runtime path without requiring a module. `main` and `opts_extend` alone do not request setup. `config = function(spec, opts) ... end` controls loading itself and may require a different module.
 
 `init` and setup/config may return a cleanup function. automatic setup also calls `module.teardown()` when present; custom config does not gain an implicit module teardown. failed setup rejects activation and rolls back owned registrations, unlike lazy.nvim’s logged setup errors. lazy triggers remain available for retry. arbitrary file writes, module-cache changes and other external effects cannot be rolled back.
+
+automatic setup selects its entrypoint from the installed plugin. an explicit `main` wins; otherwise one normalized name match or a sole candidate is required. normalization ignores case and separators, strips `wraith-`, `.wraith`, `.lua` and `-lua` affixes, and keeps digits. ambiguous or missing entrypoints require `main` or custom `config`. explicit names support legacy root files as well as `lua/` layout. inferred names use `lua/` only.
+
+inferred entrypoints cannot fall back to global modules. explicit `main` may deliberately select a preload override. existing foreign cache values are rejected, and source changes after exposure require `/reload`. this binds automatic setup's entrypoint, not every submodule or custom config's require calls. callbacks keep the declared `main`; status reports `requested_main`, `selected_main`, `loaded_main`, `main_source_kind` and `main_source_path`. a synthetic preload is labeled separately from the installed checkout commit.
+
+ordinary source failures may retry with the same binding; setup failures reuse the owned module. a source that changes its cache/preload and fails, or whose load times out, requires `/reload`. interrupted bookkeeping never silently adopts retained cache values. managed load errors include source traces as diagnostics. package/cache/preload table replacement before manager loading is unsupported; later replacement is rejected. use `require` rather than calling private managed preload wrappers directly.
 
 ```lua
 {

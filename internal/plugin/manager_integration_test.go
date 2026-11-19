@@ -65,7 +65,7 @@ func TestManagerLoadsImportedLocalDependenciesRelativeToConfig(t *testing.T) {
 		"lua/plugins/app.lua": `return {{name="app",dir="packages/app",cmd="localrun",opts={increment=1},
  dependencies={{name="dep",dir="packages/dep",lazy=true}}}}`,
 		"packages/dep/dep.lua": `return {value=41}`,
-		"packages/app/app.lua": `return {setup=function(opts)
+		"packages/app/lua/app.lua": `return {setup=function(opts)
  local answer=require("dep").value+opts.increment
  wraith.commands.create("localrun",function() wraith.notify(answer) end)
  end}`,
