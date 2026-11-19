@@ -61,6 +61,9 @@ func (a *App) pluginBufferKey(k tea.KeyMsg) tea.Cmd {
 
 // syncSurfaceCursor publishes rune coordinates without altering another view's navigation.
 func (a *App) syncSurfaceCursor(view *surfaceView) {
+	if a.surfaceReplay {
+		return
+	}
 	position := plugin.SurfacePosition{}
 	for _, ch := range view.reader.Buffer.Text[:min(view.reader.Buffer.Pos, len(view.reader.Buffer.Text))] {
 		if ch == '\n' {

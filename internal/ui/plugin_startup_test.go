@@ -79,3 +79,27 @@ for i=1,63 do wraith.windows.open(b,{}) end`
 		t.Fatal(a.notice)
 	}
 }
+
+func TestStartupReplayKeepsFinalCursorAndLayoutRevisions(t *testing.T) {
+	a := pluginFixture(t, `
+local buffer=wraith.buffers.create({editable=true,lines={"first","second"}})
+local window=wraith.windows.open(buffer,{focus=true,cursor={line=1,column=2}})
+wraith.buffers.set_lines(buffer,0,0,{"prefix"})
+wraith.windows.configure(window,{kind="float",width=32,height=8,column=3,row=2,cursor={line=0,column=1}})
+`)
+	a.width, a.height = 100, 30
+	deltas, err := preparePluginSurfaces(a.plugins, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := a.plugins.Surfaces().Index().Windows[0]
+	a.installPluginSurfaces(deltas)
+	view := a.focusedSurfaceView()
+	after, err := a.plugins.Surfaces().Window(before.ID)
+	if err != nil || view == nil || view.window.Revision != before.Revision || after.Revision != before.Revision || view.reader.Buffer.Pos != 1 || view.window.Kind != "float" {
+		t.Fatalf("replay changed final state: before=%#v after=%#v view=%#v error=%v", before, after, view, err)
+	}
+	if strings.Contains(a.notice, "buffer cursor:") {
+		t.Fatal(a.notice)
+	}
+}

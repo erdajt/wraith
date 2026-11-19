@@ -45,9 +45,16 @@ func (a *App) installPluginSurfaces(deltas []plugin.SurfaceDelta) {
 		a.surfaceKeymaps = nil
 		a.surfaceRuntime = a.plugins
 	}
+	a.surfaceReplay = true
 	for _, delta := range deltas {
 		a.applySurfaceDelta(delta, true)
 	}
 	a.reconcileSurfaces()
+	a.surfaceReplay = false
+	for _, view := range a.windows {
+		if view.surface != nil {
+			a.syncSurfaceCursor(view.surface)
+		}
+	}
 	a.syncNativeSurfaces()
 }

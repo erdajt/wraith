@@ -97,6 +97,7 @@ type App struct {
 	bufferEventPending bool
 	bufferEventRuntime *plugin.Runtime
 	pluginDepth        int
+	surfaceReplay      bool
 	surfaceKeymaps     map[string]surfaceKeymapCache
 	surfaceBuffers     map[string]plugin.SurfaceBuffer
 	surfaceRegions     map[string]plugin.SurfaceRegion
