@@ -103,6 +103,25 @@ command triggers activate the package and replay that command with its original 
 
 normalization rejects unknown fields, conflicting sources or module identities, conflicting triggers, missing dependencies and dependency/import cycles before running init functions. disabled packages are excluded; an enabled package cannot depend on a disabled package. there is no semver resolver, submodule installation, Neovim plugin compatibility or build-hook support.
 
+## imports
+
+`{ import = "plugins" }` discovers the module file, directory `init.lua`, immediate `.lua` files and immediate child directories with `init.lua`, then loads them in module-name order. each must return exactly one table of specs. deeper directories need another import. see [module discovery](modules.md) for source precedence and limits.
+
+```lua
+require("shroud").setup({
+  { import = "plugins" },
+  { name = "local tools", import = function()
+    return { { dir = "packages/review", opts = {} } }
+  end },
+})
+```
+
+function imports require a name. string imports can use an alias. `cond` and `enabled` accept booleans or zero-argument functions returning a boolean. false skips loading. completed import names skip repeated gates and reuse their top-level package contributions, preserving dependency edges for each caller. distinct names may evaluate the same file again, including overlapping directory and child imports, as in lazy.nvim.
+
+imports load sources afresh and clear their own require-cache entries. conflicting names, recursive imports, ambiguous file/init sources and extra returns raise errors. each normalization allows 128 import identities and 256 source evaluations. arbitrary effects from trusted import code are not rolled back on failure.
+
+an explicit package source can include `import`; its fragment is collected first. `name` also names that import. `cond` gates the import only; a shared `enabled` callback runs separately as an import gate and as a final package predicate.
+
 ## repeated declarations
 
 use a bare name to override a plugin declared elsewhere. the source may appear before or after the override:

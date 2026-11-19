@@ -3,7 +3,13 @@
 ---@alias Wraith.PackageAction 'install'|'update'|'restore'
 ---@alias Wraith.PackageSource {kind: 'local', dir: string}|{kind: 'git', url: string}
 ---@alias Wraith.PackageSelector {kind: 'head'}|{kind: 'branch'|'tag'|'commit', value: string}
----@alias Wraith.PackageDeclarations string|Wraith.PackageSpec|{import: string}|Wraith.PackageDeclarations[]
+---@alias Wraith.PackageDeclarations string|Wraith.PackageSpec|Wraith.PackageImport|Wraith.PackageDeclarations[]
+---@alias Wraith.PackageImportSource string|fun(): table
+---@class Wraith.PackageImport
+---@field import Wraith.PackageImportSource
+---@field name? string required for function imports; optional alias for module imports
+---@field enabled? boolean|fun(): boolean
+---@field cond? boolean|fun(): boolean
 ---@alias Wraith.PackageCleanup fun()
 ---@class Wraith.PackageKey
 ---@field [1]? string shorthand for keys
@@ -35,6 +41,8 @@
 ---@field tag? string
 ---@field commit? string full lowercase commit id
 ---@field pin? boolean
+---@field import? Wraith.PackageImportSource collects specs after this explicit source declaration
+---@field cond? boolean|fun(): boolean applies to the import only
 ---@class Wraith.NormalizedPackage
 ---@field name string
 ---@field source Wraith.PackageSource

@@ -82,7 +82,7 @@ see [package configuration](packages.md), [plugin lifecycle](../plugins.md), [se
 
 | file | contracts |
 | --- | --- |
-| [wraith.lua](types/wraith.lua) | api version, capabilities, mappings, commands, events, package lifecycle, paths |
+| [wraith.lua](types/wraith.lua) | api version, capabilities, mappings, commands, events, package lifecycle, paths, [module discovery](modules.md) |
 | [config.lua](types/config.lua) | full configuration, partial updates, providers, themes |
 | [context.lua](types/context.lua) | callback snapshots, native windows, input and prompt adapters |
 | [services.lua](types/services.lua) | json, filesystem, http, timers, processes, managed handles |
