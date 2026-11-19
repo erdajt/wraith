@@ -10,7 +10,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// decodeTypedValue copies strict typed options and accepts empty Lua arrays at known sequence fields.
+// decodeTypedValue copies strict typed options and preserves empty arrays using their destination types.
 func decodeTypedValue(L *lua.LState, value lua.LValue, destination any) {
 	copied, err := decodeValue(value)
 	if err != nil {
@@ -40,17 +40,7 @@ func decodeTypedValue(L *lua.LState, value lua.LValue, destination any) {
 		}
 	}
 	validate(copied)
-	if object, ok := copied.(map[string]any); ok {
-		if len(object) == 0 && reflect.TypeOf(destination).Elem().Kind() == reflect.Slice {
-			copied = []any{}
-		} else {
-			for _, key := range []string{"lines", "spans", "keymaps"} {
-				if empty, ok := object[key].(map[string]any); ok && len(empty) == 0 {
-					object[key] = []any{}
-				}
-			}
-		}
-	}
+	copied = normalizeTypedArrays(copied, reflect.TypeOf(destination).Elem())
 	data, err := json.Marshal(copied)
 	if err != nil {
 		L.RaiseError("typed options: %v", err)

@@ -127,3 +127,22 @@ func TestCommandHooksPreserveDurationPrecision(t *testing.T) {
 		}
 	}
 }
+
+func TestHookPayloadsRoundTripAndClearEmptyNestedArrays(t *testing.T) {
+	r := openTestRuntime(t, `
+wraith.hooks.add("before_command",function(ctx) ctx.command.environment={}; return {command=ctx.command} end)
+wraith.hooks.add("before_request",function(ctx) ctx.request.messages={}; return {request=ctx.request} end)
+`)
+	for _, environment := range [][]string{{}, {"KEY=value"}} {
+		input := HookRequest{Kind: "before_command", Phase: "preview", Command: &CommandData{Command: "true", Directory: "/tmp", Shell: "/bin/sh", Timeout: "1s", Environment: environment}}
+		result, err := r.Transform(t.Context(), input)
+		if err != nil || result.Command.Environment == nil || len(result.Command.Environment) != 0 {
+			t.Fatalf("empty environment failed: %+v %v", result, err)
+		}
+	}
+	input := HookRequest{Kind: "before_request", Purpose: "chat", Request: &RequestData{Model: "local", Messages: []HookMessage{}}}
+	result, err := r.Transform(t.Context(), input)
+	if err != nil || result.Request.Messages == nil || len(result.Request.Messages) != 0 {
+		t.Fatalf("empty messages failed: %+v %v", result, err)
+	}
+}
