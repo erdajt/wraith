@@ -22,7 +22,16 @@ func (a *App) providerClient(c config.Config, runtimes ...*plugin.Runtime) *prov
 	if runtime == nil {
 		return client
 	}
-	if !slices.ContainsFunc(runtime.Manifest().Hooks, func(hook plugin.HookDefinition) bool { return hook.Kind == "before_request" }) {
+	manifest := runtime.Manifest()
+	if profile, ok := c.Providers[c.Provider]; ok && profile.Kind == "plugin" {
+		for _, definition := range manifest.Providers {
+			if definition.Name == c.Provider {
+				client.Adapter = &luaProvider{runtime: runtime, definition: definition}
+				break
+			}
+		}
+	}
+	if !slices.ContainsFunc(manifest.Hooks, func(hook plugin.HookDefinition) bool { return hook.Kind == "before_request" }) {
 		return client
 	}
 	sessionID, directory := a.Session.ID, a.Directory
