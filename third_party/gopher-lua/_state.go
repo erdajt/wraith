@@ -625,7 +625,7 @@ func (ls *LState) printCallStack() {
 }
 
 func (ls *LState) closeAllUpvalues() { // +inline-start
-	for cf := ls.currentFrame; cf != nil; cf = cf.Parent {
+	for cf := ls.currentFrame; cf != nil && cf.Idx >= ls.protectedFrame; cf = cf.Parent {
 		if !cf.Fn.IsG {
 			ls.closeUpvalues(cf.LocalBase)
 		}
@@ -1818,13 +1818,15 @@ func (ls *LState) PCall(nargs, nret int, errfunc *LFunction) (err error) {
 	sp := ls.stack.Sp()
 	base := ls.reg.Top() - nargs - 1
 	oldpanic := ls.Panic
+	oldhandler, oldframe := ls.hasErrorFunc, ls.protectedFrame
 	ls.Panic = panicWithoutTraceback
-	if errfunc != nil {
-		ls.hasErrorFunc = true
-	}
+	ls.hasErrorFunc = errfunc != nil
+	ls.protectedFrame = sp
 	defer func() {
 		ls.Panic = oldpanic
-		ls.hasErrorFunc = false
+		ls.hasErrorFunc, ls.protectedFrame = oldhandler, oldframe
+	}()
+	defer func() {
 		rcv := recover()
 		if rcv != nil {
 			if _, ok := rcv.(*ApiError); !ok {
@@ -1856,6 +1858,7 @@ func (ls *LState) PCall(nargs, nret int, errfunc *LFunction) (err error) {
 							err = rcv.(*ApiError)
 							err.(*ApiError).StackTrace = ls.stackTrace(0)
 						}
+						ls.closeUpvalues(base)
 						ls.stack.SetSp(sp)
 						ls.currentFrame = ls.stack.Last()
 						ls.reg.SetTop(base)
@@ -1866,6 +1869,7 @@ func (ls *LState) PCall(nargs, nret int, errfunc *LFunction) (err error) {
 			} else if len(err.(*ApiError).StackTrace) == 0 {
 				err.(*ApiError).StackTrace = ls.stackTrace(0)
 			}
+			ls.closeUpvalues(base)
 			ls.stack.SetSp(sp)
 			ls.currentFrame = ls.stack.Last()
 			ls.reg.SetTop(base)

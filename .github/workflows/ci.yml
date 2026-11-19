@@ -35,6 +35,8 @@ jobs:
           go vet ./...
       - name: run race and integration tests
         run: go test -race -shuffle=on -count=1 -timeout=3m -coverprofile=coverage.out ./...
+      - name: test patched lua runtime
+        run: go test -count=1 -timeout=2m github.com/yuin/gopher-lua
       - name: fuzz terminal parsing
         env:
           GOMAXPROCS: '2'
