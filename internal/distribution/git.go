@@ -43,6 +43,7 @@ func runGit(parent context.Context, directory string, arguments ...string) (stri
 		"PATH=" + os.Getenv("PATH"), "LANG=C", "LC_ALL=C", "HOME=" + directory,
 		"GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_SYSTEM=/dev/null", "GIT_CONFIG_GLOBAL=/dev/null",
 		"GIT_CONFIG_COUNT=0", "GIT_TERMINAL_PROMPT=0", "GIT_ATTR_NOSYSTEM=1",
+		"GIT_NO_REPLACE_OBJECTS=1",
 	}
 	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	command.Cancel = func() error {
