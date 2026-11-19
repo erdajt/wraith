@@ -1,6 +1,8 @@
 return {
   setup = function(options)
-    local buffer, window, rows, records = nil, nil, {}, {}
+    ---@type string?
+    local buffer
+    local window, rows, records = nil, {}, {}
     local output_buffer, output_window
     local loading, dirty, stopped = false, false, false
     local failures = 0
@@ -26,7 +28,7 @@ return {
         local command = display(record.command, 240)
         lines[#lines + 1] = record.status .. " · " .. command
       end
-      wraith.buffers.set_lines(buffer, 0, -1, lines)
+      wraith.buffers.set_lines(assert(buffer), 0, -1, lines)
     end
 
     local refresh
@@ -42,7 +44,7 @@ return {
           render(ctx.data.error.message)
           return
         end
-        local result = ctx.data.result
+        local result = assert(ctx.data.result)
         failures = failures + #result.page.errors
         for _, record in ipairs(result.page.items) do records[record.id] = record end
         for _, record in ipairs(result.active) do records[record.id] = record end

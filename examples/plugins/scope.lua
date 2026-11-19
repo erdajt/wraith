@@ -2,7 +2,9 @@ return {
   setup = function(options)
     assert(type(options.path) == "string", "scope requires a policy file")
     local buffer, window
-    local policy, failure, revision = nil, "policy has not been loaded", 0
+    local policy, revision = nil, 0
+    ---@type string?
+    local failure = "policy has not been loaded"
     local function reload()
       policy, failure = nil, "policy is loading"
       revision = revision + 1
@@ -16,11 +18,12 @@ return {
           failure = "policy exceeds 65536 bytes"
         else
           local ok, decoded = pcall(wraith.json.decode, ctx.data.result.data)
-          if not ok or type(decoded) ~= "table" or type(decoded.directory) ~= "string" or type(decoded.commands) ~= "table" then
+          local commands = ok and type(decoded) == "table" and decoded.commands or nil
+          if not ok or type(decoded) ~= "table" or type(decoded.directory) ~= "string" or type(commands) ~= "table" then
             failure = "policy requires a directory and exact command list"
           else
-            local valid = #decoded.commands > 0
-            for _, command in ipairs(decoded.commands) do valid = valid and type(command) == "string" end
+            local valid = #commands > 0
+            for _, command in ipairs(commands) do valid = valid and type(command) == "string" end
             if valid then policy, failure = decoded, nil else failure = "policy command list is invalid" end
           end
         end
