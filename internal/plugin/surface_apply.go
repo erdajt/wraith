@@ -35,6 +35,9 @@ func (s *SurfaceStore) HostApply(mutation SurfaceMutation) (SurfaceDelta, error)
 
 // apply dispatches validated host mutations while the store holds its write lock.
 func (s *SurfaceStore) apply(m SurfaceMutation) (SurfaceDelta, error) {
+	if strings.HasPrefix(m.Operation, "region.") {
+		return s.applyRegion(m)
+	}
 	if strings.HasPrefix(m.Operation, "window.") {
 		return s.applyWindow(m)
 	}
@@ -49,6 +52,9 @@ func (s *SurfaceStore) apply(m SurfaceMutation) (SurfaceDelta, error) {
 			return delta, errors.New("buffer creation requires a live reservation and revision zero")
 		}
 		buffer := cloneSurfaceBuffer(*m.Buffer)
+		if buffer.Projection != "" || buffer.Truncated {
+			return delta, errors.New("native projections can only be created by the host")
+		}
 		buffer.ID, buffer.Owner, buffer.Revision = m.ID, reservation.owner, 1
 		if len(buffer.Lines) == 0 {
 			buffer.Lines = []string{""}
@@ -68,7 +74,9 @@ func (s *SurfaceStore) apply(m SurfaceMutation) (SurfaceDelta, error) {
 		}
 		total := size
 		for _, existing := range s.buffers {
-			total += existing.bytes
+			if existing.Projection == "" {
+				total += existing.bytes
+			}
 		}
 		if total > 16<<20 {
 			return delta, errors.New("buffer store exceeds 16 mib")
@@ -91,6 +99,9 @@ func (s *SurfaceStore) apply(m SurfaceMutation) (SurfaceDelta, error) {
 	}
 	switch m.Operation {
 	case "buffer.delete":
+		if current.Projection != "" {
+			return delta, errors.New("native projections cannot be deleted")
+		}
 		delete(s.buffers, m.ID)
 		delta.RemovedBuffers = []string{m.ID}
 		for id, window := range s.windows {
@@ -102,6 +113,9 @@ func (s *SurfaceStore) apply(m SurfaceMutation) (SurfaceDelta, error) {
 		slices.Sort(delta.RemovedWindows)
 		return delta, nil
 	case "buffer.set_lines":
+		if current.Projection == "conversation" || current.Projection != "" && current.Truncated {
+			return delta, errors.New("conversation and incomplete prompt projections are read-only")
+		}
 		if m.Start < 0 || m.End < m.Start || m.End > len(current.Lines) {
 			return delta, errors.New("invalid buffer line replacement range")
 		}
@@ -118,7 +132,9 @@ func (s *SurfaceStore) apply(m SurfaceMutation) (SurfaceDelta, error) {
 		}
 		total := size - current.bytes
 		for _, buffer := range s.buffers {
-			total += buffer.bytes
+			if buffer.Projection == "" {
+				total += buffer.bytes
+			}
 		}
 		if total > 16<<20 {
 			return delta, errors.New("buffer store exceeds 16 mib")

@@ -76,7 +76,12 @@ func (s *SurfaceStore) Reserve(owner, kind string) (string, error) {
 	if kind != "buffer" && kind != "window" && kind != "region" {
 		return "", errors.New("unknown surface kind")
 	}
-	count := len(s.buffers)
+	count := 0
+	for _, buffer := range s.buffers {
+		if buffer.Projection == "" {
+			count++
+		}
+	}
 	limit := 64
 	if kind == "window" {
 		count = len(s.windows)

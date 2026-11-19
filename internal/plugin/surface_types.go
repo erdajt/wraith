@@ -24,13 +24,15 @@ type SurfaceSpan struct {
 
 // SurfaceBuffer contains detached canonical text shared by independent views.
 type SurfaceBuffer struct {
-	ID       string        `json:"id"`
-	Owner    string        `json:"owner"`
-	Name     string        `json:"name"`
-	Revision uint64        `json:"revision"`
-	Editable bool          `json:"editable"`
-	Lines    []string      `json:"lines"`
-	Spans    []SurfaceSpan `json:"spans,omitempty"`
+	Projection string        `json:"projection,omitempty"`
+	Truncated  bool          `json:"truncated,omitempty"`
+	ID         string        `json:"id"`
+	Owner      string        `json:"owner"`
+	Name       string        `json:"name"`
+	Revision   uint64        `json:"revision"`
+	Editable   bool          `json:"editable"`
+	Lines      []string      `json:"lines"`
+	Spans      []SurfaceSpan `json:"spans,omitempty"`
 }
 
 // SurfaceWindow describes an owned view; cursor coordinates remain independent of other views.
@@ -96,13 +98,15 @@ type SurfaceDelta struct {
 
 // SurfaceBufferInfo lists text metadata without copying the buffer contents.
 type SurfaceBufferInfo struct {
-	ID        string `json:"id"`
-	Owner     string `json:"owner"`
-	Name      string `json:"name"`
-	Revision  uint64 `json:"revision"`
-	Editable  bool   `json:"editable"`
-	LineCount int    `json:"line_count"`
-	ByteCount int    `json:"byte_count"`
+	Projection string `json:"projection,omitempty"`
+	Truncated  bool   `json:"truncated,omitempty"`
+	ID         string `json:"id"`
+	Owner      string `json:"owner"`
+	Name       string `json:"name"`
+	Revision   uint64 `json:"revision"`
+	Editable   bool   `json:"editable"`
+	LineCount  int    `json:"line_count"`
+	ByteCount  int    `json:"byte_count"`
 }
 
 // SurfaceIndex lists bounded live resources without serializing full buffer contents.
