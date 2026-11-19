@@ -30,13 +30,30 @@ func (e *engine) installPlugins(api *lua.LTable) {
 			}
 			return 0
 		},
+		"depend": func(L *lua.LState) int {
+			e.registration(L)
+			if err := e.dependOnPackage(e.owner, L.CheckString(1)); err != nil {
+				L.RaiseError("plugins.depend: %v", err)
+			}
+			return 0
+		},
 		"load": func(L *lua.LState) int {
 			e.registration(L)
 			name := L.CheckString(1)
 			if e.loaded[name] || len(e.loaded) >= 128 {
 				L.RaiseError("plugin already loaded or plugin limit reached: %s", name)
 			}
-			if err := e.loadPlugin(name, L.OptTable(2, L.NewTable())); err != nil {
+			dependency := true
+			if options := L.OptTable(3, nil); options != nil {
+				options.ForEach(func(key, value lua.LValue) {
+					flag, ok := value.(lua.LBool)
+					if key.String() != "dependency" || !ok {
+						L.RaiseError("plugin load options require a boolean dependency")
+					}
+					dependency = bool(flag)
+				})
+			}
+			if err := e.loadPlugin(name, L.OptTable(2, L.NewTable()), dependency); err != nil {
 				L.RaiseError("plugin %s: %v", name, err)
 			}
 			return 0
@@ -45,7 +62,7 @@ func (e *engine) installPlugins(api *lua.LTable) {
 }
 
 // loadPlugin restores partial registrations and releases new resources even when Lua catches failure.
-func (e *engine) loadPlugin(name string, options *lua.LTable) (err error) {
+func (e *engine) loadPlugin(name string, options *lua.LTable, dependency bool) (err error) {
 	before := e.captureRegistry()
 	parentOwner := e.owner
 	e.serial++
@@ -87,18 +104,19 @@ func (e *engine) loadPlugin(name string, options *lua.LTable) (err error) {
 		e.addCleanup(cleanup)
 	}
 	L.Pop(1)
-	for parent, record := range e.packages {
-		if record.owner == parentOwner {
-			record.dependencies = append(record.dependencies, owner)
-			e.packages[parent] = record
-			for i := range e.cleanup {
-				e.cleanup[i].dependencies = e.cleanupDependencies(e.cleanup[i].owner)
-			}
-		}
-	}
 	record := e.packages[name]
 	record.loading = false
 	e.packages[name] = record
+	if dependency {
+		for _, parent := range e.packages {
+			if parent.owner == parentOwner {
+				if err := e.dependOnPackage(parentOwner, name); err != nil {
+					return err
+				}
+				break
+			}
+		}
+	}
 	e.dirty = !e.setup
 	return nil
 }
