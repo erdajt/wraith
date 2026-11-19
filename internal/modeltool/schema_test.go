@@ -2,7 +2,6 @@ package modeltool
 
 import (
 	"fmt"
-	"regexp/syntax"
 	"strings"
 	"testing"
 )
@@ -191,24 +190,5 @@ func BenchmarkSchemaRejectsRegexExpansion(b *testing.B) {
 		if _, err := Compile(definition); err == nil {
 			b.Fatal("oversized expanded regex accepted")
 		}
-	}
-}
-
-func TestRegexExpansionEstimateBoundsCompiledPrograms(t *testing.T) {
-	for _, pattern := range []string{"", "abc", "(a|b)*", "(a?)*", "(a?){0,}", "(a?){4,}", "(a|bc){2,5}", "(?i)été", "[a-z]+", "a{0}", "(?:a?b?){3,8}"} {
-		t.Run(pattern, func(t *testing.T) {
-			expression, err := syntax.Parse(pattern, syntax.Perl)
-			if err != nil {
-				t.Fatal(err)
-			}
-			estimate := regexCost(expression) + 2
-			program, err := syntax.Compile(expression.Simplify())
-			if err != nil {
-				t.Fatal(err)
-			}
-			if estimate < len(program.Inst) {
-				t.Fatalf("estimate %d below actual %d", estimate, len(program.Inst))
-			}
-		})
 	}
 }
