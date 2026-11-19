@@ -57,7 +57,7 @@ wraith.config.set("keys.editor", "<C-s>")`, path)
 	if err := os.WriteFile(filepath.Join(a.Paths.Config, "init.lua"), []byte(source), 0600); err != nil {
 		t.Fatal(err)
 	}
-	runtime, err := LoadPlugin(t.Context(), a.Paths.Config, a.Config)
+	runtime, err := LoadPlugin(t.Context(), a.Paths.Config, a.Config, a.Paths)
 	if runtime != nil {
 		runtime.Close()
 		t.Fatal("invalid host mapping was installed")

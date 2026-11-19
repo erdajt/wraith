@@ -5,8 +5,19 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/erdajt/wraith/internal/distribution"
 	"github.com/erdajt/wraith/internal/plugin"
 )
+
+// managerViewApp attaches the distributed manager to an isolated ui fixture.
+func managerViewApp(t *testing.T, source string) *App {
+	t.Helper()
+	selected, err := distribution.Prepare(t.Context(), "shroud", t.TempDir(), 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pluginFixture(t, source, plugin.PackageRoot{Directory: selected.Path, Namespaces: []string{"shroud", "wraith.manager"}})
+}
 
 const managerViewFixture = `local manager={}
 local executed=0
@@ -28,7 +39,7 @@ wraith.commands.create("execution-count",function() wraith.notify(tostring(execu
 `
 
 func TestManagerViewUsesVimRowsAndExplicitFrozenPlanApproval(t *testing.T) {
-	a := pluginFixture(t, managerViewFixture)
+	a := managerViewApp(t, managerViewFixture)
 	a.width, a.height = 120, 40
 	applyPluginEvents(t, a, a.runCommand("packages"))
 	reader := a.inputReader()
@@ -57,7 +68,7 @@ func TestManagerViewUsesVimRowsAndExplicitFrozenPlanApproval(t *testing.T) {
 }
 
 func TestManagerViewRefreshKeepsFocusAndReopensClosedWindow(t *testing.T) {
-	a := pluginFixture(t, managerViewFixture)
+	a := managerViewApp(t, managerViewFixture)
 	a.width, a.height = 120, 40
 	applyPluginEvents(t, a, a.runCommand("packages"))
 	a.key(key("3"))
@@ -79,7 +90,7 @@ func TestManagerViewRefreshKeepsFocusAndReopensClosedWindow(t *testing.T) {
 }
 
 func TestManagerViewCancelDoesNotExecutePlan(t *testing.T) {
-	a := pluginFixture(t, managerViewFixture)
+	a := managerViewApp(t, managerViewFixture)
 	a.width, a.height = 120, 40
 	applyPluginEvents(t, a, a.runCommand("packages"))
 	a.key(key("3"))
@@ -97,7 +108,7 @@ func TestManagerViewCancelDoesNotExecutePlan(t *testing.T) {
 }
 
 func TestManagerDetailsRecoverAfterHostRejectsRegistration(t *testing.T) {
-	a := pluginFixture(t, managerViewFixture+`wraith.keymap.set("chat.normal","z","noop")`)
+	a := managerViewApp(t, managerViewFixture+`wraith.keymap.set("chat.normal","z","noop")`)
 	a.width, a.height = 120, 40
 	applyPluginEvents(t, a, a.runCommand("packages"))
 	a.key(key("3"))
@@ -135,7 +146,7 @@ func TestManagerDetailsRecoverAfterHostRejectsRegistration(t *testing.T) {
 }
 
 func TestManagerViewRetainsWindowIdentityWhenCloseIsRejected(t *testing.T) {
-	a := pluginFixture(t, managerViewFixture)
+	a := managerViewApp(t, managerViewFixture)
 	a.width, a.height = 120, 40
 	applyPluginEvents(t, a, a.runCommand("packages"))
 	id := a.plugins.Surfaces().Index().Windows[0].ID

@@ -2,10 +2,13 @@ package ui
 
 import (
 	"context"
+	"errors"
+	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/config"
+	"github.com/erdajt/wraith/internal/distribution"
 	"github.com/erdajt/wraith/internal/plugin"
 )
 
@@ -19,7 +22,27 @@ type pluginReloadMsg struct {
 
 // LoadPlugin prepares and validates a candidate without replacing an active runtime.
 func LoadPlugin(ctx context.Context, directory string, c config.Config, locations ...config.Paths) (*plugin.Runtime, error) {
-	r, err := plugin.Open(ctx, directory, c, PluginActions(), locations...)
+	if len(locations) > 1 {
+		return nil, errors.New("plugin runtime accepts one location override")
+	}
+	paths, err := config.Locations()
+	if err != nil {
+		return nil, err
+	}
+	if len(locations) == 1 {
+		if locations[0].Data != "" {
+			paths.Data = locations[0].Data
+		}
+		if locations[0].Cache != "" {
+			paths.Cache = locations[0].Cache
+		}
+	}
+	selected, err := distribution.Prepare(ctx, "shroud", filepath.Join(paths.Data, "bootstrap"), 2)
+	if err != nil {
+		return nil, err
+	}
+	options := plugin.Options{Paths: paths, Packages: []plugin.PackageRoot{{Directory: selected.Path, Namespaces: []string{"shroud", "wraith.manager"}}}}
+	r, err := plugin.OpenWithOptions(ctx, directory, c, PluginActions(), options)
 	if err != nil {
 		return nil, err
 	}

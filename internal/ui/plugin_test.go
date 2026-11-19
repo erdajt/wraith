@@ -10,13 +10,13 @@ import (
 )
 
 // pluginFixture attaches a real local lua runtime to an isolated workspace.
-func pluginFixture(t *testing.T, source string) *App {
+func pluginFixture(t *testing.T, source string, packages ...plugin.PackageRoot) *App {
 	t.Helper()
 	a := fixture(t)
 	if err := os.WriteFile(filepath.Join(a.Paths.Config, "init.lua"), []byte(source), 0600); err != nil {
 		t.Fatal(err)
 	}
-	r, err := plugin.Open(t.Context(), a.Paths.Config, a.Config, PluginActions())
+	r, err := plugin.OpenWithOptions(t.Context(), a.Paths.Config, a.Config, PluginActions(), plugin.Options{Paths: a.Paths, Packages: packages})
 	if err != nil {
 		t.Fatal(err)
 	}

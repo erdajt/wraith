@@ -11,7 +11,7 @@ func TestDocumentedLuaConfigurationLoadsAndRuns(t *testing.T) {
 	if err := os.CopyFS(a.Paths.Config, os.DirFS(filepath.Join("..", "..", "docs", "examples", "lua"))); err != nil {
 		t.Fatal(err)
 	}
-	r, err := LoadPlugin(t.Context(), a.Paths.Config, a.Config)
+	r, err := LoadPlugin(t.Context(), a.Paths.Config, a.Config, a.Paths)
 	if err != nil {
 		t.Fatal(err)
 	}

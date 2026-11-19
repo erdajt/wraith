@@ -8,7 +8,7 @@ import (
 )
 
 func TestManagerOperationLogUsesBoundedSearchableBuffer(t *testing.T) {
-	a := pluginFixture(t, managerViewFixture+`
+	a := managerViewApp(t, managerViewFixture+`
 manager.status=function() return {packages={package},operation={
  id="transaction",state="fetching",name="example",message="fetching exact revision",
  log=string.rep("x",9000).."\nprogress\n"..string.char(27).."end",log_truncated=true,
@@ -50,7 +50,7 @@ manager.status=function() return {packages={package},operation={
 
 // TestManagerCleanupWarningPreservesInstalledPresentation keeps recovery visible without misreporting publication.
 func TestManagerCleanupWarningPreservesInstalledPresentation(t *testing.T) {
-	a := pluginFixture(t, managerViewFixture+`
+	a := managerViewApp(t, managerViewFixture+`
 manager.status=function() return {packages={package},operation={
  id="transaction",state="installed",phase="cleaning",generation="published",
  cleanup_warning="temporary checkout remains; inspect recovery paths",
