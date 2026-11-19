@@ -184,6 +184,15 @@ func (a *App) cacheSurfaceWindow(window plugin.SurfaceWindow, focus bool) {
 	focus = focus || window.Focus
 	window.Focus = false
 	view.surface.window = window
+	if window.Kind == "split" {
+		rect := windowRect{width: a.conversationWidth(), height: a.bodyHeight()}
+		if old.Width != window.Width || old.Kind != window.Kind {
+			a.windowTree.setExtent(id, true, window.Width, rect)
+		}
+		if old.Height != window.Height || old.Kind != window.Kind {
+			a.windowTree.setExtent(id, false, window.Height, rect)
+		}
+	}
 	if focus {
 		a.focusWindow(id)
 	}

@@ -128,6 +128,7 @@ func (a *App) windowAction(action string) {
 		}
 	}
 	if action == "+" || action == "-" || action == ">" || action == "<" || action == "=" {
+		a.syncSurfaceGeometry()
 		w, h := a.chatSize()
 		a.notice = fmt.Sprintf("conversation window %d · %d×%d", a.windowID, w, h)
 	}

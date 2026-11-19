@@ -66,3 +66,32 @@ func TestClosingNativeRootKeepsFloatingViewsAndLiveFallback(t *testing.T) {
 		t.Fatal("closing the native root left a dead leaf or removed a floating view")
 	}
 }
+
+func TestSurfaceWindowSizesUseNativeDividers(t *testing.T) {
+	a := pluginFixture(t, "")
+	a.width, a.height = 140, 40
+	buffer := surfaceFixture(t, a, false)
+	id := surfaceWindowFixture(t, a, buffer.ID, true)
+	view := a.windows[id].surface
+	window := view.window
+	window.Width = 40
+	if err := a.applySurfaceMutation(a.plugins, plugin.SurfaceMutation{Operation: "window.configure", ID: window.ID, Owner: window.Owner, Lease: a.plugins.Surfaces().OwnerLease(window.Owner), Expected: window.Revision, Window: &window}); err != nil {
+		t.Fatal(err)
+	}
+	width, _ := a.chatSize()
+	if width != 40 {
+		t.Fatalf("requested width = %d, want 40", width)
+	}
+	a.windowAction(">")
+	width, height := a.chatSize()
+	stored, err := a.plugins.Surfaces().Window(window.ID)
+	if err != nil || width <= 40 || stored.Width != width || stored.Height != height {
+		t.Fatalf("user resize not visible to plugins: %#v, measured %dx%d, error %v", stored, width, height, err)
+	}
+	a.width = 50
+	for _, place := range a.windowPlaces() {
+		if place.x < 0 || place.x+place.width > a.width || place.width <= 0 {
+			t.Fatalf("small terminal placed pane outside bounds: %#v", place)
+		}
+	}
+}

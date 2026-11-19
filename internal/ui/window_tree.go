@@ -143,3 +143,37 @@ func neighbor(places []windowPlace, current uint64, direction string) uint64 {
 	}
 	return chosen
 }
+
+// setExtent sets the nearest matching divider from a requested leaf size in terminal cells.
+func (n *windowNode) setExtent(id uint64, vertical bool, cells int, rect windowRect) bool {
+	if n.first == nil || !n.contains(id) {
+		return false
+	}
+	size, minimum := rect.height, 4
+	if n.vertical {
+		size, minimum = rect.width, 24
+	}
+	cut := max(minimum, min(size-minimum-1, int(float64(size-1)*n.ratio)))
+	first, second := rect, rect
+	if n.vertical {
+		first.width, second.width = cut, size-cut-1
+	} else {
+		first.height, second.height = cut, size-cut-1
+	}
+	if n.first.setExtent(id, vertical, cells, first) || n.second.setExtent(id, vertical, cells, second) {
+		return true
+	}
+	if n.vertical != vertical || size < minimum*2+1 {
+		return false
+	}
+	if cells == 0 {
+		n.ratio = 0.5
+		return true
+	}
+	wanted := max(minimum, min(cells, size-minimum-1))
+	if n.second.contains(id) {
+		wanted = size - wanted - 1
+	}
+	n.ratio = float64(wanted) / float64(size-1)
+	return true
+}

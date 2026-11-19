@@ -100,3 +100,21 @@ func (a *App) closeSurfaceWindow(handle string) error {
 	a.applySurfaceDelta(delta, false)
 	return nil
 }
+
+// syncSurfaceGeometry publishes user-resized tiled dimensions without replaying layout intents.
+func (a *App) syncSurfaceGeometry() {
+	for _, place := range a.windowPlaces() {
+		view := a.windows[place.id].surface
+		if view == nil || view.window.Kind != "split" {
+			continue
+		}
+		window := view.window
+		window.Width, window.Height = place.width, place.height
+		delta, err := a.plugins.Surfaces().HostApply(plugin.SurfaceMutation{Operation: "window.configure", ID: window.ID, Owner: window.Owner, Expected: window.Revision, Window: &window})
+		if err != nil {
+			a.notice = "buffer geometry: " + err.Error()
+			continue
+		}
+		view.window = *delta.Window
+	}
+}
