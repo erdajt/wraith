@@ -34,7 +34,7 @@ func (e *engine) initOwnership() {
 		commandLayers: map[string][]ownedCommand{}, bindingLayers: map[string][]ownedBinding{},
 	}
 	for _, binding := range e.manifest.Config.Keymaps {
-		id, _ := bindingIdentity(binding.Mode, binding.Keys)
+		id, _ := bindingIdentity(binding)
 		e.bindingLayers[id] = []ownedBinding{{owner: e.owner, binding: binding}}
 	}
 }
@@ -52,12 +52,12 @@ func (e *engine) cloneOwnership() ownershipLayers {
 }
 
 // bindingIdentity resolves equivalent key notation to one owner-layer identity.
-func bindingIdentity(mode, text string) (string, error) {
-	keys, err := keymap.Parse(text)
+func bindingIdentity(binding keymap.Binding) (string, error) {
+	keys, err := keymap.Parse(binding.Keys)
 	if err != nil {
 		return "", err
 	}
-	return mode + "\x00" + strings.Join(keys, "\x00"), nil
+	return binding.Buffer + "\x00" + binding.Mode + "\x00" + strings.Join(keys, "\x00"), nil
 }
 
 // setOwnedCommand replaces this owner's definition without losing earlier owners.
@@ -102,7 +102,7 @@ func (e *engine) setOwnedBinding(id string, binding keymap.Binding) {
 // refreshOwnedBinding applies the top mapping while honoring explicit deletion layers.
 func (e *engine) refreshOwnedBinding(id string) {
 	e.manifest.Config.Keymaps = slices.DeleteFunc(e.manifest.Config.Keymaps, func(binding keymap.Binding) bool {
-		key, _ := bindingIdentity(binding.Mode, binding.Keys)
+		key, _ := bindingIdentity(binding)
 		return key == id
 	})
 	layers := e.bindingLayers[id]

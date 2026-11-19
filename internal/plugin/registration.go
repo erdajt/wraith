@@ -41,7 +41,7 @@ func (e *engine) installRegistration(api *lua.LTable) {
 			if _, err := keymap.New([]keymap.Binding{binding}); err != nil {
 				L.RaiseError("keymap.set: %v", err)
 			}
-			id, _ := bindingIdentity(mode, keys)
+			id, _ := bindingIdentity(binding)
 			if len(e.bindingLayers[id]) == 0 && len(e.manifest.Config.Keymaps) >= 512 {
 				L.RaiseError("keymap limit reached")
 			}
@@ -57,7 +57,7 @@ func (e *engine) installRegistration(api *lua.LTable) {
 		"del": func(L *lua.LState) int {
 			e.registration(L)
 			mode, text := L.CheckString(1), L.CheckString(2)
-			id, err := bindingIdentity(mode, text)
+			id, err := bindingIdentity(keymap.Binding{Mode: mode, Keys: text})
 			if err != nil {
 				L.RaiseError("keymap.del: %v", err)
 			}

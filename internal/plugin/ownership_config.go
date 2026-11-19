@@ -12,7 +12,7 @@ func (e *engine) syncOwnerBindings(bindings []keymap.Binding, owner string) {
 	next := make(map[string]keymap.Binding, len(bindings))
 	ids := map[string]bool{}
 	for _, binding := range bindings {
-		id, _ := bindingIdentity(binding.Mode, binding.Keys)
+		id, _ := bindingIdentity(binding)
 		next[id], ids[id] = binding, true
 	}
 	for id := range e.bindingLayers {

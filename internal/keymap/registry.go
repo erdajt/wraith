@@ -7,6 +7,7 @@ import (
 )
 
 type Binding struct {
+	Buffer      string `json:"buffer,omitempty" yaml:"buffer,omitempty"`
 	Mode        string `json:"mode" yaml:"mode"`
 	Keys        string `json:"keys" yaml:"keys"`
 	Action      string `json:"action,omitempty" yaml:"action,omitempty"`
@@ -29,6 +30,9 @@ type Registry struct {
 func New(bindings []Binding) (*Registry, error) {
 	r := &Registry{entries: map[string]map[string]Binding{}}
 	for _, binding := range bindings {
+		if len(binding.Buffer) > 256 || strings.ContainsRune(binding.Buffer, 0) {
+			return nil, fmt.Errorf("keymap %q: invalid buffer id", binding.Keys)
+		}
 		valid := slices.Contains([]string{"*", "command", "search", "picker", "output", "buffer", "terminal", "terminal.copy"}, binding.Mode)
 		for _, surface := range []string{"prompt", "chat", "output", "buffer", "terminal.copy"} {
 			mode := strings.TrimPrefix(binding.Mode, surface+".")
@@ -49,10 +53,14 @@ func New(bindings []Binding) (*Registry, error) {
 				return nil, fmt.Errorf("keymap %q input: %w", binding.Keys, err)
 			}
 		}
-		if r.entries[binding.Mode] == nil {
-			r.entries[binding.Mode] = map[string]Binding{}
+		scope := binding.Mode
+		if binding.Buffer != "" {
+			scope = binding.Buffer + "\x00" + scope
 		}
-		r.entries[binding.Mode][strings.Join(keys, "\x00")] = binding
+		if r.entries[scope] == nil {
+			r.entries[scope] = map[string]Binding{}
+		}
+		r.entries[scope][strings.Join(keys, "\x00")] = binding
 	}
 	return r, nil
 }
@@ -82,6 +90,11 @@ func (r *Registry) LookupDefault(mode string, keys []string) Match {
 
 // Lookup resolves an exact sequence and its continuations for a single input context.
 func (r *Registry) Lookup(mode string, keys []string) Match {
+	return r.LookupBuffer("", mode, keys)
+}
+
+// LookupBuffer overlays one buffer's bindings after inherited workspace and editor mappings.
+func (r *Registry) LookupBuffer(bufferID, mode string, keys []string) Match {
 	var result Match
 	if r == nil {
 		return result
@@ -103,6 +116,11 @@ func (r *Registry) Lookup(mode string, keys []string) Match {
 		layers = append(layers, "buffer")
 	}
 	layers = append(layers, mode)
+	if bufferID != "" {
+		for _, layer := range slices.Clone(layers) {
+			layers = append(layers, bufferID+"\x00"+layer)
+		}
+	}
 	for _, layer := range layers {
 		for key, binding := range r.entries[layer] {
 			entries[key] = binding
@@ -128,6 +146,8 @@ func (r *Registry) Bindings() []Binding {
 			out = append(out, binding)
 		}
 	}
-	slices.SortFunc(out, func(a, b Binding) int { return strings.Compare(a.Mode+"\x00"+a.Keys, b.Mode+"\x00"+b.Keys) })
+	slices.SortFunc(out, func(a, b Binding) int {
+		return strings.Compare(a.Buffer+"\x00"+a.Mode+"\x00"+a.Keys, b.Buffer+"\x00"+b.Mode+"\x00"+b.Keys)
+	})
 	return out
 }

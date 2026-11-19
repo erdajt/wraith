@@ -45,13 +45,17 @@ func TestOwnerRemovalRestoresCommandsAndSubscriptions(t *testing.T) {
 
 func TestOwnerBindingsUseCanonicalKeysAndRetainHiddenCallbacks(t *testing.T) {
 	e := ownershipFixture()
-	id, err := bindingIdentity("prompt.normal", "<C-m>")
+	id, err := bindingIdentity(keymap.Binding{Mode: "prompt.normal", Keys: "<C-m>"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	alias, err := bindingIdentity("prompt.normal", "<enter>")
+	alias, err := bindingIdentity(keymap.Binding{Mode: "prompt.normal", Keys: "<enter>"})
 	if err != nil || alias != id {
 		t.Fatalf("equivalent key identities: %q %q %v", id, alias, err)
+	}
+	local, err := bindingIdentity(keymap.Binding{Buffer: "owned-buffer", Mode: "prompt.normal", Keys: "<enter>"})
+	if err != nil || local == id {
+		t.Fatal("buffer-local binding shared a global ownership identity")
 	}
 	e.setOwnedBinding(id, keymap.Binding{Mode: "prompt.normal", Keys: "<C-m>", Action: "base"})
 	e.owner = "extension"
@@ -76,7 +80,7 @@ func TestExplicitBindingChangesSurvivePackageRemoval(t *testing.T) {
 		t.Run(change, func(t *testing.T) {
 			e := ownershipFixture()
 			binding := keymap.Binding{Mode: "prompt.normal", Keys: "x", Action: "base"}
-			id, _ := bindingIdentity(binding.Mode, binding.Keys)
+			id, _ := bindingIdentity(binding)
 			e.setOwnedBinding(id, binding)
 			e.owner = "extension"
 			binding.Action = "extension"

@@ -27,6 +27,29 @@ func TestBufferBindingsInheritNavigationAndOverrideByScope(t *testing.T) {
 	}
 }
 
+func TestBufferLocalMappingsStayWithinTheirTarget(t *testing.T) {
+	r, err := New([]Binding{
+		{Mode: "buffer.normal", Keys: "x", Action: "global"},
+		{Buffer: "first", Mode: "buffer.normal", Keys: "x", Action: "first"},
+		{Buffer: "second", Mode: "buffer.normal", Keys: "x", Action: "second"},
+		{Buffer: "first", Mode: "buffer.visual", Keys: "y", Input: "y"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for id, want := range map[string]string{"first": "first", "second": "second", "third": "global", "": "global"} {
+		if got := r.LookupBuffer(id, "buffer.normal", []string{"x"}); got.Action != want {
+			t.Fatalf("buffer %q mapping = %q, want %q", id, got.Action, want)
+		}
+	}
+	if got := r.LookupBuffer("second", "buffer.visual", []string{"y"}); got.Exact {
+		t.Fatal("local visual mapping leaked to another buffer")
+	}
+	if len(r.Bindings()) != 4 {
+		t.Fatal("buffer-local identity overwrote an unrelated binding")
+	}
+}
+
 func TestRegistryOverridesWithoutSharingContextOrMutatingDefaults(t *testing.T) {
 	bindings := []Binding{{Mode: "chat.normal", Keys: "<C-w>v", Action: "window.vertical"}, {Mode: "chat.normal", Keys: "<C-w>", Action: "window.help"}, {Mode: "chat.normal", Keys: "<C-w>v", Action: "window.horizontal"}, {Mode: "*", Keys: "<F1>", Action: "help"}}
 	r, err := New(bindings)
