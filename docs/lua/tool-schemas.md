@@ -33,7 +33,7 @@ subschemas may be objects or booleans. property names and annotation data may co
 
 unknown keywords are rejected. `$ref`, `$dynamicRef`, `$defs`, `$id`, anchors, `format` and content keywords are not supported. no external schema is loaded. an omitted `$schema` selects draft 2020-12; other dialects are rejected.
 
-patterns use Go's RE2 syntax. lookaround and backreferences are unavailable. numbers use Go's JSON `float64` representation, matching Lua's numeric precision; use strings for identifiers that require exact integers beyond 53 bits.
+patterns use Go's RE2 syntax. lookaround and backreferences are unavailable. numbers use double precision, matching Lua. integer-valued numbers outside `-9007199254740991` through `9007199254740991` are rejected in schemas and arguments, including decimal and exponent notation. use strings for larger identifiers and exact decimal values. fractional numbers retain double precision rounding.
 
 ## limits
 

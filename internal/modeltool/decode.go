@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"math"
 	"strconv"
 	"unicode/utf8"
 )
@@ -31,6 +32,7 @@ func decode(raw []byte, limit int) (any, valueSize, error) {
 	}
 
 	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.UseNumber()
 	value, err := decodeValue(decoder, 1, limit, &size)
 	if err != nil {
 		return nil, size, err
@@ -53,6 +55,16 @@ func decodeValue(decoder *json.Decoder, depth, limit int, size *valueSize) (any,
 	}
 	if text, ok := token.(string); ok {
 		size.text += len(text)
+	}
+	if number, ok := token.(json.Number); ok {
+		value, err := strconv.ParseFloat(string(number), 64)
+		if err != nil || math.IsNaN(value) || math.IsInf(value, 0) {
+			return nil, errors.New("json contains an invalid number")
+		}
+		if math.Trunc(value) == value && math.Abs(value) > 1<<53-1 {
+			return nil, errors.New("json integer exceeds exact numeric range; use a string")
+		}
+		return value, nil
 	}
 	delimiter, ok := token.(json.Delim)
 	if !ok {

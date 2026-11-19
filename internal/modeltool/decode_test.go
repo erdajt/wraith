@@ -42,3 +42,25 @@ func TestDecodePreservesValidUnicodeAndCountsKeys(t *testing.T) {
 		t.Fatal("object key did not count toward node limit")
 	}
 }
+
+func TestDecodeRejectsUnsafeIntegerRepresentations(t *testing.T) {
+	for _, raw := range []string{
+		`9007199254740992`, `9007199254740993`, `-9007199254740993`,
+		`9007199254740993.0`, `9.007199254740993e15`, `1e100`,
+	} {
+		t.Run(raw, func(t *testing.T) {
+			if _, _, err := decode([]byte(raw), 16); err == nil {
+				t.Fatal("unsafe integer accepted")
+			}
+		})
+	}
+	for raw, want := range map[string]float64{
+		`9007199254740991`: 9007199254740991, `-9007199254740991`: -9007199254740991,
+		`1.25`: 1.25, `1e-20`: 1e-20,
+	} {
+		value, _, err := decode([]byte(raw), 16)
+		if err != nil || value != want {
+			t.Fatalf("decode(%s) = %v, %v; want %v", raw, value, err, want)
+		}
+	}
+}

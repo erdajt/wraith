@@ -7,6 +7,29 @@ import (
 	"testing"
 )
 
+func TestSchemaRejectsRoundedIntegerAliases(t *testing.T) {
+	if _, err := Compile([]byte(`{"type":"object","properties":{"id":{"enum":[9007199254740993]}}}`)); err == nil {
+		t.Fatal("schema accepted an integer that rounds to another identifier")
+	}
+	schema, err := Compile([]byte(`{"type":"object","properties":{"id":{"type":"integer"}}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := schema.Validate([]byte(`{"id":9007199254740993}`)); err == nil {
+		t.Fatal("arguments accepted a rounded identifier")
+	}
+	stringsOnly, err := Compile([]byte(`{"type":"object","properties":{"id":{"enum":["9007199254740993"]}}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := stringsOnly.Validate([]byte(`{"id":"9007199254740992"}`)); err == nil {
+		t.Fatal("distinct string identifiers matched")
+	}
+	if err := stringsOnly.Validate([]byte(`{"id":"9007199254740993"}`)); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestSchemaValidatesNestedToolArguments(t *testing.T) {
 	schema, err := Compile([]byte(`{
 		"type":"object", "required":["command","options"], "additionalProperties":false,
