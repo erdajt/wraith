@@ -157,6 +157,11 @@ function M.cancel(id)
   return state.store.cancel(id)
 end
 
+function M.recover()
+  assert(state, "package manager is not configured")
+  return state.store.recover()
+end
+
 for _, action in ipairs({"install", "update", "restore"}) do
   M[action] = function(names)
     if type(names) == "string" then names = {names} end

@@ -18,7 +18,7 @@ function M.setup(specs, options)
   return M
 end
 
-for _, method in ipairs({"status", "load", "unload", "unload_all", "plan", "execute", "install", "update", "restore", "cancel", "open"}) do
+for _, method in ipairs({"status", "load", "unload", "unload_all", "plan", "execute", "install", "update", "restore", "cancel", "recover", "open"}) do
   M[method] = function(...) return wraith.plugins.call(runtime, method, ...) end
 end
 
