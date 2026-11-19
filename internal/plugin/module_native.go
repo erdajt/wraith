@@ -76,10 +76,11 @@ func (e *engine) invokeOwnedModule(L *lua.LState, name string, resolution *modul
 	e.moduleInvocations++
 	e.packageCalls = append(e.packageCalls, consumer, resolution.provider.owner, owner)
 	before := e.captureRegistry()
+	initial := native.loaded.RawGetString(name)
 	defer func() {
 		if err != nil {
 			value = lua.LNil
-			err = errors.Join(err, e.disposeRegistry(e.restoreRegistry(before)))
+			err = e.rollbackModule(L, name, native, initial, before, err)
 		}
 		L.SetTop(top)
 		e.L, e.owner = state, originalOwner
@@ -90,7 +91,6 @@ func (e *engine) invokeOwnedModule(L *lua.LState, name string, resolution *modul
 		err = L.CallByParam(lua.P{Fn: native.require, NRet: 1, Protect: true}, lua.LString(name))
 		return lua.LNil, err
 	}
-	initial := native.loaded.RawGetString(name)
 	verification := moduleVerification{phase: "before", executed: !lua.LVAsBool(initial)}
 	verification.proof, err = e.checkModuleResolution(L, name, resolution, verification)
 	if err == nil {

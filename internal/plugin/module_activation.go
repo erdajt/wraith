@@ -46,17 +46,8 @@ func (e *engine) activateModuleProvider(L *lua.LState, name string, resolution *
 	initial := native.loaded.RawGetString(name)
 	defer func() {
 		if err != nil {
-			if changed := native.validate(L); changed != nil {
-				err = errors.Join(err, changed, e.poisonModule(name, changed.Error()))
-			}
 			owner = ""
-			err = errors.Join(err, e.disposeRegistry(e.restoreRegistry(before)))
-			if changed := native.validate(L); changed != nil {
-				err = errors.Join(err, changed, e.poisonModule(name, changed.Error()))
-			}
-			if value := native.loaded.RawGetString(name); value != lua.LNil && value != initial {
-				err = errors.Join(err, e.poisonModule(name, "failed module activation left an unverified cache value; use /reload"))
-			}
+			err = e.rollbackModule(L, name, native, initial, before, err)
 		}
 		L.SetTop(top)
 		e.L, e.owner = state, previous
