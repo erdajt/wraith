@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -36,6 +37,16 @@ func (input workspaceQueryInput) run(ctx context.Context) (any, error) {
 	err := input.scans.readSource(ctx, func() error {
 		var err error
 		result, err = input.read(ctx)
+		if err != nil {
+			return err
+		}
+		encoded, err := json.Marshal(result)
+		if err == nil && len(encoded) > 256<<10 {
+			err = errors.New("workspace query result exceeds 256 kib; request a smaller page")
+		}
+		if err != nil {
+			result = nil
+		}
 		return err
 	})
 	return result, err

@@ -53,7 +53,7 @@ func workspaceJobMetadata(value runner.Record) map[string]any {
 // workspacePreview clips valid UTF-8 without retaining unbounded message text in a page.
 func workspacePreview(text string, limit int) string {
 	if len(text) <= limit {
-		return strings.ToValidUTF8(text, "�")
+		return strings.Clone(strings.ToValidUTF8(text, "�"))
 	}
 	for limit > 0 && !utf8.RuneStart(text[limit]) {
 		limit--

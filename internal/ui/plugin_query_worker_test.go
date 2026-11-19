@@ -133,3 +133,15 @@ func TestWorkspaceQueriesFollowSessionOwnershipAcrossCommandDirectories(t *testi
 		t.Fatalf("explicit directory scope ignored: %#v, %v", result, err)
 	}
 }
+
+// TestWorkspaceOversizedProjectionDoesNotEscapeSourceSlot rejects large metadata before retaining a reply.
+func TestWorkspaceOversizedProjectionDoesNotEscapeSourceSlot(t *testing.T) {
+	directory := t.TempDir()
+	input := workspaceQueryInput{scans: &workspaceScanStore{}, directory: directory,
+		session: session.Session{Directory: directory, Title: strings.Repeat("x", 256<<10)},
+		query:   plugin.WorkspaceQuery{Kind: "sessions.get"}}
+	result, err := input.run(t.Context())
+	if err == nil || result != nil || !strings.Contains(err.Error(), "256 kib") || len(input.scans.reads) != 0 {
+		t.Fatalf("oversized projection escaped source slot: %T, %v", result, err)
+	}
+}
