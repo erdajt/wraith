@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 )
 
 type packageRecord struct {
@@ -45,7 +46,8 @@ func (e *engine) unloadPlugin(name string) error {
 	e.removeOwnerRegistrations(record.owner)
 	for key, layers := range e.bindingLayers {
 		e.bindingLayers[key] = slices.DeleteFunc(layers, func(layer ownedBinding) bool {
-			return e.callbackOwners[layer.binding.Action] == record.owner
+			return e.callbackOwners[layer.binding.Action] == record.owner ||
+				(strings.HasPrefix(layer.binding.Action, "command.") && !e.actions[layer.binding.Action])
 		})
 		e.refreshOwnedBinding(key)
 	}

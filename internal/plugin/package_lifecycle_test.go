@@ -275,3 +275,42 @@ func TestDisposedDependencyEdgesSurviveUnrelatedLoad(t *testing.T) {
 		t.Fatalf("dependency order: %q, %v", content, err)
 	}
 }
+
+func TestUnloadDropsDanglingCommandAliasesButKeepsRestoredActions(t *testing.T) {
+	r := openTestRuntime(t, `
+ package.preload.first=function() return {setup=function()
+  wraith.commands.create("shared",function() end)
+ end} end
+ package.preload.second=function() return {setup=function()
+  wraith.commands.create("shared",function() end,"",{replace=true})
+  wraith.commands.create("unique",function() end)
+ end} end
+ wraith.plugins.load("first")
+ wraith.plugins.load("second")
+ wraith.keymap.set("prompt.normal","x","command.unique")
+ wraith.keymap.set("prompt.normal","z","command.shared")
+ wraith.commands.create("unload",function() wraith.plugins.unload("second") end)
+ `)
+	m := r.Manifest()
+	ch, err := r.Submit(m.Commands[2].Callback, "", nil, m.Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := receiveResult(t, ch)
+	if got.Err != nil || got.Manifest == nil {
+		t.Fatalf("command alias prevented unload: %+v", got)
+	}
+	defer r.Acknowledge(got.Revision, false)
+	found := false
+	for _, binding := range got.Manifest.Config.Keymaps {
+		if binding.Keys == "x" {
+			t.Fatal("dangling command alias survived")
+		}
+		if binding.Keys == "z" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("alias to restored command was removed")
+	}
+}
