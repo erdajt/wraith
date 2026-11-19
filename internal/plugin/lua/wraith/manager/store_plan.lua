@@ -45,6 +45,7 @@ function M.create(specs, lock, action, names)
     local previous = lock.packages[spec.name]
     local item = { name = spec.name, source = spec.source, selector = spec.selector, pin = spec.pin }
     if spec.source.kind == "local" then
+      assert(action ~= "restore" or not previous, "local package has a git lock; reconcile with install: " .. spec.name)
       item.state, item.path = "local", spec.source.dir
     else
       assert(not previous or equal(previous.source, spec.source), "package source changed: " .. spec.name)
@@ -65,7 +66,14 @@ function M.create(specs, lock, action, names)
     packages[#packages + 1] = item
   end
 
-  return { action = action, packages = packages, baseline = lock }
+  local removed = {}
+  if action ~= "restore" then
+    for name in pairs(lock.packages) do
+      if not indexed[name] or indexed[name].source.kind == "local" then removed[#removed + 1] = name end
+    end
+    table.sort(removed)
+  end
+  return { action = action, packages = packages, baseline = lock, removed = removed }
 end
 
 return M

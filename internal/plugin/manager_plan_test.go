@@ -78,3 +78,29 @@ update=planner.create(specs,lock,"update",{"app"})
 assert(update.packages[2].commit==string.rep("b",40))
 assert(update.packages[2].previous==string.rep("a",40))`, path))
 }
+
+// TestManagerPlanListsRetiredSelectionsWithoutChangingBaseline makes declarative lock pruning explicit.
+func TestManagerPlanListsRetiredSelectionsWithoutChangingBaseline(t *testing.T) {
+	path, err := filepath.Abs("lua/wraith/manager/store_plan.lua")
+	if err != nil {
+		t.Fatal(err)
+	}
+	openTestRuntime(t, fmt.Sprintf(`local planner=dofile(%q)
+local source={kind="git",url="https://example.com/repo"}
+local selector={kind="head"}
+local entry={source=source,selector=selector,pin=false,commit=string.rep("a",40)}
+local specs={
+ {name="selected",source=source,selector=selector,pin=false,dependencies={}},
+ {name="unchanged",source=source,selector=selector,pin=false,dependencies={}},
+}
+local lock={version=1,generation="before",packages={selected=entry,unchanged=entry,disabled=entry,removed=entry}}
+local plan=planner.create(specs,lock,"update",{"selected"})
+assert(#plan.packages==1 and plan.packages[1].name=="selected")
+assert(#plan.removed==2 and plan.removed[1]=="disabled" and plan.removed[2]=="removed")
+assert(plan.baseline.packages.unchanged and plan.baseline.packages.disabled)
+assert(#planner.create(specs,lock,"restore",{"selected"}).removed==0)
+specs[2].source={kind="local",dir="/explicit/development"}
+plan=planner.create(specs,lock,"install",{"selected"})
+assert(#plan.removed==3 and plan.removed[3]=="unchanged")
+assert(not pcall(planner.create,specs,lock,"restore",{"unchanged"}))`, path))
+}
