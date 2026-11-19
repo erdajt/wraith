@@ -59,7 +59,7 @@ func (e *engine) installSchedule(api *lua.LTable) {
 		if e.setup && len(e.startup) >= 64 {
 			L.RaiseError("startup schedule limit reached")
 		}
-		if !e.setup && len(e.effects) >= 64 {
+		if !e.setup && e.effectCount("schedule.callback") >= 64 {
 			L.RaiseError("plugin action batch exceeds its limit")
 		}
 		e.serial++

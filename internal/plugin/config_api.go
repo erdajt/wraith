@@ -131,7 +131,7 @@ func (e *engine) emit(L *lua.LState, effect Effect) {
 	if e.setup || e.closing {
 		L.RaiseError("runtime operations are disabled during setup and teardown")
 	}
-	if len(e.effects) >= 64 || len(effect.Argument) > 64<<10 {
+	if e.effectCount(effect.Name) >= 64 || len(effect.Argument) > 64<<10 {
 		L.RaiseError("plugin action batch exceeds its limit")
 	}
 	if effect.Name == "input.feed" {
@@ -174,4 +174,16 @@ func (e *engine) callback(L *lua.LState, value lua.LValue) string {
 	e.callbackOwners[id] = e.owner
 	e.manifest.Callbacks = append(e.manifest.Callbacks, id)
 	return id
+}
+
+// effectCount keeps deferred callbacks from consuming the ordinary host action budget.
+func (e *engine) effectCount(name string) int {
+	scheduled := name == "schedule.callback"
+	count := 0
+	for _, effect := range e.effects {
+		if (effect.Name == "schedule.callback") == scheduled {
+			count++
+		}
+	}
+	return count
 }

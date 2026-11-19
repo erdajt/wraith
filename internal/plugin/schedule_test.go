@@ -123,3 +123,31 @@ func TestStartupScheduleBoundaryAndUnloadedOwners(t *testing.T) {
 		}
 	}
 }
+
+func TestStartupSchedulingDoesNotConsumeObserverActionBudget(t *testing.T) {
+	for _, first := range []bool{false, true} {
+		t.Run(fmt.Sprint(first), func(t *testing.T) {
+			observer := `wraith.events.on("ready",function() for i=1,64 do wraith.notify("ready") end end)`
+			scheduled := `for i=1,64 do wraith.schedule(function() end) end`
+			source := observer + "\n" + scheduled
+			if !first {
+				source = scheduled + "\n" + observer
+			}
+			r := openTestRuntime(t, source)
+			ch, err := r.Submit("", "ready", nil, r.Manifest().Config)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := receiveResult(t, ch)
+			if got.Err != nil || len(got.Effects) != 128 || got.Manifest == nil {
+				t.Fatalf("mixed startup batch: %+v", got)
+			}
+			if err := r.Acknowledge(got.Revision, true); err != nil {
+				t.Fatal(err)
+			}
+			if len(r.Diagnostics()) != 0 {
+				t.Fatalf("startup observer failed: %v", r.Diagnostics())
+			}
+		})
+	}
+}
