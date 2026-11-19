@@ -3,6 +3,7 @@ package ui
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -50,19 +51,29 @@ func (a *App) callPlugin(callback, event, argument string) tea.Cmd {
 
 // callPluginData includes detached event data while retaining the callback's input ownership.
 func (a *App) callPluginData(callback, event, argument string, data any) tea.Cmd {
+	cmd, err := a.queuePluginData(callback, event, argument, data)
+	if err != nil {
+		a.notice = err.Error()
+		if a.pluginDepth < 8 {
+			a.notice = "lua: " + a.notice
+		}
+	}
+	return cmd
+}
+
+// queuePluginData lets persistent event sources retain their latest state under queue pressure.
+func (a *App) queuePluginData(callback, event, argument string, data any) (tea.Cmd, error) {
 	if a.plugins == nil || event != "" && !slices.Contains(a.pluginManifest.Events, event) {
-		return nil
+		return nil, nil
 	}
 	if a.pluginDepth >= 8 {
-		a.notice = "plugin callback chain limit reached"
-		return nil
+		return nil, errors.New("plugin callback chain limit reached")
 	}
 	snapshot := a.pluginSnapshot(argument, event, data)
 	m := pluginResultMsg{Runtime: a.plugins, Owner: a.keyOwner(), Draft: a.Prompt.String(), Digest: configDigest(a.Config), Target: a.pluginTarget(), Keys: keymapDigest(a.Config), Depth: a.pluginDepth + 1}
 	result, err := a.plugins.Submit(callback, event, snapshot, a.Config)
 	if err != nil {
-		a.notice = "lua: " + err.Error()
-		return nil
+		return nil, err
 	}
 	return func() tea.Msg {
 		select {
@@ -73,7 +84,7 @@ func (a *App) callPluginData(callback, event, argument string, data any) tea.Cmd
 		case <-a.done:
 			return nil
 		}
-	}
+	}, nil
 }
 
 // applyPluginResult rejects stale targets and routes effects through ordinary workspace guards.

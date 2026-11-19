@@ -116,7 +116,7 @@ func (e *engine) installRegistration(api *lua.LTable) {
 		"on": func(L *lua.LState) int {
 			e.registration(L)
 			name := L.CheckString(1)
-			if !slices.Contains([]string{"ready", "session_changed", "window_changed", "response_finished"}, name) && (!customEventName.MatchString(name) || len(name) > 128) {
+			if !slices.Contains([]string{"ready", "session_changed", "window_changed", "buffer_changed", "response_finished"}, name) && (!customEventName.MatchString(name) || len(name) > 128) {
 				L.RaiseError("unknown event: %s", name)
 			}
 			if len(e.events[name]) >= 32 {
