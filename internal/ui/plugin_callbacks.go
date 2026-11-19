@@ -14,13 +14,15 @@ import (
 )
 
 type pluginResultMsg struct {
-	Parent       *pluginResultMsg
-	Runtime      *plugin.Runtime
-	Owner, Draft string
-	Digest       [32]byte
-	Target       [32]byte
-	Depth        int
-	Result       plugin.Result
+	Parent           *pluginResultMsg
+	Scheduled        []string
+	PendingSchedules []string
+	Runtime          *plugin.Runtime
+	Owner, Draft     string
+	Digest           [32]byte
+	Target           [32]byte
+	Depth            int
+	Result           plugin.Result
 }
 
 // configDigest invalidates pending callback edits after settings change.
@@ -90,13 +92,20 @@ func (a *App) callPluginData(callback, event, argument string, data any) tea.Cmd
 }
 
 // applyPluginResult rejects stale targets and routes effects through ordinary workspace guards.
-func (a *App) applyPluginResult(m pluginResultMsg) tea.Cmd {
+func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
+	transferred := false
 	defer func() {
 		if m.Result.Revision != 0 {
 			_ = m.Runtime.Acknowledge(m.Result.Revision, false)
 		}
+		if !transferred {
+			discardPluginSchedules(m)
+			if next := remainingPluginSchedules(m); len(next.IDs) > 0 {
+				command = tea.Sequence(command, func() tea.Msg { return next })
+			}
+		}
 	}()
-	if m.Runtime != a.plugins || m.Parent == nil && m.Result.Err == nil && len(m.Result.Effects) == 0 && m.Result.Manifest == nil {
+	if m.Runtime != a.plugins || m.Parent == nil && m.Result.Err == nil && len(m.Result.Effects) == 0 && len(m.Scheduled) == 0 && len(m.PendingSchedules) == 0 && m.Result.Manifest == nil {
 		return nil
 	}
 	if !a.pluginOwns(m) {
@@ -116,6 +125,10 @@ func (a *App) applyPluginResult(m pluginResultMsg) tea.Cmd {
 		m.Digest = configDigest(a.Config)
 	}
 	for i, effect := range m.Result.Effects {
+		if effect.Name == "schedule.callback" {
+			m.Scheduled = append(m.Scheduled, effect.Argument)
+			continue
+		}
 		if !a.actionAllowed(effect.Name) {
 			return nil
 		}
@@ -152,19 +165,25 @@ func (a *App) applyPluginResult(m pluginResultMsg) tea.Cmd {
 				return nil
 			}
 			m.Result.Effects = m.Result.Effects[i+1:]
+			transferred = true
 			return func() tea.Msg {
 				result := cmd()
 				if child, ok := result.(pluginResultMsg); ok {
 					child.Parent = &m
 					return child
 				}
+				discardPluginSchedules(m)
+				if result == nil {
+					return remainingPluginSchedules(m)
+				}
 				return result
 			}
 		}
 		if cmd != nil {
-			if i+1 < len(m.Result.Effects) || m.Parent != nil {
+			if i+1 < len(m.Result.Effects) || m.Parent != nil || len(m.Scheduled) > 0 || len(m.PendingSchedules) > 0 {
 				m.Result.Effects = m.Result.Effects[i+1:]
 				m.Owner, m.Draft, m.Digest, m.Target = a.keyOwner(), a.Prompt.String(), configDigest(a.Config), a.pluginTarget()
+				transferred = true
 				if a.editing {
 					a.editorDeferred = append(a.editorDeferred, m)
 					return cmd
@@ -176,8 +195,15 @@ func (a *App) applyPluginResult(m pluginResultMsg) tea.Cmd {
 	}
 	if m.Parent != nil {
 		next := *m.Parent
+		next.Scheduled = append(slices.Clone(next.Scheduled), m.Scheduled...)
 		next.Owner, next.Draft, next.Digest, next.Target = a.keyOwner(), a.Prompt.String(), configDigest(a.Config), a.pluginTarget()
+		transferred = true
 		return func() tea.Msg { return next }
+	}
+	transferred = true
+	scheduled := append(slices.Clone(m.PendingSchedules), m.Scheduled...)
+	if len(scheduled) > 0 {
+		return func() tea.Msg { return pluginScheduledMsg{Runtime: m.Runtime, IDs: scheduled} }
 	}
 	return nil
 }

@@ -10,6 +10,8 @@ import (
 // update dispatches ui, provider and terminal events to their state handlers.
 func (a *App) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m := msg.(type) {
+	case pluginScheduledMsg:
+		return a, a.runPluginSchedule(m)
 	case pluginNoticeMsg:
 		return a, a.applyPluginNotice(m)
 	case pluginReloadMsg:
@@ -95,9 +97,18 @@ func (a *App) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for _, message := range pending {
 			if effect, ok := message.(pluginResultMsg); ok {
 				if !a.pluginOwns(effect) {
+					var resumes []tea.Cmd
+					for _, queued := range pending {
+						if callback, ok := queued.(pluginResultMsg); ok {
+							discardPluginSchedules(callback)
+							if next := remainingPluginSchedules(callback); len(next.IDs) > 0 {
+								resumes = append(resumes, func() tea.Msg { return next })
+							}
+						}
+					}
 					a.editing = false
 					a.notice = "editor result discarded after workspace changed · edit retained at " + m.File.Path
-					return a, nil
+					return a, tea.Batch(resumes...)
 				}
 			}
 		}
@@ -106,6 +117,10 @@ func (a *App) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for _, message := range pending {
 			if effect, ok := message.(pluginResultMsg); ok {
 				if !a.editorSucceeded {
+					discardPluginSchedules(effect)
+					if next := remainingPluginSchedules(effect); len(next.IDs) > 0 {
+						cmds = append(cmds, func() tea.Msg { return next })
+					}
 					continue
 				}
 				effect.Owner, effect.Draft, effect.Digest, effect.Target = a.keyOwner(), a.Prompt.String(), configDigest(a.Config), a.pluginTarget()
