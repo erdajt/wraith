@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"reflect"
+	"unicode/utf8"
 
 	"github.com/erdajt/wraith/internal/keymap"
 	lua "github.com/yuin/gopher-lua"
@@ -15,6 +16,25 @@ func decodeSurface(L *lua.LState, value lua.LValue, destination any) {
 	if err != nil {
 		L.RaiseError("surface options: %v", err)
 	}
+	var validate func(any)
+	validate = func(value any) {
+		switch value := value.(type) {
+		case string:
+			if !utf8.ValidString(value) {
+				L.RaiseError("surface options require valid utf-8; use ui.decode for binary input")
+			}
+		case []any:
+			for _, item := range value {
+				validate(item)
+			}
+		case map[string]any:
+			for key, item := range value {
+				validate(key)
+				validate(item)
+			}
+		}
+	}
+	validate(copied)
 	if object, ok := copied.(map[string]any); ok {
 		if len(object) == 0 && reflect.TypeOf(destination).Elem().Kind() == reflect.Slice {
 			copied = []any{}
