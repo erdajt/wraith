@@ -17,12 +17,12 @@ func (b *Buffer) CloneView() *Buffer {
 
 // SyncText rebases rune anchors and optionally discards history after an external replacement.
 func (b *Buffer) SyncText(text string, resetHistory bool) {
-	if resetHistory && b.history != nil {
-		*b.history = history{}
-	}
 	next := []rune(text)
 	if slices.Equal(b.Text, next) {
 		return
+	}
+	if resetHistory && b.history != nil {
+		*b.history = history{}
 	}
 	start := 0
 	for start < min(len(b.Text), len(next)) && b.Text[start] == next[start] {

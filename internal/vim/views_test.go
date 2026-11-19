@@ -69,3 +69,16 @@ func TestExternalReplacementClearsSharedHistoryAndOverlappingSelection(t *testin
 		t.Fatal("external replacement left stale shared undo")
 	}
 }
+
+func TestUnchangedTextPreservesSharedUndo(t *testing.T) {
+	first := New()
+	first.Set("before")
+	first.Set("after")
+	second := first.CloneView()
+	second.SyncText("after", true)
+	first.Key("esc", "")
+	first.Key("u", "")
+	if first.String() != "before" {
+		t.Fatal("unchanged text reset document history")
+	}
+}
