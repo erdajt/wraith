@@ -32,7 +32,9 @@ func (a *App) runExtension(p proposal) tea.Cmd {
 	if a.plugins != call.Runtime || index < 0 || !reflect.DeepEqual(definitions[index], call.Definition) {
 		a.proposal, a.popup = nil, nil
 		cmd := a.proposeExtension(call.Definition.Name, call.Arguments)
-		a.notice = "tool definition changed · review a new approval"
+		if a.proposal != nil {
+			a.notice = "tool definition changed · review a new approval"
+		}
 		return cmd
 	}
 	if err := call.Schema.Validate(call.Arguments); err != nil {
