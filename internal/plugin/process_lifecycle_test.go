@@ -67,16 +67,29 @@ func TestManagedProcessStopsOrdinaryDescendants(t *testing.T) {
 						if err != nil {
 							t.Fatal(err)
 						}
-						stat, err := os.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "stat"))
-						if err != nil && !os.IsNotExist(err) {
-							t.Fatal(err)
-						}
-						if err == nil {
+						stopped := time.NewTimer(3 * time.Second)
+						defer stopped.Stop()
+						tick := time.NewTicker(time.Millisecond)
+						defer tick.Stop()
+						for {
+							stat, err := os.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "stat"))
+							if os.IsNotExist(err) {
+								break
+							}
+							if err != nil {
+								t.Fatal(err)
+							}
 							state := string(stat)[strings.LastIndex(string(stat), ") ")+2:]
-							if !strings.HasPrefix(state, "Z ") && !strings.HasPrefix(state, "X ") {
-								t.Fatalf("descendant remains alive: %s", stat)
+							if strings.HasPrefix(state, "Z ") || strings.HasPrefix(state, "X ") {
+								break
+							}
+							select {
+							case <-tick.C:
+							case <-stopped.C:
+								t.Fatalf("descendant remains alive after group cancellation: %s", stat)
 							}
 						}
+
 						return
 					}
 				case <-deadline.C:
@@ -95,9 +108,9 @@ func TestManagedProcessCancellationUnblocksUnreadProtocolOutput(t *testing.T) {
 	defer tick.Stop()
 	for {
 		manager.mu.Lock()
-		queued := manager.progress
+		queued := manager.progressBytes
 		manager.mu.Unlock()
-		if queued == 256 {
+		if queued > (8<<20)-(64<<10) {
 			break
 		}
 		select {
