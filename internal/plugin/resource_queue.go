@@ -110,6 +110,7 @@ func (m *resourceManager) deliver() {
 			}
 		}
 		queued := m.queue[0]
+		m.queue[0] = queuedResourceEvent{}
 		m.queue = m.queue[1:]
 		if !queued.event.Final {
 			m.progress--

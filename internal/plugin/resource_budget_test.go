@@ -76,3 +76,32 @@ func TestResourceProgressRejectsSingleEventBeyondByteBudget(t *testing.T) {
 		t.Fatalf("oversized event did not fail before waiting: %v", err)
 	}
 }
+
+func TestResourceDeliveryClearsRetainedQueueSlot(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+	queue := []queuedResourceEvent{{event: ResourceEvent{Data: map[string]any{"data": []byte("payload")}}, bytes: 71}}
+	m := &resourceManager{
+		ctx: ctx, cancel: cancel, events: make(chan ResourceEvent),
+		changed: make(chan struct{}), wake: make(chan struct{}, 1),
+		queue: queue, progress: 1, progressBytes: 71,
+	}
+	go m.deliver()
+	select {
+	case <-m.events:
+	case <-time.After(time.Second):
+		t.Fatal("queued event was not delivered")
+	}
+	if queue[0].event.Data != nil {
+		t.Fatal("dequeued slot retained delivered payload")
+	}
+	cancel()
+	select {
+	case _, open := <-m.events:
+		if open {
+			t.Fatal("delivery duplicated its event")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("idle dispatcher did not stop")
+	}
+}
