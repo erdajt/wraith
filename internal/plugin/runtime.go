@@ -87,6 +87,8 @@ type Runtime struct {
 }
 
 type engine struct {
+	pureHook      bool
+	hookViolation error
 	ownershipLayers
 	schedulerState
 	resourceState

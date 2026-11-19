@@ -128,6 +128,10 @@ func mergeValue(current, update any) any {
 
 // emit bounds host operations and prevents setup or teardown from changing the live workspace.
 func (e *engine) emit(L *lua.LState, effect Effect) {
+	if e.pureHook {
+		e.hookViolation = fmt.Errorf("host operations are unavailable during pure hooks")
+		L.RaiseError("%v", e.hookViolation)
+	}
 	if e.setup || e.closing {
 		L.RaiseError("runtime operations are disabled during setup and teardown")
 	}
