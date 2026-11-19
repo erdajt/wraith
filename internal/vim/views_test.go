@@ -82,3 +82,33 @@ func TestUnchangedTextPreservesSharedUndo(t *testing.T) {
 		t.Fatal("unchanged text reset document history")
 	}
 }
+
+// TestNewViewSharesUndoWithoutNavigation keeps document history separate from view state.
+func TestNewViewSharesUndoWithoutNavigation(t *testing.T) {
+	first := New()
+	first.Set("before")
+	first.Set("after")
+	first.Mode, first.Search, first.query = "visual", "after", "aft"
+	first.Anchor, first.Pos = 1, 3
+	first.Pending, first.Count, first.OperatorCount = "d", "2", "3"
+	first.vertical, first.preferredColumn = true, 9
+	first.Register, first.Yanked = []rune("copied"), true
+
+	second := first.NewView()
+	if second.Mode != "normal" || second.Pos != 0 || second.Anchor != 0 || second.Search != "" || second.query != "" || second.Pending != "" || second.Count != "" || second.OperatorCount != "" || second.vertical || second.preferredColumn != 0 || len(second.Register) != 0 || second.Yanked {
+		t.Fatalf("new view inherited navigation: %+v", second)
+	}
+	second.Text[0] = 'A'
+	if first.String() != "after" {
+		t.Fatal("new view aliases document storage")
+	}
+	second.Key("u", "")
+	if second.String() != "before" || first.String() != "after" {
+		t.Fatal("new view lost shared undo or mutated the other view")
+	}
+	first.Key("esc", "")
+	first.Key("ctrl+r", "")
+	if first.String() != "After" {
+		t.Fatalf("redo history was not shared: %q", first.String())
+	}
+}

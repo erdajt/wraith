@@ -112,6 +112,8 @@ window options:
 | `mode` | `normal` or `insert`; insertion requires an editable buffer |
 | `buffer_id` | change the displayed buffer with `configure` |
 
+opening a view or changing its buffer applies the requested cursor and mode with fresh selection, search and scroll state. another view of that buffer shares text and undo, not navigation. configuring the same buffer preserves its transient view state unless cursor or mode changes.
+
 changing kind or placement moves the existing view. requested split sizes adjust the nearest matching divider and respect minimum visible sizes. terminal resize clips floats and may hide split branches until space returns. user divider changes update owned window geometry. `focus` is an operation request, not persistent focus state. window `mode` records normal versus insertion cursor behavior; visual selection and search remain transient state in each view.
 
 native approvals, editors and modal dialogs retain input ownership. focus requests that would replace them fail. passive regions never capture input.

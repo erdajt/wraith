@@ -15,6 +15,14 @@ func (b *Buffer) CloneView() *Buffer {
 	return &view
 }
 
+// NewView shares document history with fresh navigation and independent text storage.
+func (b *Buffer) NewView() *Buffer {
+	if b.history == nil {
+		b.history = &history{}
+	}
+	return &Buffer{Text: slices.Clone(b.Text), Mode: "normal", history: b.history}
+}
+
 // SyncText rebases rune anchors and optionally discards history after an external replacement.
 func (b *Buffer) SyncText(text string, resetHistory bool) {
 	next := []rune(text)

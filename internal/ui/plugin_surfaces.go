@@ -140,7 +140,7 @@ func (a *App) cacheSurfaceWindow(window plugin.SurfaceWindow, focus bool) {
 		editor := newReader(strings.Join(buffer.Lines, "\n"))
 		for _, existing := range a.windows {
 			if existing.surface != nil && existing.surface.window.BufferID == window.BufferID {
-				editor.Buffer = existing.surface.reader.Buffer.CloneView()
+				editor.Buffer = existing.surface.reader.Buffer.NewView()
 				break
 			}
 		}
@@ -151,6 +151,7 @@ func (a *App) cacheSurfaceWindow(window plugin.SurfaceWindow, focus bool) {
 		focus = focus || window.Focus
 	}
 	old := view.surface.window
+	attached := old.ID == "" || old.BufferID != window.BufferID
 	if old.ID == "" || old.Kind != window.Kind || old.Position != window.Position || old.RelativeTo != window.RelativeTo {
 		a.detachSurfaceWindow(id)
 		if window.Kind == "split" {
@@ -179,17 +180,17 @@ func (a *App) cacheSurfaceWindow(window plugin.SurfaceWindow, focus bool) {
 			view.surface.reader = newReader(strings.Join(buffer.Lines, "\n"))
 			for _, existing := range a.windows {
 				if existing != view && existing.surface != nil && existing.surface.window.BufferID == buffer.ID {
-					view.surface.reader.Buffer = existing.surface.reader.Buffer.CloneView()
+					view.surface.reader.Buffer = existing.surface.reader.Buffer.NewView()
 					break
 				}
 			}
 			view.surface.revision = buffer.Revision
 		}
 	}
-	if window.Cursor != view.surface.window.Cursor || view.surface.window.ID == "" {
+	if attached || window.Cursor != old.Cursor {
 		view.surface.reader.Buffer.Pos = surfaceCursorOffset(a.surfaceBuffers[window.BufferID].Lines, window.Cursor)
 	}
-	if window.Mode != old.Mode {
+	if attached || window.Mode != old.Mode {
 		b := view.surface.reader.Buffer
 		b.Mode, b.Pending, b.Count, b.OperatorCount = window.Mode, "", "", ""
 	}
