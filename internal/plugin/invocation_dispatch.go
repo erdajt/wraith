@@ -42,7 +42,7 @@ func (r *Runtime) SubmitInvocation(start InvocationStart, snapshot any, c config
 	if err != nil {
 		return nil, err
 	}
-	reply, err := r.submit(claimed.Binding.Callback, "", snapshot, c, nil, &claimed)
+	reply, err := r.submit(claimed.Binding.Callback, "", snapshot, c, nil, &claimed, claimed.ID)
 	if err != nil {
 		r.invocations.mu.Lock()
 		if record := r.invocations.records[start.ID]; record != nil {
@@ -104,4 +104,24 @@ func (m *invocationManager) revokeOwner(owner string) {
 	for _, id := range ids {
 		m.finish(id, nil, errors.New("invocation owner was unloaded"))
 	}
+}
+
+// SubmitWithinInvocation preserves cancellation across explicitly nested host callbacks.
+func (r *Runtime) SubmitWithinInvocation(id, callback, event string, snapshot any, c config.Config) (<-chan Result, error) {
+	if !r.InvocationValid(id) {
+		return nil, errors.New("invocation is no longer active")
+	}
+	return r.submit(callback, event, snapshot, c, nil, nil, id)
+}
+
+// context provides a cancellation source without exposing mutable invocation records.
+func (m *invocationManager) context(id string) context.Context {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if record := m.records[id]; record != nil {
+		return record.context
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	return ctx
 }

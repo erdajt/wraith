@@ -92,6 +92,7 @@ func (m *invocationManager) discard(id string) {
 		return
 	}
 	delete(m.records, id)
+	m.removeStart(id)
 	children := slices.Collect(maps.Keys(record.children))
 	record.queue = nil
 	record.bytes = 0
@@ -124,5 +125,26 @@ func (m *invocationManager) close() {
 	m.mu.Unlock()
 	for _, id := range ids {
 		m.discard(id)
+	}
+}
+
+// removeStart releases queued notices while retaining the order of other live starts.
+func (m *invocationManager) removeStart(id string) {
+	var retained []InvocationStart
+	for {
+		select {
+		case start, ok := <-m.starts:
+			if !ok {
+				return
+			}
+			if start.ID != id && !m.closed {
+				retained = append(retained, start)
+			}
+		default:
+			for _, start := range retained {
+				m.starts <- start
+			}
+			return
+		}
 	}
 }

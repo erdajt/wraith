@@ -121,7 +121,7 @@ func (r *Runtime) SubmitResource(event ResourceEvent, snapshot any, c config.Con
 		return nil, err
 	}
 	event.Data = detached.(map[string]any)
-	return r.submit("", "", snapshot, c, &event, nil)
+	return r.submit("", "", snapshot, c, &event, nil, "")
 }
 
 // callbackContext attaches a copied worker event to current workspace state on the VM owner.

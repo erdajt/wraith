@@ -115,3 +115,34 @@ func TestInvocationDeadlineAndCloseReleaseCapacity(t *testing.T) {
 		t.Fatal("live invocation bound was not enforced")
 	}
 }
+
+func TestClosedUnstartedInvocationsDoNotOccupyDispatchCapacity(t *testing.T) {
+	manager := newInvocationManager("test", func([]string) {})
+	t.Cleanup(manager.close)
+	for i := 0; i < 512; i++ {
+		call, err := manager.begin(t.Context(), InvocationRequest{})
+		if err != nil {
+			t.Fatalf("closed call %d retained a dispatch slot: %v", i, err)
+		}
+		call.Close()
+	}
+	if len(manager.starts) != 0 {
+		t.Fatal("closed invocations retained dispatch notices")
+	}
+	first, err := manager.begin(t.Context(), InvocationRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	removed, err := manager.begin(t.Context(), InvocationRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	last, err := manager.begin(t.Context(), InvocationRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	removed.Close()
+	if a, b := <-manager.starts, <-manager.starts; a.ID != first.ID || b.ID != last.ID {
+		t.Fatalf("dispatch order changed: %s, %s", a.ID, b.ID)
+	}
+}

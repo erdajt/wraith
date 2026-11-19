@@ -31,7 +31,10 @@ func (e *engine) invokeObservers(parent context.Context, event string) error {
 		e.owner = owner
 		ctx, cancel := context.WithTimeout(parent, 50*time.Millisecond)
 		e.L.SetContext(ctx)
-		err := e.L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true}, encodeValue(e.L, e.snapshot))
+		argument, err := e.invocationContext(encodeValue(e.L, e.snapshot), nil)
+		if err == nil {
+			err = e.L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true}, argument)
+		}
 		if ctx.Err() != nil {
 			err = errors.Join(err, ctx.Err())
 		}

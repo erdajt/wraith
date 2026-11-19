@@ -58,6 +58,7 @@ type request struct {
 	revision        uint64
 	resource        *ResourceEvent
 	invocation      *InvocationStart
+	invocationID    string
 }
 
 type completion struct {
@@ -180,11 +181,11 @@ func (r *Runtime) Manifest() Manifest {
 
 // Submit queues a callback or coalesced event without blocking the ui or retaining mutable state.
 func (r *Runtime) Submit(callback, event string, snapshot any, c config.Config) (<-chan Result, error) {
-	return r.submit(callback, event, snapshot, c, nil, nil)
+	return r.submit(callback, event, snapshot, c, nil, nil, "")
 }
 
 // submit queues detached state while preserving an optional managed resource identity.
-func (r *Runtime) submit(callback, event string, snapshot any, c config.Config, resource *ResourceEvent, invocation *InvocationStart) (<-chan Result, error) {
+func (r *Runtime) submit(callback, event string, snapshot any, c config.Config, resource *ResourceEvent, invocation *InvocationStart, invocationID string) (<-chan Result, error) {
 	data, err := json.Marshal(snapshot)
 	if err != nil || len(data) > 1<<20 {
 		return nil, errors.New("plugin snapshot exceeds value limits")
@@ -203,7 +204,7 @@ func (r *Runtime) submit(callback, event string, snapshot any, c config.Config, 
 		return nil, err
 	}
 	reply := &completion{channel: make(chan Result, 1)}
-	req := request{callback: callback, event: event, data: data, config: copy, reply: reply, revision: r.revision, resource: resource, invocation: invocation}
+	req := request{callback: callback, event: event, data: data, config: copy, reply: reply, revision: r.revision, resource: resource, invocation: invocation, invocationID: invocationID}
 	if previous, ok := r.pending[event]; (event == "window_changed" || event == "session_changed" || event == "buffer_changed") && ok {
 		previous.reply.resolve(Result{})
 		delete(r.waiting, previous.reply)
@@ -279,8 +280,8 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 				delete(r.pending, req.event)
 			}
 			scheduled := strings.HasPrefix(req.callback, "lua.schedule.")
-			stale := req.event == "" && req.resource == nil && req.invocation == nil && !scheduled && req.revision != r.revision
-			if req.event != "" || scheduled || req.resource != nil || req.invocation != nil {
+			stale := req.event == "" && req.resource == nil && req.invocation == nil && req.invocationID == "" && !scheduled && req.revision != r.revision
+			if req.event != "" || scheduled || req.resource != nil || req.invocation != nil || req.invocationID != "" {
 				req.config.Keymaps = slices.Clone(r.manifest.Config.Keymaps)
 			}
 			r.mu.Unlock()
@@ -313,7 +314,7 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 // invoke stages command or isolated observer changes for host publication.
 func (e *engine) invoke(parent context.Context, req request) (result Result) {
 	e.observerErrors = nil
-	e.invocationID = ""
+	e.invocationID = req.invocationID
 	defer func() { result.Invocation = e.invocationID; e.invocationID = "" }()
 	e.surfacePreview = nil
 	e.surfaceReserved = e.surfaces.pendingReservations(e.surfaceReserved)
@@ -326,7 +327,9 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 			return Result{}
 		}
 		delete(e.scheduled, req.callback)
-		e.invocationID = deferred.invocation
+		if deferred.invocation != "" {
+			e.invocationID = deferred.invocation
+		}
 	}
 	var resource resourceCallback
 	if req.resource != nil {
@@ -336,7 +339,9 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 			return Result{}
 		}
 		e.delivered[req.resource.ID] = req.resource.Sequence
-		e.invocationID = resource.invocation
+		if resource.invocation != "" {
+			e.invocationID = resource.invocation
+		}
 		if resource.function == nil {
 			return Result{}
 		}
@@ -346,6 +351,13 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 	}
 	if e.invocationID != "" && !e.invocations.valid(e.invocationID) {
 		return Result{Err: errors.New("invocation is no longer active")}
+	}
+	if e.invocationID != "" {
+		ctx, cancel := context.WithCancel(parent)
+		stop := context.AfterFunc(e.invocations.context(e.invocationID), cancel)
+		defer stop()
+		defer cancel()
+		parent = ctx
 	}
 	before := e.captureRegistry()
 	e.dirty = false

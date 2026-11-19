@@ -8,7 +8,7 @@ import (
 	"io"
 )
 
-// finish retains one terminal result and cancels every managed child before waking consumers.
+// finish retains one terminal result and cancels every managed child.
 func (m *invocationManager) finish(id string, data json.RawMessage, err error) error {
 	m.mu.Lock()
 	record := m.records[id]
@@ -21,6 +21,7 @@ func (m *invocationManager) finish(id string, data json.RawMessage, err error) e
 	if err != nil {
 		event.Error = err.Error()
 	}
+	m.removeStart(id)
 	record.terminal = &event
 	children := make([]string, 0, len(record.children))
 	for child := range record.children {
