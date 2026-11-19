@@ -82,11 +82,23 @@ func (a *App) applySurfaceDelta(delta plugin.SurfaceDelta, external bool) {
 	for _, buffer := range delta.ChangedBuffers {
 		a.cacheSurfaceBuffer(buffer, external)
 	}
+	for _, window := range delta.ChangedWindows {
+		if view := a.windows[a.surfaceWindows[window.ID]]; view != nil && view.surface != nil {
+			view.surface.window = window
+		}
+	}
 	if delta.Region != nil {
 		a.surfaceRegions[delta.Region.ID] = *delta.Region
 	}
 	if delta.Window != nil {
 		a.cacheSurfaceWindow(*delta.Window, delta.Operation == "window.focus")
+	}
+	if delta.Buffer != nil || len(delta.ChangedBuffers) > 0 {
+		for _, view := range a.windows {
+			if view.surface != nil {
+				a.syncSurfaceCursor(view.surface)
+			}
+		}
 	}
 }
 

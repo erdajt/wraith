@@ -9,8 +9,11 @@ import (
 	"github.com/erdajt/wraith/internal/vim"
 )
 
-// inputReader returns the focused read-only buffer without exposing a live shell.
+// inputReader returns the focused editor buffer without exposing a live shell.
 func (a *App) inputReader() *reader {
+	if a.pluginDialog != nil && a.pluginDialog.spec.Kind == "input" {
+		return a.pluginDialog.reader
+	}
 	if a.popup != nil {
 		return a.popup.Reader
 	}
@@ -22,6 +25,9 @@ func (a *App) inputReader() *reader {
 		if p := a.panes[index]; p != nil {
 			return p.Reader
 		}
+	}
+	if view := a.focusedSurfaceView(); view != nil {
+		return view.reader
 	}
 	return nil
 }
@@ -78,7 +84,11 @@ func (a *App) feedInput(sequence string) tea.Cmd {
 		if owner != a.keyOwner() || !a.inputAvailable() {
 			break
 		}
-		if r := a.inputReader(); r != nil {
+		if a.pluginDialog != nil {
+			commands = append(commands, a.pluginDialogKey(k))
+		} else if a.focusedSurfaceView() != nil {
+			commands = append(commands, a.pluginBufferKey(k))
+		} else if r := a.inputReader(); r != nil {
 			text, exit := r.key(k, max(1, a.height-8))
 			if exit && k.String() == "esc" {
 				r.Buffer.Key("esc", "")
@@ -111,8 +121,11 @@ func (a *App) feedInput(sequence string) tea.Cmd {
 	return tea.Sequence(commands...)
 }
 
-// inputAvailable excludes approvals, pickers, command lines and live terminal input.
+// inputAvailable excludes native approvals, command lines and live terminal input.
 func (a *App) inputAvailable() bool {
+	if a.pluginDialog != nil {
+		return true
+	}
 	if a.editing || a.proposal != nil || a.commandMode {
 		return false
 	}
@@ -128,12 +141,23 @@ func (a *App) setInputMode(mode string) tea.Cmd {
 		a.notice = "mode changes require an editable or read-only buffer"
 		return nil
 	}
+	if a.pluginDialog != nil && a.pluginDialog.spec.Kind == "select" {
+		a.notice = "picker navigation uses native input mappings"
+		return nil
+	}
 	if mode != "normal" && mode != "insert" && mode != "visual" && mode != "visual-line" && mode != "search" {
 		a.notice = "invalid input mode: " + mode
 		return nil
 	}
-	if mode == "insert" && (a.focus != "prompt" || a.inputReader() != nil) {
-		a.notice = "insert mode requires the prompt"
+	editable := a.focus == "prompt" && a.inputReader() == nil
+	if view := a.focusedSurfaceView(); view != nil {
+		editable = a.surfaceBuffers[view.window.BufferID].Editable
+	}
+	if a.pluginDialog != nil {
+		editable = a.pluginDialog.spec.Kind == "input"
+	}
+	if mode == "insert" && !editable {
+		a.notice = "insert mode requires an editable buffer"
 		return nil
 	}
 	if a.focus == "prompt" && a.inputReader() == nil && a.Prompt.Mode == mode && a.Prompt.Pending == "" && a.Prompt.Count == "" {

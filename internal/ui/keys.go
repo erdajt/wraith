@@ -9,6 +9,24 @@ import (
 // keyDefault routes unmatched input to the focused vim editor, picker or terminal.
 func (a *App) keyDefault(k tea.KeyMsg) tea.Cmd {
 	key := k.String()
+	if a.pluginDialog != nil {
+		return a.pluginDialogKey(k)
+	}
+	if view := a.focusedSurfaceView(); view != nil && !a.commandMode {
+		b := view.reader.Buffer
+		if b.Mode == "normal" && b.Pending == "" && (key == a.Config.Leader || a.Config.Leader == "space" && key == " ") {
+			a.openLeader("")
+			return nil
+		}
+		if b.Mode == "normal" && b.Pending == "" && key == ":" {
+			a.commandMode, a.command = true, ""
+			return nil
+		}
+		if b.Mode == "normal" && b.Pending == "" && key == "q" {
+			return a.closeWorkspace(closeRequest{})
+		}
+		return a.pluginBufferKey(k)
+	}
 	if key == a.Config.Keys["quit"] || (key == "q" && a.chatMotionPending == "" && a.Prompt.Pending == "" && a.popup == nil && !a.commandMode && !a.searchMode && ((a.focus == "chat" && a.visualMode == "") || (a.focus == "prompt" && a.Prompt.Mode == "normal"))) {
 		if key == "q" {
 			return a.runAction("window.close", "")

@@ -50,6 +50,9 @@ func (a *App) builtinActions() map[string]action {
 		"window.close_force": {"discard draft and close this view", func(string) tea.Cmd { return a.closeWorkspace(closeRequest{Force: true}) }},
 		"prompt.send":        {"send the draft", func(string) tea.Cmd { return a.submit() }},
 		"editor.open": {"edit the focused message or draft", func(string) tea.Cmd {
+			if view := a.focusedSurfaceView(); view != nil {
+				return a.setInputMode("insert")
+			}
 			if a.focus == "chat" {
 				return a.editResponse()
 			}
@@ -63,7 +66,9 @@ func (a *App) builtinActions() map[string]action {
 			} else {
 				a.Prompt.Pending, a.Prompt.Count, a.Prompt.OperatorCount = "", "", ""
 				a.focus = "chat"
-				a.ensureChatCursor()
+				if a.focusedSurfaceView() == nil {
+					a.ensureChatCursor()
+				}
 			}
 			return nil
 		}},
@@ -130,6 +135,9 @@ func (a *App) buildKeymaps(c config.Config) (*keymap.Registry, error) {
 		for _, mode := range []string{"prompt.insert", "prompt.normal", "prompt.visual", "prompt.operator", "chat.normal", "chat.visual", "chat.operator"} {
 			bindings = append(bindings, keymap.Binding{Mode: mode, Keys: keymap.Notation(c.Keys[setting]), Action: name})
 		}
+	}
+	for _, mode := range []string{"buffer.insert", "buffer.normal", "buffer.visual", "buffer.operator"} {
+		bindings = append(bindings, keymap.Binding{Mode: mode, Keys: keymap.Notation(c.Keys["focus"]), Action: "focus.next"})
 	}
 	for _, spec := range [][2]string{{"terminal_overlay", "terminal.overlay"}, {"terminal_split", "terminal.side"}, {"quit", "app.quit"}, {"cancel", "operation.cancel"}} {
 		setting, name := spec[0], spec[1]

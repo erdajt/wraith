@@ -12,6 +12,13 @@ type keymapTimeoutMsg uint64
 
 // inputMode identifies the editor that owns unmapped input, including pending vim operators.
 func (a *App) inputMode() string {
+	if a.pluginDialog != nil {
+		if a.pluginDialog.spec.Kind == "input" {
+			b := a.pluginDialog.reader.Buffer
+			return "buffer." + editorMode(b.Mode, b.Pending)
+		}
+		return "picker"
+	}
 	if a.popup != nil {
 		if a.popup.Reader != nil {
 			return "output." + editorMode(a.popup.Reader.Buffer.Mode, a.popup.Reader.Buffer.Pending)
@@ -35,6 +42,9 @@ func (a *App) inputMode() string {
 		return "chat.search"
 	}
 	if a.focus == "chat" {
+		if view := a.focusedSurfaceView(); view != nil {
+			return "buffer." + editorMode(view.reader.Buffer.Mode, view.reader.Buffer.Pending)
+		}
 		mode := "normal"
 		if a.visualMode != "" {
 			mode = a.visualMode
@@ -52,6 +62,9 @@ func (a *App) keyOwner() string {
 	popup := ""
 	if a.popup != nil {
 		popup = a.popup.Kind
+	}
+	if a.pluginDialog != nil {
+		popup = a.pluginDialog.spec.ID
 	}
 	return fmt.Sprintf("%s:%d:%s:%s", a.Session.ID, a.windowID, a.focus, popup)
 }
@@ -183,6 +196,14 @@ func (a *App) keymapTimeout(serial uint64) tea.Cmd {
 
 // cancelInput keeps cancellation available even when the configurable binding changes.
 func (a *App) cancelInput() tea.Cmd {
+	if a.pluginDialog != nil {
+		return a.finishPluginDialog(map[string]any{"cancelled": true, "reason": "cancelled"})
+	}
+	if view := a.focusedSurfaceView(); view != nil {
+		view.reader.Buffer.Key("esc", "")
+		a.commandMode = false
+		return nil
+	}
 	if a.popup == nil && strings.HasPrefix(a.focus, "terminal") {
 		return a.terminalKey(tea.KeyMsg{Type: tea.KeyCtrlC})
 	}

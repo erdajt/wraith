@@ -36,6 +36,9 @@ func (a *App) View() string {
 		if a.visualMode != "" {
 			mode = strings.ToUpper(a.visualMode)
 		}
+		if view := a.focusedSurfaceView(); view != nil {
+			mode = view.reader.Buffer.Status()
+		}
 	}
 	right := ink(p.Second, mode) + ink(p.Muted, "  "+a.focus+"  ")
 	rows[0] = base(p, logo+strings.Repeat(" ", max(1, w-ansi.StringWidth(logo)-ansi.StringWidth(right)))+right, w)
@@ -103,6 +106,12 @@ func (a *App) View() string {
 		}
 	}
 
+	if a.pluginDialog != nil {
+		box := a.pluginDialogFrame()
+		if len(box) > 0 {
+			a.overlay(rows, box, (w-ansi.StringWidth(box[0]))/2, (a.height-len(box))/2)
+		}
+	}
 	if a.popup != nil {
 		if a.proposal != nil && (a.popup.Kind == "approval" || a.popup.Kind == "modify-command" || a.popup.Kind == "command-preview") {
 			for i := range rows {
