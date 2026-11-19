@@ -57,6 +57,7 @@ func (e *engine) installDiagnostics(api *lua.LTable) {
 	for _, name := range []string{
 		"live_registration", "custom_events", "plugin_lifecycle", "scheduling",
 		"json", "filesystem", "http", "timers", "managed_resources", "process",
+		"buffers", "windows", "regions", "dialogs", "buffer_keymaps",
 	} {
 		capabilities.RawSetString(name, lua.LTrue)
 	}

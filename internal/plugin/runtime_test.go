@@ -50,6 +50,11 @@ func TestManagedCapabilitiesExposeCallableServices(t *testing.T) {
  http={"http", "request"}, timers={"timer", "start"},
  managed_resources={"resource", "status", "cancel", "release"},
  process={"process", "start", "write", "close_stdin", "output"},
+ buffers={"buffers","create","get","get_lines","set_lines","set_spans","native","delete"},
+ windows={"windows","open","get","configure","list","focus","close","split"},
+ regions={"regions","create","get","list","set","delete"},
+ dialogs={"ui","select","input","decode"},
+ buffer_keymaps={"buffers","set_keymap","del_keymap"},
 }
 for capability, methods in pairs(services) do
  assert(wraith.capabilities[capability], "missing capability: " .. capability)
