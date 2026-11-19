@@ -194,7 +194,7 @@ func (a *App) actionAllowed(name string) bool {
 	if name == "noop" || (name == "app.quit" || name == "app.quit_force" || name == "app.save_quit") || name == "operation.cancel" || name == "notify" || name == "event.emit" || strings.HasPrefix(name, "lua.callback.") {
 		return true
 	}
-	if a.editing || a.popup != nil || a.proposal != nil {
+	if a.editing || a.popup != nil || a.pluginDialog != nil || a.proposal != nil {
 		a.notice = "finish or cancel the current dialog before " + name
 		return false
 	}

@@ -66,6 +66,9 @@ func (a *App) keyOwner() string {
 	if a.pluginDialog != nil {
 		popup = a.pluginDialog.spec.ID
 	}
+	if view := a.focusedSurfaceView(); view != nil {
+		popup += ":" + view.window.BufferID
+	}
 	return fmt.Sprintf("%s:%d:%s:%s", a.Session.ID, a.windowID, a.focus, popup)
 }
 
@@ -120,7 +123,7 @@ func (a *App) mapKey(k tea.KeyMsg, defaults, expired bool) tea.Cmd {
 	for i, value := range keys {
 		names[i] = value.String()
 	}
-	match := a.keymaps.Lookup(a.inputMode(), names)
+	match := a.lookupSurfaceKeys(names)
 	if defaults {
 		match = a.keymaps.LookupDefault(a.inputMode(), names)
 	}
@@ -176,7 +179,7 @@ func (a *App) keymapTimeout(serial uint64) tea.Cmd {
 	for i, key := range keys {
 		names[i] = key.String()
 	}
-	match := a.keymaps.Lookup(a.inputMode(), names)
+	match := a.lookupSurfaceKeys(names)
 	if defaults {
 		match = a.keymaps.LookupDefault(a.inputMode(), names)
 	}

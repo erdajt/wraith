@@ -95,6 +95,7 @@ type App struct {
 	pluginDiagnostics []string
 	pluginSerial      uint64
 	pluginDepth       int
+	surfaceKeymaps    map[string]surfaceKeymapCache
 	surfaceBuffers    map[string]plugin.SurfaceBuffer
 	surfaceRegions    map[string]plugin.SurfaceRegion
 	surfaceWindows    map[string]uint64

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/erdajt/wraith/internal/keymap"
 	"github.com/erdajt/wraith/internal/plugin"
 )
 
@@ -12,7 +11,6 @@ type surfaceView struct {
 	window   plugin.SurfaceWindow
 	reader   *reader
 	revision uint64
-	keymaps  *keymap.Registry
 }
 
 // focusedSurfaceView returns the plugin editor attached to the current conversation leaf.
@@ -72,6 +70,7 @@ func (a *App) applySurfaceDelta(delta plugin.SurfaceDelta, external bool) {
 	}
 	for _, id := range delta.RemovedBuffers {
 		delete(a.surfaceBuffers, id)
+		delete(a.surfaceKeymaps, id)
 	}
 	for _, id := range delta.RemovedRegions {
 		delete(a.surfaceRegions, id)
@@ -113,7 +112,6 @@ func (a *App) cacheSurfaceBuffer(buffer plugin.SurfaceBuffer, external bool) {
 		}
 		view.surface.reader.Buffer.SyncText(text, external)
 		view.surface.revision = buffer.Revision
-		view.surface.keymaps = nil
 	}
 }
 
@@ -239,6 +237,7 @@ func (a *App) reconcileSurfaces() {
 			a.removeSurfaceWindow(id)
 		}
 		a.surfaceBuffers, a.surfaceRegions, a.surfaceWindows = nil, nil, nil
+		a.surfaceKeymaps = nil
 		a.surfaceRuntime = a.plugins
 	}
 	if a.plugins == nil {
@@ -277,6 +276,7 @@ func (a *App) reconcileSurfaces() {
 	for id := range a.surfaceBuffers {
 		if !liveBuffers[id] {
 			delete(a.surfaceBuffers, id)
+			delete(a.surfaceKeymaps, id)
 		}
 	}
 	for id := range a.surfaceRegions {
