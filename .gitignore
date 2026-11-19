@@ -5,3 +5,5 @@
 *.prof
 
 /tools/__pycache__/
+
+/internal/distribution/assets/.manifest.lock
