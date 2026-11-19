@@ -86,9 +86,9 @@ end, "prepare a review prompt")
 
 `keymap.set(mode, sequence, action_or_function_or_keys, description)` registers an override. descriptions are optional. use `/keymaps` to inspect active mappings. [keybindings](keybindings.md#mode-specific-mappings) lists notation and modes. numeric prefixes retain the current normal/visual mappings. pending operators and literal arguments have separate modes.
 
-`keymap.del(mode, sequence)` removes configured overrides for that sequence; built-in defaults become available again. map to `noop` to consume a default key. mappings and commands can be registered during setup or inside callbacks. runtime registrations are validated and installed before their callback effects run. rejected registrations leave the previous host registry active.
+`keymap.del(mode, sequence)` hides configured overrides for that sequence; built-in defaults become available again. the deletion belongs to the calling configuration or plugin, so user configuration can disable a mapping installed by a plugin. map to `noop` to consume a default key. mappings and commands can be registered during setup or inside callbacks. runtime registrations are validated and installed before their callback effects run. rejected registrations leave the previous host registry active.
 
-`commands.create(name, callback, description)` registers a slash command and a `command.NAME` action. command names use lowercase letters, digits and hyphens, with optional dotted children. built-in names and namespaces are reserved unless an existing command is explicitly replaced with `{replace = true}`. a trailing `!` is accepted. `commands.delete(name)` removes a custom command and restores any builtin it replaced. custom commands appear in slash completion and `/help`. a virtual parent expands to its dotted children when selected.
+`commands.create(name, callback, description)` registers a slash command and a `command.NAME` action. command names use lowercase letters, digits and hyphens, with optional dotted children. built-in names and namespaces are reserved unless an existing command is explicitly replaced with `{replace = true}`. a trailing `!` is accepted. `commands.delete(name)` hides a custom command and restores any builtin it replaced. command definitions and deletions belong to their configuration or plugin owner. custom commands appear in slash completion and `/help`. a virtual parent expands to its dotted children when selected.
 
 `wraith.action(name, argument)` queues a named operation from a callback. arguments are optional strings. host actions include `prompt.send`, `editor.open`, `focus.next`, `terminal.overlay`, `terminal.side`, `operation.cancel`, `app.quit`, `noop`, all `command.NAME` actions, and the `window.*` actions listed in [keybindings](keybindings.md). native `input.feed` edits the focused buffer; action calls never synthesize live shell input.
 
@@ -139,11 +139,30 @@ end
 
 `events.on(name, function)` registers during setup or a callback and returns an id. `events.off(id)` removes the subscription, including from a callback or teardown. only `window_changed` and `session_changed` coalesce to the newest queued snapshot. completion and custom events retain their order. superseded state-event callers are released without effects.
 
-custom events use dotted lowercase names, such as `review.selected`. `wraith.events.emit("review.selected", {id = "task-1"})` queues delivery after the emitting callback succeeds. listeners read the payload from `ctx.data`. a callback can register a listener and emit its event in the same batch; host registration finishes before delivery. emission cannot impersonate built-in lifecycle events.
+custom events use dotted lowercase names, such as `review.selected`. `wraith.events.emit("review.selected", {id = "task-1"})` queues delivery after the emitting callback succeeds. listeners read the payload from `ctx.data`. a callback can register a listener and emit its event in the same batch; host registration finishes before delivery. emission cannot impersonate built-in lifecycle events. each observer has its own deadline and registration transaction. a failing observer reports its event and owner, loses its own staged changes, and leaves healthy observers running. removed listeners are skipped; newly registered listeners start with the next event. host-only validation can still reject the final publication.
 
-`wraith.plugins.load("plugins.review", options)` uses `require` to load a local module once. it must return a table with `setup(options)`. setup may return a cleanup function; the table may also provide `teardown()`. successful runtimes run cleanup hooks in reverse registration order when replaced or closed. `init.lua` may itself return a cleanup function. failed candidates are closed without running their runtime actions. failed plugin setup restores its staged registrations even if Lua catches the failure with `pcall`; cleanup releases resources registered by that failed setup. arbitrary Lua globals, module-cache changes and external effects are not rolled back.
+`wraith.plugins.load("plugins.review", options)` uses `require` to load a local module once. it must return a table with `setup(options)`. setup may return a cleanup function; the table may also provide `teardown()`. successful runtimes release dependents before their dependencies when replaced or closed, with reverse registration order within each owner. `init.lua` may itself return a cleanup function. failed candidates are closed without running their runtime actions. failed plugin setup restores its staged registrations even if Lua catches the failure with `pcall`; cleanup releases resources registered by that failed setup. arbitrary Lua globals, module-cache changes and external effects are not rolled back.
 
-setup can register APIs and change candidate configuration. runtime workspace actions and snapshot inspection are unavailable during setup. teardown runs with runtime actions and configuration changes disabled. cleanup errors do not prevent VM closure. asynchronous failures appear as notices, including errors from the previous configuration after reload. host registry publication does not wait for arbitrary teardown code.
+`plugins.list()` returns loaded module names in sorted order. `plugins.unload(name)` removes that plugin's commands, mappings and subscriptions, restores covered definitions, and releases its owned resources after the UI accepts the new registry. rejected unloads leave those resources active. callbacks copied from the unloaded plugin are removed too. reloading a module uses Lua's existing `package.loaded` cache; unload does not clear it.
+
+a plugin that calls `plugins.load` owns a runtime dependency on the loaded plugin. unload dependents before their dependencies. unloading an initializing plugin or the currently executing plugin is rejected. these runtime edges describe loaded instances; package installation and version resolution are separate.
+
+setup can register APIs and change candidate configuration. runtime workspace actions and snapshot inspection are unavailable during initial configuration setup. teardown runs with runtime actions and configuration changes disabled. cleanup errors do not prevent VM closure. asynchronous failures appear as notices, including errors from the previous configuration after reload. host registry publication does not wait for arbitrary teardown code.
+
+## deferred callbacks
+
+`wraith.schedule(function(ctx) ... end)` runs a function after the current host-effect chain completes. it returns no handle. each scheduled callback receives a fresh workspace snapshot after earlier scheduled callbacks have applied their changes. siblings keep their order across registry updates; a failed callback does not cancel its already queued siblings.
+
+```lua
+wraith.commands.create("prepare", function()
+  wraith.prompt.set("review the current package")
+  wraith.schedule(function(ctx)
+    wraith.notify("draft ready: " .. tostring(#ctx.prompt) .. " bytes")
+  end)
+end)
+```
+
+callbacks scheduled during initial setup wait for the workspace's first `ready` event. work belongs to the scheduling plugin and is removed on unload or runtime replacement. an abandoned host-effect chain discards work it has not dispatched. editor actions hold later work until the editor finishes; canceling that editor still releases independent scheduled siblings. a scheduled callback is consumed once, including when it fails.
 
 ## module paths
 
@@ -157,17 +176,21 @@ changing roots preserves explicitly added `package.path` patterns after the mana
 
 modules resolve through `package.path`, initially `config/lua/?.lua`, `config/lua/?/init.lua`, `config/?.lua` and `config/?/init.lua`. trusted code can change these paths and use symlinks or `package.preload`. the working directory and `LUA_PATH` are not added automatically. project files and assistant responses are never loaded as configuration.
 
-the VM includes base, string, table, math, coroutine, package, `io`, `os` and `debug`. plugins run with your user account authority: they can read files and credentials, write files, run programs or exit the process. `dofile` and `loadfile` are available. `print` produces startup diagnostics or callback notices instead of writing into the terminal frame. native Lua modules and LuaJIT are unsupported. `wraith.capabilities` describes available runtime features.
+the VM includes base, string, table, math, coroutine, package, `io`, `os` and `debug`. plugins run with your user account authority: they can read files and credentials, write files, run programs or exit the process. `dofile` and `loadfile` are available. `print` produces startup diagnostics or callback notices instead of writing into the terminal frame. native Lua modules and LuaJIT are unsupported. `wraith.capabilities` describes available runtime features. `trusted_lua`, `runtimepath`, `stdpath`, `live_registration`, `custom_events`, `plugin_lifecycle` and `scheduling` are true; `luajit` and `native_modules` are false.
 
 callback deadlines interrupt Lua instructions, not blocking native operations such as `os.execute` or file reads. reload and callback failure cannot undo external effects. suspended coroutines resume under the current callback's deadline.
 
 | limit | value |
 | --- | --- |
 | candidate setup | 2 seconds |
-| callback or event batch | 250 milliseconds |
+| command or scheduled callback | 250 milliseconds |
+| individual event observer | 50 milliseconds |
+| listeners per event | 32; startup scheduling uses one ready listener |
 | all teardown hooks together | 200 milliseconds |
 | waiting callback requests | 128 |
-| effects per callback | 64 |
+| ordinary effects per callback or event dispatch | 64 |
+| deferred effects per callback or event dispatch | 128 |
+| pending scheduled callbacks / startup schedules | 128 / 64 |
 | argument or environment value | 64 kib |
 | `init.lua`, required source file or serialized snapshot | 1 mib |
 | retained callbacks / commands / loaded plugins | 512 / 128 / 128 |

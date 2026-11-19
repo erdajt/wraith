@@ -54,6 +54,9 @@ func (e *engine) installDiagnostics(api *lua.LTable) {
 	for _, name := range []string{"trusted_lua", "runtimepath", "stdpath"} {
 		capabilities.RawSetString(name, lua.LBool(name == "trusted_lua"))
 	}
+	for _, name := range []string{"live_registration", "custom_events", "plugin_lifecycle", "scheduling"} {
+		capabilities.RawSetString(name, lua.LTrue)
+	}
 	capabilities.RawSetString("luajit", lua.LFalse)
 	capabilities.RawSetString("native_modules", lua.LFalse)
 	api.RawSetString("capabilities", capabilities)
