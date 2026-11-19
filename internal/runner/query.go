@@ -29,10 +29,15 @@ type Page = session.OutputPage
 
 // ReadOutput returns a bounded, redacted search window only when output sharing is allowed.
 func ReadOutput(record Record, query Query, snapshot variables.Snapshot) (Page, error) {
+	return ReadOutputContext(context.Background(), record, query, snapshot)
+}
+
+// ReadOutputContext checks sharing before a cancellable, redacted output search.
+func ReadOutputContext(ctx context.Context, record Record, query Query, snapshot variables.Snapshot) (Page, error) {
 	if !record.ShareOutput || record.OutputHidden {
 		return Page{Lines: []OutputLine{}, Truncated: record.Truncated}, errors.New("output is private; user sharing is required")
 	}
-	return readOutput(context.Background(), record, query, snapshot)
+	return readOutput(ctx, record, query, snapshot)
 }
 
 // ReadLocalOutput inspects trusted local output without changing model-sharing policy.

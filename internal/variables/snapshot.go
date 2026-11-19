@@ -3,8 +3,10 @@ package variables
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/url"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -47,6 +49,11 @@ func NewSnapshot(active, retained []Entry) Snapshot {
 	}
 	s.replacer = strings.NewReplacer(replacements...)
 	return s
+}
+
+// Equal compares immutable bindings and retained replacements without inspecting lazy matcher state.
+func (s Snapshot) Equal(other Snapshot) bool {
+	return slices.Equal(s.entries, other.entries) && slices.Equal(s.pairs, other.pairs) && maps.Equal(s.markerNames, other.markerNames)
 }
 
 // Redact replaces private values and supported encodings with stable references.
