@@ -131,7 +131,11 @@ func (e *engine) emit(L *lua.LState, effect Effect) {
 	if e.setup || e.closing {
 		L.RaiseError("runtime operations are disabled during setup and teardown")
 	}
-	if e.effectCount(effect.Name) >= 64 || len(effect.Argument) > 64<<10 {
+	limit := 64
+	if effect.Name == "schedule.callback" {
+		limit = 128
+	}
+	if e.effectCount(effect.Name) >= limit || len(effect.Argument) > 64<<10 {
 		L.RaiseError("plugin action batch exceeds its limit")
 	}
 	if effect.Name == "input.feed" {

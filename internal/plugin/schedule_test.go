@@ -151,3 +151,24 @@ func TestStartupSchedulingDoesNotConsumeObserverActionBudget(t *testing.T) {
 		})
 	}
 }
+
+func TestStartupSchedulingSharesPendingCapacityWithReadyCallbacks(t *testing.T) {
+	r := openTestRuntime(t, `
+ wraith.events.on("ready",function() for i=1,64 do wraith.schedule(function() end) end end)
+ for i=1,64 do wraith.schedule(function() end) end
+ `)
+	ch, err := r.Submit("", "ready", nil, r.Manifest().Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := receiveResult(t, ch)
+	if got.Err != nil || len(got.Effects) != 128 || got.Manifest == nil {
+		t.Fatalf("pending startup work was stranded: %+v", got)
+	}
+	if err := r.Acknowledge(got.Revision, true); err != nil {
+		t.Fatal(err)
+	}
+	if len(r.Diagnostics()) != 0 {
+		t.Fatalf("ready callbacks failed: %v", r.Diagnostics())
+	}
+}
