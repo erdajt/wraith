@@ -116,7 +116,7 @@ bindings resolve once. an exception consumes the mapping and reports the error. 
 | `wraith.input.set_mode(mode)` | choose normal, insert, visual, visual-line or search |
 | `wraith.notify(text)` | show a notice |
 
-each callback receives `ctx` with `argument`, `event`, `data`, `prompt`, `input`, `windows` and `session`. `data` contains a detached payload for custom events. session messages contain role and content, limited to the latest 64 messages and 128 kib of content. `message_count` records the full count. a large message may be truncated. modifying snapshot tables does not change the app.
+each callback receives `ctx` with `argument`, `event`, `data`, `prompt`, `input`, `windows` and `session`. `data` contains a detached payload for custom events. session messages contain role and content, limited to the latest 64 messages and 64 kib of content. `message_count` records the full count. a large message may be truncated. modifying snapshot tables does not change the app.
 
 operations run after the callback returns successfully. snapshot reads within that callback continue to describe its original state. split operations return no new id immediately; inspect a later window event to find it. an exception or timeout discards the callback's effect batch.
 
