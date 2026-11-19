@@ -132,3 +132,91 @@ func TestResourceCallbackFailureCancelsContinuingWork(t *testing.T) {
 		t.Fatal("timer did not fire")
 	}
 }
+
+func TestOwnedWorkerUnloadWaitsForHostAcceptance(t *testing.T) {
+	r := openTestRuntime(t, `
+ package.preload.worker=function() return {setup=function()
+  wraith.timer.start(1,function() wraith.notify("alive") end,{repeat_ms=10})
+ end} end
+ wraith.plugins.load("worker")
+ wraith.commands.create("unload",function() wraith.plugins.unload("worker") end)
+ `)
+	m := r.Manifest()
+	if err := r.Activate(m.Resources); err != nil {
+		t.Fatal(err)
+	}
+	var event ResourceEvent
+	select {
+	case event = <-r.Events():
+	case <-time.After(time.Second):
+		t.Fatal("owned timer did not start")
+	}
+
+	for _, accepted := range []bool{false, true} {
+		ch, err := r.Submit(m.Commands[0].Callback, "", nil, m.Config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := receiveResult(t, ch)
+		if got.Err != nil || got.Manifest == nil {
+			t.Fatalf("unload failed: %+v", got)
+		}
+		if !r.ResourceValid(event) {
+			t.Fatal("unload canceled work before host acceptance")
+		}
+		if err := r.Acknowledge(got.Revision, accepted); err != nil {
+			t.Fatal(err)
+		}
+		if r.ResourceValid(event) == accepted {
+			t.Fatalf("resource validity does not match accepted=%t", accepted)
+		}
+		if !accepted {
+			ch, err = r.SubmitResource(event, nil, m.Config)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got = receiveResult(t, ch)
+			if got.Err != nil || len(got.Effects) != 1 || got.Effects[0].Argument != "alive" {
+				t.Fatalf("rejected unload lost owned callback: %+v", got)
+			}
+		}
+	}
+	if _, err := r.SubmitResource(event, nil, m.Config); err == nil {
+		t.Fatal("released owner accepted a queued completion")
+	}
+}
+
+func TestCanceledStartupReservationDoesNotBlockOtherWorkers(t *testing.T) {
+	r := openTestRuntime(t, `
+ local id=wraith.timer.start(1,function(ctx)
+  assert(ctx.resource.final and ctx.data.state=="cancelled" and ctx.data.done)
+  wraith.notify("cancelled")
+ end)
+ wraith.resource.cancel(id)
+ wraith.timer.start(1,function() wraith.notify("completed") end)
+ `)
+	m := r.Manifest()
+	if err := r.Activate(m.Resources); err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]bool{}
+	for range 2 {
+		select {
+		case event := <-r.Events():
+			ch, err := r.SubmitResource(event, nil, m.Config)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := receiveResult(t, ch)
+			if got.Err != nil || len(got.Effects) != 1 {
+				t.Fatalf("startup completion: %+v", got)
+			}
+			seen[got.Effects[0].Argument] = true
+		case <-time.After(time.Second):
+			t.Fatal("startup resource was stranded")
+		}
+	}
+	if !seen["cancelled"] || !seen["completed"] {
+		t.Fatalf("startup outcomes: %v", seen)
+	}
+}

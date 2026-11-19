@@ -34,6 +34,18 @@ end)`, fifo)
 				t.Fatal(err)
 			}
 			t.Cleanup(r.Close)
+			workerStopped := make(chan struct{})
+			id, err := r.services.reserve("config", "fixture", func(ctx context.Context, _ *resourceSink) resourceResult {
+				defer close(workerStopped)
+				<-ctx.Done()
+				return resourceResult{Err: ctx.Err()}
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Activate([]string{id}); err != nil {
+				t.Fatal(err)
+			}
 			m := r.Manifest()
 			result, err := r.Submit(m.Commands[0].Callback, "", nil, m.Config)
 			if err != nil {
@@ -66,6 +78,12 @@ end)`, fifo)
 				}
 			case <-time.After(time.Second):
 				t.Fatal("caller waited for native read")
+			}
+
+			select {
+			case <-workerStopped:
+			case <-time.After(time.Second):
+				t.Fatal("managed worker waited for the blocked Lua VM")
 			}
 
 			_, _ = writer.WriteString("done\n")
