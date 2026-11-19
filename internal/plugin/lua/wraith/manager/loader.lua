@@ -9,7 +9,14 @@ local function loaded()
 end
 
 function M.new(graph, paths, runtime)
-  local self, names = {}, {}
+  local self, names, generation = {}, {}, 0
+  local watched, event_names = {ready=true}, {"ready"}
+  for _, spec in ipairs(graph.ordered) do
+    for _, event in ipairs(spec.event) do
+      if not watched[event] then watched[event] = true; event_names[#event_names + 1] = event end
+    end
+  end
+  table.sort(event_names)
   local active = loaded()
   assert(#graph.ordered * 2 + #wraith.plugins.list() <= 128, "managed packages exceed available lifecycle capacity")
   for name in pairs(wrappers) do
@@ -27,7 +34,9 @@ function M.new(graph, paths, runtime)
   for _, spec in ipairs(graph.ordered) do
     local identity = names[spec.name]
     package.preload[identity.init] = function()
-      local init, cleanup = {}, nil
+      generation = generation + 1
+      local init, cleanup, identity_token = {}, nil, tostring(generation)
+      function init.identity() return identity_token end
       function init.arm()
         for _, command in ipairs(spec.cmd) do
           wraith.commands.create(command, function(ctx)
@@ -60,9 +69,14 @@ function M.new(graph, paths, runtime)
     end
 
     package.preload[identity.activation] = function()
-      local activation, main, pending_cleanup = {}, nil, nil
+      local activation, main, pending_cleanup, subscriptions = {}, nil, nil, {}
       function activation.setup()
         main, pending_cleanup = nil, nil
+        local previous = {}
+        for _, event in ipairs(event_names) do
+          previous[event] = {}
+          for _, id in ipairs(wraith.events.listeners(event)) do previous[event][id] = true end
+        end
         wraith.plugins.depend(identity.init)
         for _, dependency in ipairs(spec.dependencies) do wraith.plugins.depend(names[dependency].activation) end
         local opts = type(spec.opts) == "table" and copy(spec.opts) or {}
@@ -83,6 +97,12 @@ function M.new(graph, paths, runtime)
         end
         pending_cleanup = type(result) == "function" and result or nil
         for _, key in ipairs(spec.keys) do wraith.keymap.set(key.mode, key.keys, key.action, key.description) end
+        for _, event in ipairs(event_names) do
+          subscriptions[event] = {}
+          for _, id in ipairs(wraith.events.listeners(event)) do
+            if not previous[event][id] then subscriptions[event][#subscriptions[event] + 1] = id end
+          end
+        end
         if pending_cleanup then
           return function()
             local callback = pending_cleanup
@@ -106,6 +126,7 @@ function M.new(graph, paths, runtime)
         end
         if #errors > 0 then error(table.concat(errors, "; ")) end
       end
+      function activation.listeners(event) return copy(subscriptions[event] or {}) end
       function activation.key(index, ctx)
         local key = assert(spec.keys[index], "unknown package key")
         if type(key.action) == "function" then return key.action(ctx) end
@@ -127,11 +148,34 @@ function M.new(graph, paths, runtime)
       wraith.plugins.load(names[spec.name].init, {}, {dependency=false})
     end
   end
+  function self.states()
+    local active, result = loaded(), {}
+    for name, identity in pairs(names) do
+      result[name] = {loaded=active[identity.activation] == true, managed=active[identity.init] == true}
+    end
+    return result
+  end
   function self.is_loaded(name)
     return names[name] ~= nil and loaded()[names[name].activation] == true
   end
   function self.is_managed(name)
     return names[name] ~= nil and loaded()[names[name].init] == true
+  end
+  function self.identity(name)
+    if self.is_managed(name) then return wraith.plugins.call(names[name].init, "identity") end
+  end
+  function self.listeners(cohort, event)
+    local selected, visited = {}, {}
+    local function collect(name)
+      if visited[name] or not self.is_loaded(name) then return end
+      visited[name] = true
+      for _, dependency in ipairs(graph.by_name[name].dependencies) do collect(dependency) end
+      for _, id in ipairs(wraith.plugins.call(names[name].activation, "listeners", event)) do selected[id] = true end
+    end
+    for _, name in ipairs(cohort) do collect(name) end
+    local result = {}
+    for _, id in ipairs(wraith.events.listeners(event)) do if selected[id] then result[#result + 1] = id end end
+    return result
   end
   function self.load(name)
     local spec = assert(graph.by_name[name], "unknown package: " .. tostring(name))
