@@ -25,6 +25,7 @@
 | [troubleshooting](troubleshooting.md) | connection, model, clipboard, rendering and execution failures |
 | [screenshots](screenshots.md) | app captures, fixture provenance and reproduction |
 | [architecture](architecture.md) | packages, event loop, persistence, privacy and execution boundaries |
+| [package distribution](distribution.md) | verified source bundles, startup pins and release maintenance |
 | [development](development.md) | tests, race checks, fuzzing, builds, ci and releases |
 
 start with [getting started](getting-started.md). use `/help` inside wraith for commands and current bindings. `/settings` groups options by purpose; `?` explains the selected setting. `/settings.` completes category names.

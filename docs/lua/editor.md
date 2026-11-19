@@ -1,6 +1,6 @@
 # lua editor support
 
-wraith ships [luals declarations](types/wraith.lua) for the host api and the bundled [package manager](types/wraith/manager.lua). add the declarations to your language server's library for completion, hover documentation, callback types and argument checks.
+wraith ships [luals declarations](types/wraith.lua) for the host api and the shipped [package manager](types/wraith/manager.lua). add the declarations to your language server's library for completion, hover documentation, callback types and argument checks.
 
 ## setup
 
@@ -21,7 +21,7 @@ replace the library path with your checkout's absolute path. add the whole `type
 
 in neovim, use your existing `lua_ls` setup. if mason already installs `lua-language-server`, another installer or completion plugin is unnecessary. open the config directory as a workspace so luals finds its `.luarc.json`. keep these settings local to wraith projects: neovim's own configuration uses a different runtime and api.
 
-these files are editor declarations. do not `require` them from `init.lua`, add them to wraith's runtimepath or copy them over a package implementation. the running application provides `wraith`; it also provides `require('wraith.manager')` through its embedded loader.
+these files are editor declarations. do not `require` them from `init.lua`, add them to wraith's runtimepath or copy them over a package implementation. the running application provides `wraith`; it also provides `require('shroud')` and the compatibility alias `require('wraith.manager')` from its verified package checkout.
 
 ## typed callbacks
 

@@ -1,8 +1,8 @@
 # packages
 
-wraith includes a package manager written in lua. it loads local modules, installs pinned git checkouts, resolves dependencies and activates packages on commands, events or keys. it uses the same [public APIs](../plugins.md) available to your plugins.
+wraith ships Shroud, a package manager written in lua from a separate repository. it loads local modules, installs pinned git checkouts, resolves dependencies and activates packages on commands, events or keys. it uses the same [public APIs](../plugins.md) available to your plugins.
 
-startup reads your configuration and lock file without installing, fetching or updating anything. installed packages work offline. installation and updates require an explicit action. packages run as trusted code with your user account's permissions; installing a package does not sandbox it.
+startup installs the bundled Shroud revision into a verified local checkout before reading your configuration. it requires git and works offline. Shroud then reads your configuration and lock file without fetching or updating plugins. plugin installation and updates require an explicit action. see [distribution maintenance](../distribution.md). packages run as trusted code with your user account's permissions; installing a package does not sandbox it.
 
 ## start with a local package
 

@@ -58,7 +58,7 @@ edit prompts with vim motions or your own editor. search and yank conversations.
 | custom interfaces | shared editable buffers, independent tiled/floating windows, local mappings, styled text, presentation regions and searchable dialogs |
 | extension services | managed processes, http, filesystem, timers, json and paged conversation/job/output queries |
 | model extensions | request and command hooks, custom providers, streamed replies and schema-validated tools through native approval |
-| packages | bundled Lua manager, modular specs, dependency ordering, lazy commands/events/keys, frozen plans, pinned revisions and atomic lock publication |
+| packages | Shroud Lua manager, modular specs, dependency ordering, lazy commands/events/keys, frozen plans, pinned revisions and atomic lock publication |
 | appearance | ten themes, custom palettes, inherited backgrounds, themed cursors, an animated hooded mark and reduced motion |
 
 </details>
@@ -215,7 +215,7 @@ Lua runs with your account's authority, including `io`, `os` and `debug`. instal
 
 ### manage packages in lua
 
-the package manager is shipped Lua using the same public APIs available to your plugins. copy the [review module](docs/examples/lua/plugins/review.lua) to `~/.config/wraith/plugins/review.lua`, then load it on its first command:
+Shroud is a separate Lua package using the same public APIs available to your plugins. wraith ships a pinned git bundle and installs it locally before loading your configuration; git is required. copy the [review module](docs/examples/lua/plugins/review.lua) to `~/.config/wraith/plugins/review.lua`, then load it on its first command:
 
 ```lua
 require("wraith.manager").setup({
@@ -229,7 +229,7 @@ require("wraith.manager").setup({
 })
 ```
 
-`/packages` opens the manager. inspect a package, review its install/update/restore plan, confirm it, and follow progress or search the operation log. specs can use local directories or Git sources, imports, dependencies, pins and lazy triggers. startup never fetches packages. updates preserve running code until `/reload`; dirty checkouts are not overwritten.
+`/packages` opens the manager. inspect a package, review its install/update/restore plan, confirm it, and follow progress or search the operation log. specs can use local directories or Git sources, imports, dependencies, pins and lazy triggers. startup never fetches remote packages. updates preserve running code until `/reload`; dirty checkouts are not overwritten.
 
 [package guide and lockfile recovery](docs/lua/packages.md) · [modular package example](docs/examples/lua/packages/init.lua) · [API reference](docs/plugins.md) · [window controls](docs/keybindings.md#conversation-windows)
 

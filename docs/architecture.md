@@ -7,6 +7,7 @@ wraith is a single go binary. bubble tea owns terminal lifecycle and the event l
 | `cmd/wraith` | flags, diagnostics, workspace lock, session selection and terminal startup |
 | `internal/config` | defaults, validation, xdg locations and configuration persistence |
 | `internal/keymap` | vim key notation, modal sequences and action resolution |
+| `internal/distribution` | release pins, verified git bundles and immutable package bootstrap |
 | `internal/plugin` | trusted Lua VM ownership, explicit module paths, configuration and callback effects |
 | `internal/provider` | normalized api and cli backends, streaming events and model catalogs |
 | `internal/runner` | concurrent approved jobs, process groups, recovery journals and redacted output queries |
@@ -82,7 +83,9 @@ request hooks run before the final privacy and evidence checks. command hooks ca
 
 ## packages
 
-`internal/plugin/lua/wraith/manager` is bundled lua loaded through ordinary `require`. it uses public lifecycle, filesystem, process, timer and surface APIs. it has no private installer privilege. configuration chooses when to call `setup`; startup never installs or updates sources.
+Shroud lives in its own repository. wraith embeds its pinned git bundle and [distribution manifest](../internal/distribution/assets/manifest.json). startup verifies and installs that revision before evaluating user Lua; it does not fetch remote updates. selected namespaces bind to the installed checkout through ordinary `require`. missing nested modules cannot fall through to configuration files. the generic Lua runtime accepts explicit package roots and performs no installation itself.
+
+Shroud uses public lifecycle, filesystem, process, timer and surface APIs. configuration chooses when to call `setup`. plugin installation still requires an explicit manager action. see [distribution maintenance](distribution.md) for source verification and pin updates.
 
 spec normalization rejects unknown fields, conflicting source identities, duplicate names and dependency cycles before running initialization. each package has separate initialization and activation owners. lazy commands, events and keys preserve the first triggering input. dependencies activate first, and owned cleanup runs during unload. an exposed module's identity remains fixed for that VM even after unload: changing its source, path, main module or installed revision requires a fresh runtime. this prevents a new lockfile from mislabelling an old `require` cache.
 
