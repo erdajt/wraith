@@ -51,6 +51,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	L.SetGlobal("wraith", api)
 	e.installConfig(api)
 	e.installJSON(api)
+	e.installFilesystem(api)
 	e.installRegistration(api)
 	e.installWorkspace(api)
 	e.installPlugins(api)

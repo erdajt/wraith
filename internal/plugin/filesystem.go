@@ -98,7 +98,18 @@ func (op fileOperation) run(ctx context.Context) (result map[string]any, err err
 		slices.SortFunc(entries, func(a, b os.DirEntry) int { return strings.Compare(a.Name(), b.Name()) })
 		items := make([]any, 0, len(entries))
 		for _, entry := range entries {
-			items = append(items, map[string]any{"name": entry.Name(), "type": fileKind(entry.Type())})
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+			mode := entry.Type()
+			if mode == 0 {
+				info, err := entry.Info()
+				if err != nil {
+					return nil, err
+				}
+				mode = info.Mode()
+			}
+			items = append(items, map[string]any{"name": entry.Name(), "type": fileKind(mode)})
 		}
 		return map[string]any{"path": op.path, "entries": items, "next_offset": op.offset + int64(len(entries)), "truncated": truncated}, ctx.Err()
 	case "mkdir":
