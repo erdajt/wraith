@@ -17,6 +17,9 @@ type nativeModules struct {
 func captureNativeModules(L *lua.LState) (nativeModules, error) {
 	native := nativeModules{}
 	native.require, _ = L.GetGlobal("require").(*lua.LFunction)
+	if native.require == nil || !native.require.IsG || native.require.GFunction == nil {
+		return native, errors.New("module routing requires the original native require")
+	}
 	native.pkg, _ = L.GetGlobal("package").(*lua.LTable)
 	if native.pkg != nil {
 		native.loaded, _ = native.pkg.RawGetString("loaded").(*lua.LTable)
