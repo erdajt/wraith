@@ -40,7 +40,7 @@ type workspaceScanPage struct {
 }
 
 // page retains directory iterators so continuation never rescans an unbounded prefix.
-func (s *workspaceScanStore) page(ctx context.Context, runtime *plugin.Runtime, query plugin.WorkspaceQuery, directory, filter string, examine func(string) (any, error)) (workspaceScanPage, error) {
+func (s *workspaceScanStore) page(ctx context.Context, runtime *plugin.Runtime, query plugin.WorkspaceQuery, directory, filter string, budget int, examine func(string) (any, error)) (workspaceScanPage, error) {
 	page := workspaceScanPage{Items: []any{}, Errors: []map[string]any{}}
 	s.mu.Lock()
 	if s.closed {
@@ -120,7 +120,7 @@ func (s *workspaceScanStore) page(ctx context.Context, runtime *plugin.Runtime, 
 	if limit == 0 {
 		limit = 40
 	}
-	for page.Examined < 64 && len(page.Items) < limit {
+	for page.Examined < min(64, budget) && len(page.Items) < limit {
 		if err := ctx.Err(); err != nil {
 			return page, err
 		}
