@@ -95,6 +95,11 @@ type App struct {
 	pluginDiagnostics []string
 	pluginSerial      uint64
 	pluginDepth       int
+	surfaceBuffers    map[string]plugin.SurfaceBuffer
+	surfaceRegions    map[string]plugin.SurfaceRegion
+	surfaceWindows    map[string]uint64
+	surfaceRuntime    *plugin.Runtime
+	pluginDialog      *pluginDialog
 
 	editorFile        *editor.File
 	editorSucceeded   bool

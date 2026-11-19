@@ -19,6 +19,9 @@ type pluginResultMsg struct {
 	PendingSchedules []string
 	Runtime          *plugin.Runtime
 	Resource         *plugin.ResourceEvent
+	Explicit         bool
+	LeaseOwner       string
+	Lease            string
 	ResumeOwned      bool
 	Keys             [32]byte
 	Owner, Draft     string
