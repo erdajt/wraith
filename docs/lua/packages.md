@@ -51,8 +51,10 @@ choose exactly one source:
 | field | meaning |
 | --- | --- |
 | `"owner/repository"` or `repo = "owner/repository"` | GitHub repository shorthand |
+| `"https://github.com/owner/repository"` or `"git@github.com:owner/repository.git"` | direct remote; also accepted in the first table position or `repo` |
+| `"./packages/review"`, `"~/projects/review"` or `"/path/to/review"` | explicit local module root |
 | `url = "..."` | HTTPS, SSH, SCP-style SSH, `file://` or an absolute local git repository path |
-| `dir = "packages/review"` | local module root; absolute paths and explicit symlinks also work |
+| `dir = "packages/review"` | local module root relative to the effective config directory; home expansion, absolute paths and explicit symlinks also work |
 
 HTTP, remote helper protocols, embedded URL credentials, query strings, fragments and control characters are rejected. local directories are never installed, rewritten or deleted. they cannot select or pin git revisions.
 

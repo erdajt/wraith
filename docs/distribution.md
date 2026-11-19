@@ -40,6 +40,6 @@ review the manifest and source change together. publish the package commit befor
 go test -race ./internal/distribution ./cmd/wraith-bundle ./internal/plugin
 ```
 
-distribution tests export real repositories, verify their raw trees and install the resulting bundles. manager tests use the shipped pin through the same installation path before loading user configuration. they do not read a sibling checkout or fall back to embedded Lua source. pin a candidate using the exporter before running these tests against a changed package.
+distribution tests export real repositories, verify their raw trees and install the resulting bundles. manager tests use the shipped pin through the same installation path before loading user configuration. they do not read a sibling checkout or fall back to embedded Lua source. pin a candidate using the exporter before running these tests against a changed package. `TestShroudPackageContracts` also runs the selected package's `tests/*.lua` assertions, each in a fresh runtime with isolated configuration and storage. the suite logs the candidate commit and fails if its contracts are missing. these scripts never run during application startup.
 
 the generic plugin runtime can accept explicit package roots without installing Shroud. this separates the Lua host from its default manager. CLI startup and configuration reload select the distribution pin explicitly.

@@ -14,10 +14,10 @@
 ---@field desc? string shorthand for description
 ---@field description? string
 ---@class Wraith.PackageSpec
----@field [1]? string owner/repository shorthand
----@field repo? string owner/repository; choose one source
+---@field [1]? string repository shorthand, remote url or explicit local path
+---@field repo? string same source forms as the first position; choose one source
 ---@field url? string explicit https, ssh, scp-style or file remote
----@field dir? string absolute or relative to the effective config directory
+---@field dir? string absolute, home-relative or relative to the effective config directory
 ---@field name? string defaults to lowercase repository/directory basename
 ---@field main? string defaults to repository/directory basename without .git
 ---@field dependencies? Wraith.PackageDeclarations bare dependency names refer to existing declarations
