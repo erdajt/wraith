@@ -54,6 +54,27 @@ func TestManagerSpecsResolveNestedImportsAndDependencyOrder(t *testing.T) {
  `)
 }
 
+// TestManagerNormalizesBoundedDeclarationsInCallback uses the production callback deadline.
+func TestManagerNormalizesBoundedDeclarationsInCallback(t *testing.T) {
+	r := openManagerRuntime(t, `wraith.commands.create("normalize",function()
+ local declarations,calls={},0
+ for index=1,64 do
+  local name="plugin"..((index-1)%8+1)
+  declarations[index]={name=name,dir="/tmp/"..name,opts={value=index},
+   enabled=function() calls=calls+1; return true end}
+ end
+ local graph=require("wraith.manager.spec").normalize(declarations)
+ assert(#graph.ordered==8 and calls==8)
+ local options=require("wraith.manager.spec_options")
+ for index=1,8 do
+  local name="plugin"..index
+  local expected=index+56
+  assert(options.resolve(graph.by_name[name],graph.options[name]).value==expected)
+ end
+end)`)
+	managerCommand(t, r, "normalize", "")
+}
+
 func TestManagerSpecsRejectInvalidGraphsBeforeInitialization(t *testing.T) {
 	openManagerRuntime(t, `local spec=require("wraith.manager.spec")
  local initialized=0
