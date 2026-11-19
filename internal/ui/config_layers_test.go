@@ -1,10 +1,56 @@
 package ui
 
 import (
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/erdajt/wraith/internal/config"
 )
+
+func TestLuaProviderSettingsPersistWithoutCopyingCredentials(t *testing.T) {
+	for _, change := range []string{"model", "context", "provider"} {
+		t.Run(change, func(t *testing.T) {
+			a := pluginFixture(t, `
+wraith.config.setup({providers={proof={kind="plugin",model="first",api_key="private-key",headers={authorization="private-header"}}}})
+`)
+			if change != "provider" {
+				a.Config.Provider = "proof"
+				a.Config.Model = "first"
+				a.Session.Model = "first"
+			}
+			switch change {
+			case "model":
+				a.activateProvider("proof", "second")
+			case "context":
+				a.setContext("32768")
+			case "provider":
+				a.activateProvider("proof", "first")
+			}
+			saved, err := config.LoadDirectory(a.Paths.Config)
+			if err != nil {
+				t.Fatal(err)
+			}
+			profile := saved.Providers["proof"]
+			if profile.Kind != "plugin" {
+				t.Fatalf("profile was not saved: %+v; %s", profile, a.notice)
+			}
+			if change == "model" && (profile.Model != "second" || a.Session.Model != "second") {
+				t.Fatalf("model selection was lost: %+v; %s", profile, a.notice)
+			}
+			if change == "context" && profile.ModelContexts["first"] != 32768 {
+				t.Fatalf("model context was lost: %+v; %s", profile, a.notice)
+			}
+			data, err := os.ReadFile(config.File(a.Paths.Config))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(data), "private-key") || strings.Contains(string(data), "private-header") {
+				t.Fatal("lua credentials leaked into yaml")
+			}
+		})
+	}
+}
 
 func TestSettingsPreserveYamlUnderLuaOverrides(t *testing.T) {
 	a := pluginFixture(t, `

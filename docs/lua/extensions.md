@@ -96,6 +96,8 @@ wraith.config.setup({
 })
 ```
 
+model and context selections save a minimal `kind: plugin` profile in YAML when the profile exists only in Lua. unrelated Lua values, including credentials, are not copied. explicit values in `init.lua` still override YAML on reload; resumed sessions restore their saved model.
+
 all three callbacks are required. `ctx.invocation` contains `id`, `kind`, `name` and `method`. `ctx.data` contains the method request. the host supplies a fresh workspace snapshot when dispatching the callback.
 
 | callback | input | final result |

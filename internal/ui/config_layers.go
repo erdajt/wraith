@@ -29,6 +29,20 @@ func (a *App) saveConfig(next config.Config) error {
 		}
 	}
 	mergeSettings(objects[0], objects[1], objects[2])
+	profiles := objects[0]["providers"].(map[string]any)
+	for name, profile := range next.Providers {
+		if profile.Kind != "plugin" {
+			continue
+		}
+		persisted, ok := profiles[name].(map[string]any)
+		if !ok && next.Provider == name {
+			persisted = map[string]any{}
+			profiles[name] = persisted
+		}
+		if persisted != nil && persisted["kind"] == nil {
+			persisted["kind"] = "plugin"
+		}
+	}
 	data, err := json.Marshal(objects[0])
 	if err != nil {
 		return err
