@@ -107,6 +107,7 @@ type App struct {
 	policyCancel       context.CancelFunc
 	pluginQueries      map[string]*workspaceQueryState
 	workspaceScans     *workspaceScanStore
+	workspaceEvents    workspaceEventState
 	surfaceReplay      bool
 	surfaceKeymaps     map[string]surfaceKeymapCache
 	surfaceBuffers     map[string]plugin.SurfaceBuffer

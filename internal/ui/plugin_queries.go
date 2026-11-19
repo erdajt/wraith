@@ -71,7 +71,7 @@ func (a *App) startWorkspaceQuery(runtime *plugin.Runtime, query plugin.Workspac
 			cancel()
 			return a.deliverWorkspaceQuery(workspaceQueryMsg{state: state, data: workspaceQueryResult(query, nil, err)})
 		}
-		input.data = map[string]any{"items": items, "directory": a.Directory, "session": a.Session.ID}
+		input.data = map[string]any{"items": items, "directory": a.Directory, "session": a.Session.ID, "scope": a.Config.Environment.Scope}
 	}
 	if query.Kind == "terminals.list" {
 		items := []any{}
