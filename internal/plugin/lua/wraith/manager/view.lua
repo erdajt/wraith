@@ -119,6 +119,7 @@ function M.new(manager, options)
         if operation.name then lines[#lines + 1] = "package: " .. text(operation.name, 128) end
         if operation.message then lines[#lines + 1] = text(operation.message, 1024) end
         if operation.error then lines[#lines + 1] = "error: " .. text(operation.error, 2048) end
+        if operation.cleanup_warning then lines[#lines + 1] = "cleanup: " .. text(operation.cleanup_warning, 2048) end
         lines[#lines + 1] = ""
         local log = tostring(operation.log or "")
         local clipped = #log > 8192 or operation.log_truncated
@@ -187,6 +188,7 @@ function M.new(manager, options)
     if operation and operation.phase and operation.phase ~= operation.state then lines[#lines + 1] = "last phase: " .. text(operation.phase, 128) end
     if operation and operation.message then lines[#lines + 1] = text(operation.message, 1024) end
     if operation and operation.error then lines[#lines + 1] = "operation: " .. text(operation.error, 2048) end
+    if operation and operation.cleanup_warning then lines[#lines + 1] = "cleanup: " .. text(operation.cleanup_warning, 2048) end
     wraith.buffers.set_lines(buffer, 0, -1, lines)
     wraith.buffers.set_spans(buffer, spans)
   end

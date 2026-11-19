@@ -47,3 +47,25 @@ manager.status=function() return {packages={package},operation={
 		t.Fatal("closing the log did not return to package status")
 	}
 }
+
+// TestManagerCleanupWarningPreservesInstalledPresentation keeps recovery visible without misreporting publication.
+func TestManagerCleanupWarningPreservesInstalledPresentation(t *testing.T) {
+	a := pluginFixture(t, managerViewFixture+`
+manager.status=function() return {packages={package},operation={
+ id="transaction",state="installed",phase="cleaning",generation="published",
+ cleanup_warning="temporary checkout remains; inspect recovery paths",
+}} end
+`)
+	a.width, a.height = 120, 40
+	applyPluginEvents(t, a, a.runCommand("packages"))
+	text := a.inputReader().Buffer.String()
+	if !strings.HasPrefix(text, "packages · installed") || !strings.Contains(text, "cleanup: temporary checkout remains") {
+		t.Fatalf("publication or cleanup state missing: %s", text)
+	}
+
+	applyPluginEvents(t, a, a.key(key("o")))
+	text = a.inputReader().Buffer.String()
+	if !strings.Contains(text, "state: installed") || !strings.Contains(text, "cleanup: temporary checkout remains") {
+		t.Fatalf("operation details lost cleanup warning: %s", text)
+	}
+}
