@@ -1,8 +1,10 @@
 package plugin
 
 import (
-	lua "github.com/yuin/gopher-lua"
+	"encoding/json"
 	"slices"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 // previewSurfaces fixes observed revisions until the current callback has finished.
@@ -48,14 +50,23 @@ func (e *engine) stageSurface(mutation SurfaceMutation) SurfaceDelta {
 			}
 		}
 	}()
+	startupBytes := e.surfaceStartupBytes
+	if e.setup {
+		encoded, err := json.Marshal(mutation)
+		if err != nil {
+			L.RaiseError("startup surface: %v", err)
+		}
+		startupBytes += len(encoded) + 1
+		if len(e.manifest.Surface) >= 128 || startupBytes+2 > 8<<20 {
+			L.RaiseError("startup surfaces exceed 128 operations or 8 mib")
+		}
+	}
 	delta, err := preview.Apply(mutation)
 	if err != nil {
 		L.RaiseError("surface: %v", err)
 	}
 	if e.setup {
-		if len(e.manifest.Surface) >= 128 {
-			L.RaiseError("startup surface mutation limit reached")
-		}
+		e.surfaceStartupBytes = startupBytes
 		e.manifest.Surface = append(e.manifest.Surface, mutation)
 	} else {
 		e.emit(L, Effect{Name: "surface.apply", Argument: mutation.ID, Data: mutation})

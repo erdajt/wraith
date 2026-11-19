@@ -65,6 +65,9 @@ func (c *completion) resolve(result Result) {
 }
 
 type Runtime struct {
+	startupInstalled                        bool
+	startupReady                            chan struct{}
+	startupConsumed                         chan struct{}
 	surfaces                                *SurfaceStore
 	services                                *resourceManager
 	discarded                               map[string]bool
@@ -122,6 +125,7 @@ func Open(parent context.Context, directory string, c config.Config, actions []s
 	ctx, cancel := context.WithCancel(parent)
 	r := &Runtime{
 		ctx: ctx, cancel: cancel, done: make(chan struct{}),
+		startupReady: make(chan struct{}, 1), startupConsumed: make(chan struct{}),
 		queue: make(chan request, 128), ack: make(chan publicationDecision, 1),
 		notices: make(chan string, 64), discarded: map[string]bool{},
 		pending: map[string]request{}, waiting: map[*completion]struct{}{},
@@ -235,9 +239,19 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 		select {
 		case <-r.ctx.Done():
 			return
+		case <-r.startupReady:
+			e.manifest.Surface = nil
+			e.surfaceStartupBytes = 0
+			e.surfacePreview = nil
+			close(r.startupConsumed)
 		case req := <-r.queue:
 			r.discardScheduled(e)
 			r.mu.Lock()
+			if r.startupInstalled {
+				e.manifest.Surface = nil
+				e.surfaceStartupBytes = 0
+				e.surfacePreview = nil
+			}
 			if req.event == "window_changed" || req.event == "session_changed" || req.event == "buffer_changed" {
 				req = r.pending[req.event]
 				delete(r.pending, req.event)

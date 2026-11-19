@@ -16,10 +16,15 @@ func decodeSurface(L *lua.LState, value lua.LValue, destination any) {
 	if err != nil {
 		L.RaiseError("surface options: %v", err)
 	}
+	size := 0
 	var validate func(any)
 	validate = func(value any) {
 		switch value := value.(type) {
 		case string:
+			size += len(value)
+			if size > 1<<20 {
+				L.RaiseError("surface options exceed 1 mib")
+			}
 			if !utf8.ValidString(value) {
 				L.RaiseError("surface options require valid utf-8; use ui.decode for binary input")
 			}

@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"encoding/json"
 	"fmt"
 	"maps"
 	"slices"
@@ -70,6 +71,9 @@ func (e *engine) unloadPlugin(name string) error {
 	e.manifest.Surface = slices.DeleteFunc(e.manifest.Surface, func(mutation SurfaceMutation) bool {
 		return mutation.Owner == record.owner || mutation.TargetOwner == record.owner
 	})
+	if encoded, err := json.Marshal(e.manifest.Surface); err == nil {
+		e.surfaceStartupBytes = len(encoded)
+	}
 	e.removeOwnerRegistrations(record.owner)
 	for key, layers := range e.bindingLayers {
 		e.bindingLayers[key] = slices.DeleteFunc(layers, func(layer ownedBinding) bool {
