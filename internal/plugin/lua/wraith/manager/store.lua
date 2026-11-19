@@ -16,7 +16,7 @@ function M.new(specs, settings)
   local function notify(callback, value)
     if not callback then return end
     local ok, err = pcall(callback, copy(value))
-    if not ok then wraith.notify("package observer: " .. wraith.ui.decode(tostring(err):sub(1, 2048))) end
+    if not ok then pcall(wraith.notify, "package observer: " .. wraith.ui.decode(tostring(err):sub(1, 2048))) end
   end
 
   local function reconcile()
