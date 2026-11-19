@@ -82,7 +82,7 @@ func (m *resourceManager) reserve(owner, kind string, work resourceWork) (string
 	}
 	active := 0
 	for _, record := range m.records {
-		if record.state == "reserved" || record.state == "running" {
+		if record.state == "reserved" || record.activated && !record.done {
 			active++
 		}
 	}
@@ -189,6 +189,11 @@ func (m *resourceManager) Status(id, owner string) (map[string]any, error) {
 	if record.result.Err != nil {
 		result["error"] = record.result.Err.Error()
 	}
+	data, err := cloneResourceValue(record.result.Data)
+	if err != nil {
+		return nil, err
+	}
+	result["result"] = data
 	return result, nil
 }
 

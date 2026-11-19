@@ -116,3 +116,31 @@ func TestResourceReleaseCancelsReservedWork(t *testing.T) {
 	default:
 	}
 }
+
+func TestCanceledWorkersKeepCapacityUntilTheyFinish(t *testing.T) {
+	m := newResourceManager(t.Context())
+	t.Cleanup(m.close)
+	release := make(chan struct{})
+	defer close(release)
+	for range 32 {
+		started := make(chan struct{})
+		id, err := m.reserve("config", "fixture", func(context.Context, *resourceSink) resourceResult {
+			close(started)
+			<-release
+			return resourceResult{}
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := m.activate(id); err != nil {
+			t.Fatal(err)
+		}
+		<-started
+		if err := m.Cancel(id, "config"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := m.reserve("config", "fixture", func(context.Context, *resourceSink) resourceResult { return resourceResult{} }); err == nil {
+		t.Fatal("canceling unfinished workers released their capacity")
+	}
+}
