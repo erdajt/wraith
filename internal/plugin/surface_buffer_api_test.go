@@ -11,8 +11,11 @@ import (
 func TestLuaBufferAPIStagesTypedTextAndRejectsInvalidOptions(t *testing.T) {
 	directory := t.TempDir()
 	source := `
+assert(#wraith.buffers.list() == 0 and #wraith.regions.list() == 0)
 local b = wraith.buffers.create({name="notes", editable=true, lines={"écho", "two"}})
 assert(wraith.buffers.get(b).text_revision == 1)
+assert(#wraith.buffers.get(b).keymaps == 0 and #wraith.buffers.get(b).spans == 0)
+assert(#wraith.buffers.get_lines(b,0,0).lines == 0)
 assert(wraith.buffers.set_lines(b, 1, -1, {"next"}) == 2)
 local page = wraith.buffers.get_lines(b, 0, -1)
 assert(page.lines[1] == "écho" and page.lines[2] == "next" and page.next == 2)

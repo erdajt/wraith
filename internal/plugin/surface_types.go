@@ -34,8 +34,8 @@ type SurfaceBuffer struct {
 	Revision     uint64           `json:"revision"`
 	Editable     bool             `json:"editable"`
 	Lines        []string         `json:"lines"`
-	Spans        []SurfaceSpan    `json:"spans,omitempty"`
-	Keymaps      []keymap.Binding `json:"keymaps,omitempty"`
+	Spans        []SurfaceSpan    `json:"spans"`
+	Keymaps      []keymap.Binding `json:"keymaps"`
 	TextRevision uint64           `json:"text_revision"`
 }
 
@@ -69,7 +69,7 @@ type SurfaceRegion struct {
 	Row      int           `json:"row,omitempty"`
 	Column   int           `json:"column,omitempty"`
 	Lines    []string      `json:"lines"`
-	Spans    []SurfaceSpan `json:"spans,omitempty"`
+	Spans    []SurfaceSpan `json:"spans"`
 }
 
 // SurfaceMutation carries an ordered edit and the caller lease that created it.
@@ -86,7 +86,7 @@ type SurfaceMutation struct {
 	Start       int             `json:"start,omitempty"`
 	End         int             `json:"end,omitempty"`
 	Lines       []string        `json:"lines,omitempty"`
-	Spans       []SurfaceSpan   `json:"spans,omitempty"`
+	Spans       []SurfaceSpan   `json:"spans"`
 	Binding     *keymap.Binding `json:"binding,omitempty"`
 }
 

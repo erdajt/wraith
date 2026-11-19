@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"reflect"
 
+	"github.com/erdajt/wraith/internal/keymap"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -38,6 +39,22 @@ func decodeSurface(L *lua.LState, value lua.LValue, destination any) {
 
 // pushSurface returns a detached typed value without exposing Go or Lua-owned storage.
 func pushSurface(L *lua.LState, value any) int {
+	switch item := value.(type) {
+	case SurfaceBuffer:
+		item.Spans = append([]SurfaceSpan{}, item.Spans...)
+		item.Keymaps = append([]keymap.Binding{}, item.Keymaps...)
+		value = item
+	case SurfaceRegion:
+		item.Lines = append([]string{}, item.Lines...)
+		item.Spans = append([]SurfaceSpan{}, item.Spans...)
+		value = item
+	case SurfaceBufferPage:
+		item.Lines = append([]string{}, item.Lines...)
+		value = item
+	}
+	if reflected := reflect.ValueOf(value); reflected.IsValid() && reflected.Kind() == reflect.Slice && reflected.IsNil() {
+		value = []any{}
+	}
 	data, err := json.Marshal(value)
 	if err != nil {
 		L.RaiseError("surface value: %v", err)
