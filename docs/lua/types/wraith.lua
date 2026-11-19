@@ -44,7 +44,7 @@
 wraith = wraith or {}
 wraith.api_version = 2
 wraith.capabilities = {
-  trusted_lua = true, runtimepath = true, stdpath = true, modules = true, module_sources = true,
+  trusted_lua = true, runtimepath = true, stdpath = true, modules = true, module_sources = true, module_loading = true,
   live_registration = true, custom_events = true, plugin_lifecycle = true,
   scheduling = true, json = true, filesystem = true, http = true,
   timers = true, managed_resources = true, process = true,
@@ -173,6 +173,11 @@ function wraith.runtimepath.remove(path) end
 ---@field load fun(): ... runs the bound source afresh and preserves all return values
 ---@class Wraith.ModulesAPI
 wraith.modules = wraith.modules or {}
+--- reports the native require marker without evaluating a module or exposing its cache value.
+---@param name string dotted module name, at most 128 bytes
+---@return boolean loading
+function wraith.modules.loading(name) end
+
 -- discovers an exact module and immediate children from the first selected source root.
 ---@param name string dotted module name, at most 128 bytes
 ---@return Wraith.ModuleSource[] sources sorted by name, at most 256

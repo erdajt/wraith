@@ -53,3 +53,11 @@ exact lookup converts dots to directory separators. it checks `lua/name.lua` and
 catalog records retain their physical paths. a physical `lua/tool.extra.lua` record loads that file directly, while `source(root, 'tool.extra')` looks for `lua/tool/extra.lua` or `lua/tool/extra/init.lua`. use the catalog record's loader instead of reconstructing its path.
 
 both APIs preserve the discovery limits and bound-loader behavior above. they do not install preload wrappers or change require caching. package managers must define their own entry-point ownership and cache policy.
+
+## require state
+
+`wraith.modules.loading(name)` reports whether native `require` currently holds its loading marker for that name. it reads the runtime registry, without executing loaders or exposing the private marker. check `wraith.capabilities.module_loading` on older hosts. names follow the discovery grammar and length limit.
+
+the predicate is true inside a loader entered by `require`, before that loader replaces its cache entry. a direct preload call on an uncached name returns false. replacing the public `package.loaded` table does not replace the native registry. this is a cache-state query, not proof that arbitrary trusted Lua code is safe.
+
+failed native loads clear only their unchanged loading marker, allowing retries. values written by the source remain intact, including false and userdata. successful nil returns keep normal `require` caching. package managers must still distinguish failed source evaluation from failed setup and reject cache values they do not own.

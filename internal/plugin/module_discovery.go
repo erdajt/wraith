@@ -23,6 +23,14 @@ type moduleSource struct {
 func (e *engine) installModuleDiscovery(api *lua.LTable) {
 	L := e.L
 	api.RawSetString("modules", L.SetFuncs(L.NewTable(), map[string]lua.LGFunction{
+		"loading": func(L *lua.LState) int {
+			name := L.CheckString(1)
+			if len(name) > 128 || !namespaceName.MatchString(name) {
+				L.RaiseError("modules.loading: invalid module name")
+			}
+			L.Push(lua.LBool(L.IsModuleLoading(name)))
+			return 1
+		},
 		"discover": func(L *lua.LState) int {
 			ctx := L.Context()
 			if ctx == nil {
@@ -75,6 +83,7 @@ func (e *engine) installModuleDiscovery(api *lua.LTable) {
 	capabilities := api.RawGetString("capabilities").(*lua.LTable)
 	capabilities.RawSetString("modules", lua.LTrue)
 	capabilities.RawSetString("module_sources", lua.LTrue)
+	capabilities.RawSetString("module_loading", lua.LTrue)
 }
 
 // moduleRecord binds source identity and loading independently of mutable lua metadata.
