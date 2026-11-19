@@ -92,7 +92,7 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 	transferred := false
 	m.Result.Effects = slices.Clone(m.Result.Effects)
 	for _, effect := range m.Result.Effects {
-		m.Explicit = m.Explicit || effect.Name == "surface.apply" || effect.Name == "dialog.open"
+		m.Explicit = m.Explicit || effect.Name == "surface.apply" || effect.Name == "dialog.open" || effect.Name == "workspace.query" || effect.Name == "workspace.cancel"
 	}
 	background := m.Explicit || m.Resource != nil || m.Lease != ""
 	defer func() {
@@ -145,11 +145,26 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 		owned := a.pluginOwns(m)
 		if background && !owned {
 			switch effect.Name {
-			case "notify", "event.emit", "schedule.callback", "resource.activate", "resource.release", "surface.apply", "dialog.open":
+			case "notify", "event.emit", "schedule.callback", "resource.activate", "resource.release", "surface.apply", "dialog.open", "workspace.query", "workspace.cancel":
 			default:
 				a.notice = "lua input effect discarded after workspace changed"
 				continue
 			}
+		}
+		if effect.Name == "workspace.query" {
+			query, ok := effect.Data.(plugin.WorkspaceQuery)
+			if !ok {
+				a.notice = "lua workspace: invalid query"
+				return nil
+			}
+			cmd := a.startWorkspaceQuery(m.Runtime, query)
+			m.Result.Effects = m.Result.Effects[i+1:]
+			transferred = true
+			return tea.Batch(cmd, func() tea.Msg { return m })
+		}
+		if effect.Name == "workspace.cancel" {
+			a.cancelWorkspaceQuery(m.Runtime, effect.Owner, effect.Lease, effect.Argument)
+			continue
 		}
 		if effect.Name == "surface.apply" {
 			mutation, ok := effect.Data.(plugin.SurfaceMutation)
