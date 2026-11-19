@@ -129,3 +129,20 @@ func TestPackageRootsRejectAmbiguousModuleIdentity(t *testing.T) {
 		})
 	}
 }
+
+func TestGenericRuntimeDoesNotInstallOrLoadTheDefaultManager(t *testing.T) {
+	directory, data := t.TempDir(), t.TempDir()
+	if err := os.WriteFile(filepath.Join(directory, "init.lua"), []byte(`assert(package.preload["wraith.manager"]==nil)
+assert(not pcall(require,"shroud"))`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	runtime, err := Open(t.Context(), directory, config.Default(), nil, config.Paths{Data: data})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer runtime.Close()
+	entries, err := os.ReadDir(data)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("generic runtime installed packages: %v, %v", entries, err)
+	}
+}

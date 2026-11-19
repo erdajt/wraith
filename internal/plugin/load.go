@@ -99,10 +99,6 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 		return nil, err
 	}
 
-	if err := e.installBundledModules(); err != nil {
-		return nil, err
-	}
-
 	if len(hosts) > 0 {
 		if err := e.installPackageModules(hosts[0].packages); err != nil {
 			return nil, err
