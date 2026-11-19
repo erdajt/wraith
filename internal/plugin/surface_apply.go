@@ -35,6 +35,9 @@ func (s *SurfaceStore) HostApply(mutation SurfaceMutation) (SurfaceDelta, error)
 
 // apply dispatches validated host mutations while the store holds its write lock.
 func (s *SurfaceStore) apply(m SurfaceMutation) (SurfaceDelta, error) {
+	if strings.HasPrefix(m.Operation, "window.") {
+		return s.applyWindow(m)
+	}
 	if !strings.HasPrefix(m.Operation, "buffer.") {
 		return SurfaceDelta{}, fmt.Errorf("unknown surface operation: %s", m.Operation)
 	}
