@@ -7,6 +7,7 @@ lock=$1
 baseline=$2
 candidate=$3
 absent=$4
+mode=$5
 if [ -L "$lock" ] || { [ -e "$lock" ] && [ ! -f "$lock" ]; }; then exit 73; fi
 if [ -L "$candidate" ] || [ ! -f "$candidate" ]; then exit 73; fi
 if [ "$absent" = yes ]; then
@@ -15,6 +16,7 @@ else
   if [ -L "$baseline" ] || [ ! -f "$baseline" ]; then exit 73; fi
   if ! cmp -s -- "$baseline" "$lock"; then exit 75; fi
 fi
+if [ "$mode" = check ]; then exit 0; fi
 mv -T -- "$candidate" "$lock"
 ]]
 
@@ -32,10 +34,10 @@ function M.commit(request, options, completed)
   assert(wraith.fs.stat(request.guard).type == "file", "package guard must be a regular file")
   local argv = { "flock", "--exclusive", "--timeout", tostring((options.lock_timeout_ms or 5000) / 1000),
     "--conflict-exit-code", "74", "--no-fork", request.guard, "/bin/sh", "-c", transaction,
-    "wraith-publish", request.lockfile, request.baseline, request.candidate, request.absent and "yes" or "no" }
+    "wraith-publish", request.lockfile, request.baseline, request.candidate, request.absent and "yes" or "no", request.check_only and "check" or "commit" }
   return process.start(argv, options, function(result)
     if result.state == "completed" and result.exit_code == 0 then
-      completed({ state = "installed", generation = request.generation })
+      completed({ state = "installed", generation = not request.check_only and request.generation or nil })
       return
     end
     if result.exit_code == 75 then
@@ -48,6 +50,11 @@ function M.commit(request, options, completed)
     end
     if result.exit_code == 73 then
       completed({ state = "failed", error = "publication requires regular files, not directories or symlinks" })
+      return
+    end
+
+    if request.check_only then
+      completed({ state = result.state, error = result.error or "restore baseline check interrupted" })
       return
     end
 
