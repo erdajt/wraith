@@ -166,7 +166,7 @@ func (input workspaceQueryInput) job(ctx context.Context, directory string) (any
 	if options.Revision != "" && options.Revision != metadata["revision"] {
 		return nil, errors.New("stale_revision: command output changed")
 	}
-	page, err := runner.ReadLocalOutput(record, runner.Query{
+	page, err := runner.ReadLocalOutputContext(ctx, record, runner.Query{
 		From: options.From, Pattern: options.Pattern, Regex: options.Regex, IgnoreCase: options.IgnoreCase,
 		Before: options.Before, After: options.After, Limit: options.Limit,
 	})

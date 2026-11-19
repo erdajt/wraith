@@ -130,3 +130,13 @@ end)`)
 		t.Fatal("retired resource callback changed current workspace")
 	}
 }
+
+// TestReleasedResourceCanFinishOwnedEventChain keeps accepted continuation effects after handle disposal.
+func TestReleasedResourceCanFinishOwnedEventChain(t *testing.T) {
+	a := pluginFixture(t, `wraith.events.on("cleanup.finished",function() wraith.notify("complete") end)
+ wraith.timer.start(1,function(ctx)
+  wraith.resource.release(ctx.resource.id)
+  wraith.events.emit("cleanup.finished",{})
+ end)`)
+	runScheduledProgram(t, a, a.startPluginResources())
+}

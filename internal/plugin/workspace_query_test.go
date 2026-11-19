@@ -97,3 +97,13 @@ func TestWorkspaceQuerySetupDefersHostWork(t *testing.T) {
 		t.Fatalf("deferred query: %+v", got)
 	}
 }
+
+// TestWorkspaceLifecycleEventsCanBeObserved accepts native service changes without namespaced aliases.
+func TestWorkspaceLifecycleEventsCanBeObserved(t *testing.T) {
+	runtime := openTestRuntime(t, `for _,name in ipairs({"jobs_changed","terminals_changed","environment_changed"}) do
+ wraith.events.on(name,function() end)
+ end`)
+	if len(runtime.Manifest().Events) != 3 {
+		t.Fatal("native service events missing")
+	}
+}

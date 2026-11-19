@@ -249,6 +249,10 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 		}
 		if effect.Name == "resource.release" {
 			m.Runtime.DiscardResources([]string{effect.Argument})
+			if m.Resource != nil && m.Resource.ID == effect.Argument {
+				m.Resource = nil
+				m.Explicit, m.LeaseOwner, m.Lease = true, effect.Owner, effect.Lease
+			}
 			continue
 		}
 		if effect.Name == "schedule.callback" {
