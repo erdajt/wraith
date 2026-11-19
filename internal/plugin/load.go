@@ -98,6 +98,10 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 		return nil, err
 	}
 
+	if err := e.installBundledModules(); err != nil {
+		return nil, err
+	}
+
 	e.guardHookAPIs(api)
 	fn, err := loadFile(L, filepath.Join(directory, "init.lua"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
