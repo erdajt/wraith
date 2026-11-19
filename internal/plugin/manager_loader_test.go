@@ -7,8 +7,8 @@ import (
 func TestManagerLoaderOwnsInitActivationAndDependencyCleanup(t *testing.T) {
 	r := openManagerRuntime(t, `local loader
  local graph=require("wraith.manager.spec").normalize({
-  {name="dependency",dir="/tmp/dependency",lazy=true,opts={}},
-  {name="app",dir="/tmp/app",opts={},dependencies={"dependency"},cmd="app",init=function()
+  {name="dependency",main="dependency",dir="/tmp/dependency",lazy=true,opts={}},
+  {name="app",main="app",dir="/tmp/app",opts={},dependencies={"dependency"},cmd="app",init=function()
    wraith.commands.create("initialized",function() end)
    return function() print("init cleanup") end
   end}})
@@ -86,7 +86,7 @@ func TestManagerLazyCommandRetriesAfterFailedAndRejectedActivation(t *testing.T)
  end} end
  package.preload.manager_test=function() return {setup=function() end,
   configure=function()
-   local graph=require("wraith.manager.spec").normalize({{name="app",dir="/tmp/app",opts={},cmd="app"}})
+   local graph=require("wraith.manager.spec").normalize({{name="app",main="app",dir="/tmp/app",opts={},cmd="app"}})
    loader=require("wraith.manager.loader").new(graph,{app="/tmp/app"},"manager_test")
    loader.initialize()
   end,trigger=function(...) loader.trigger(...) end} end
