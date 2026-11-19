@@ -110,9 +110,23 @@ func TestResourceCallbackFailureCancelsContinuingWork(t *testing.T) {
 			t.Fatal("consumer error disappeared")
 		}
 		status, err := r.services.Status(event.ID, "config")
-		if err != nil || status["state"] != "cancelled" {
+		if err != nil || status["state"] != "cancelled" || status["callback_error"] == nil {
 			encoded, _ := json.Marshal(status)
 			t.Fatalf("failed consumer retained worker: %s, %v", encoded, err)
+		}
+		for !event.Final {
+			select {
+			case event = <-r.Events():
+				ch, err := r.SubmitResource(event, nil, m.Config)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if repeated := receiveResult(t, ch); repeated.Err != nil {
+					t.Fatalf("failed consumer ran again: %v", repeated.Err)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("cancelled worker did not finish")
+			}
 		}
 	case <-time.After(time.Second):
 		t.Fatal("timer did not fire")

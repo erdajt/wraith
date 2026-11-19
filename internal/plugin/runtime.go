@@ -298,7 +298,10 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 			hooks := e.restoreRegistry(before)
 			result.Err = errors.Join(result.Err, e.disposeHooks(hooks))
 			if req.resource != nil {
-				result.Err = errors.Join(result.Err, e.services.Cancel(req.resource.ID, resource.owner))
+				callback := e.resources[req.resource.ID]
+				callback.function = nil
+				e.resources[req.resource.ID] = callback
+				result.Err = errors.Join(result.Err, e.services.failConsumer(req.resource.ID, resource.owner, result.Err))
 			}
 		}
 	}()

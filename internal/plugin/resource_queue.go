@@ -67,6 +67,9 @@ func (m *resourceManager) terminal(record *managedResource) {
 		result = nil
 	}
 	data := map[string]any{"state": record.state, "done": record.done, "result": result}
+	if record.callbackError != "" {
+		data["callback_error"] = record.callbackError
+	}
 	if record.result.Err != nil {
 		data["error"] = record.result.Err.Error()
 	}

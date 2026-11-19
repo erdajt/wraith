@@ -34,6 +34,7 @@ type managedResource struct {
 	activated, done        bool
 	result                 resourceResult
 	dropped                uint64
+	callbackError          string
 	control                any
 }
 
@@ -197,6 +198,9 @@ func (m *resourceManager) Status(id, owner string) (map[string]any, error) {
 	if record.result.Err != nil {
 		result["error"] = record.result.Err.Error()
 	}
+	if record.callbackError != "" {
+		result["callback_error"] = record.callbackError
+	}
 	data, err := cloneResourceValue(record.result.Data)
 	if err != nil {
 		return nil, err
@@ -233,4 +237,20 @@ func (m *resourceManager) close() {
 	m.records = map[string]*managedResource{}
 	m.queue = nil
 	m.signalChanged()
+}
+
+// failConsumer keeps callback failure context while stopping further managed production.
+func (m *resourceManager) failConsumer(id, owner string, failure error) error {
+	m.mu.Lock()
+	record := m.records[id]
+	if record == nil || record.owner != owner {
+		m.mu.Unlock()
+		return errors.New("resource is missing or belongs to another owner")
+	}
+	record.callbackError = failure.Error()
+	if len(record.callbackError) > 4096 {
+		record.callbackError = record.callbackError[:4096]
+	}
+	m.mu.Unlock()
+	return m.Cancel(id, owner)
 }
