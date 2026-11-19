@@ -2,7 +2,7 @@
 
 wraith embeds gopher-lua and exposes API version 2. `init.lua` is real lua 5.1-style code, with functions, loops, tables, closures and local modules. luaJIT and neovim's `vim` module are not included.
 
-[service APIs](lua/services.md) cover JSON, filesystem operations, HTTP, timers and managed resource lifetimes. [surface APIs](lua/surfaces.md) cover shared buffers, floating and tiled views, presentation regions and modal dialogs.
+[service APIs](lua/services.md) cover JSON, filesystem operations, HTTP, timers and managed resource lifetimes. [surface APIs](lua/surfaces.md) cover shared buffers, floating and tiled views, presentation regions and modal dialogs. [workspace APIs](lua/workspace.md) page conversations, jobs and local output. [example packages](lua/examples.md) compose these APIs into task selectors, history, Git views and native command policies.
 
 ## start
 
@@ -137,9 +137,13 @@ end
 | `ready` | initial workspace start or successful reload |
 | `session_changed` | the active session id changes |
 | `window_changed` | view focus or visible window geometry changes |
+| `buffer_changed` | canonical surface text changes |
+| `jobs_changed` | bounded native job metadata changes |
+| `terminals_changed` | scratch terminal lifecycle or dimensions change |
+| `environment_changed` | variable names, redacted comments or scope change |
 | `response_finished` | an active model response stops; compaction is excluded |
 
-`events.on(name, function)` registers during setup or a callback and returns an id. `events.off(id)` removes the subscription, including from a callback or teardown. only `window_changed` and `session_changed` coalesce to the newest queued snapshot. completion and custom events retain their order. superseded state-event callers are released without effects.
+`events.on(name, function)` registers during setup or a callback and returns an id. `events.off(id)` removes the subscription, including from a callback or teardown. `window_changed`, `session_changed` and `buffer_changed` coalesce to the newest queued snapshot. native workspace service events retain their latest pending resync state under queue pressure; see [lifecycle events](lua/workspace.md#lifecycle-events). completion and custom events retain their order. superseded state-event callers are released without effects.
 
 custom events use dotted lowercase names, such as `review.selected`. `wraith.events.emit("review.selected", {id = "task-1"})` queues delivery after the emitting callback succeeds. listeners read the payload from `ctx.data`. a callback can register a listener and emit its event in the same batch; host registration finishes before delivery. emission cannot impersonate built-in lifecycle events. each observer has its own deadline and registration transaction. a failing observer reports its event and owner, loses its own staged changes, and leaves healthy observers running. removed listeners are skipped; newly registered listeners start with the next event. host-only validation can still reject the final publication.
 
