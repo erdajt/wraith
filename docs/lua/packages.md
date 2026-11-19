@@ -66,8 +66,8 @@ HTTP, remote helper protocols, embedded URL credentials, query strings, fragment
 | `pin` | `false`; keep the locked revision during update, except when an explicit commit selector changes |
 | `dependencies` | package names or nested specifications; loaded before the dependent package |
 | `enabled` | `true`, or a function receiving a copied specification and returning a boolean |
-| `priority` | `0`; higher values activate first, with declaration order breaking ties; dependencies still load first |
-| `lazy` | true when `cmd`, `event` or `keys` is present, otherwise false |
+| `priority` | `50`; higher values start first, with declaration order breaking ties; dependencies still load before their parent |
+| `lazy` | true for dependency-only declarations or command, event or key triggers; explicit booleans override the default |
 | `cmd` | one slash command name or a list of names that activate the package |
 | `event` | one lifecycle/custom event name or a list that activates the package |
 | `keys` | key specifications, described below |
@@ -98,6 +98,8 @@ without a custom `config`, activation requires `main` and calls `module.setup(op
 key entries accept positional `{sequence, action}` or named `{keys = sequence, action = action}` fields. `mode` defaults to `chat.normal`; `description` and `desc` are aliases. the action is a registered action name or a function. canonical key aliases are checked for conflicts.
 
 command triggers activate the package and replay that command with its original argument. the package must register the promised command. key triggers run their declared action after activation; they do not replay a physical key recursively. event triggers deliver the original event only to the newly activated packages' listeners. existing listeners do not receive a duplicate event. a package activated after startup also receives `ready` through its newly registered ready listeners.
+
+a separate top-level declaration removes the dependency-only default. completed import replays do not add declarations or change that default. eager startup order is independent of lazy plugins’ priorities.
 
 `lazy = true` without a trigger means explicit `manager.load(name)` activation. unloading removes activation and init owners, including their triggers. load it explicitly again or reload the configuration to restore them. unload dependents before their dependencies.
 

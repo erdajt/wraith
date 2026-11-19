@@ -90,7 +90,10 @@ func TestManagerEagerChainPublishesBeforeTargetedReadyDelivery(t *testing.T) {
    wraith.events.on("ready",function() wraith.notify("ready:"..name) end)
   end} end
  end
- require("wraith.manager").setup({{name="second",dir="/tmp/second"},{name="first",dir="/tmp/first",priority=10}})
+ require("wraith.manager").setup({
+  {name="lazy",dir="/tmp/lazy",lazy=true,priority=100,dependencies={{name="second",dir="/tmp/second",lazy=false,priority=0}}},
+  {name="first",dir="/tmp/first"},
+ })
  `)
 	pending, err := r.Submit("", "ready", nil, r.Manifest().Config)
 	if err != nil {

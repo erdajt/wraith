@@ -28,8 +28,8 @@
 ---@field main? string defaults to repository/directory basename without .git
 ---@field dependencies? Wraith.PackageDeclarations bare dependency names refer to existing declarations
 ---@field enabled? boolean|fun(spec: Wraith.PackageSpec): boolean
----@field priority? integer default 0, within -1000000..1000000
----@field lazy? boolean defaults to whether command, event or key triggers exist
+---@field priority? integer default 50, within -1000000..1000000
+---@field lazy? boolean defaults to dependency-only declarations or command, event or key triggers
 ---@field cmd? string|string[]
 ---@field event? Wraith.Event|Wraith.Event[]
 ---@field keys? Wraith.PackageKey[]

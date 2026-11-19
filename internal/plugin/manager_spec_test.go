@@ -37,7 +37,7 @@ func TestManagerSpecsResolveNestedImportsAndDependencyOrder(t *testing.T) {
  package.preload["settings.tools"]=function() return {{"owner/app",dependencies={"library"},cmd="app",opts={nested={value=1}}}} end
  local enabled=0
  local input={{{name="library",dir="/tmp/library",priority=-10}}, {import="settings.tools"},
-  {"owner/first",priority=20,enabled=function() enabled=enabled+1; return true end},
+  {"owner/first",priority=100,enabled=function() enabled=enabled+1; return true end},
   {"owner/disabled",enabled=false}, {"owner/key",keys={{"z",function() end,desc="inspect"}}}}
  local graph=spec.normalize(input)
  assert(enabled==1 and #graph.ordered==4)
@@ -50,7 +50,7 @@ func TestManagerSpecsResolveNestedImportsAndDependencyOrder(t *testing.T) {
  local relative=spec.normalize({{name="local",dir="./packages/../local"}})
  assert(relative.by_name["local"].source.dir==wraith.paths.stdpath("config").."/local")
  local dependency=spec.normalize({{"owner/lazy",lazy=true,dependencies={{"owner/dependency"}}}})
- assert(not dependency.by_name.dependency.lazy and dependency.by_name.lazy.lazy)
+ assert(dependency.by_name.dependency.lazy and dependency.by_name.lazy.lazy)
  `)
 }
 
