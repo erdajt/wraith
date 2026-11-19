@@ -100,3 +100,19 @@ func TestTransformRejectsMalformedEnvelopeBeforeCallingLua(t *testing.T) {
 		}
 	}
 }
+
+func TestEachHookPayloadIsValidatedBeforeTheNextHook(t *testing.T) {
+	for name, mutation := range map[string]string{
+		"thinking": `ctx.request.think={unsupported=true}`,
+		"options":  `ctx.request.options.num_ctx=-1`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			r := openTestRuntime(t, `wraith.hooks.add("before_request",function(ctx) `+mutation+`; return {request=ctx.request} end)
+wraith.hooks.add("before_request",function() error("invalid data reached next hook") end)`)
+			input := HookRequest{Kind: "before_request", Purpose: "chat", Request: &RequestData{Model: "local", Messages: []HookMessage{{Role: "user", Content: "hello"}}}}
+			if _, err := r.Transform(t.Context(), input); err == nil || strings.Contains(err.Error(), "reached next hook") {
+				t.Fatalf("intermediate payload was not validated: %v", err)
+			}
+		})
+	}
+}

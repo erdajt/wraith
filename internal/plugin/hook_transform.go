@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"slices"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -166,8 +168,17 @@ func validateHookRequest(input HookRequest) error {
 		if input.Request == nil || input.Command != nil || !slices.Contains([]string{"chat", "extract", "audit"}, input.Purpose) {
 			return errors.New("invalid request hook envelope")
 		}
-		if input.Request.Model == "" || len(input.Request.Messages) > 4096 {
+		if strings.TrimSpace(input.Request.Model) == "" || len(input.Request.Messages) > 4096 {
 			return errors.New("invalid transformed request model or messages")
+		}
+		options := input.Request.Options
+		if options.Context < 0 || options.Predict < 0 || options.Threads < 0 || math.IsNaN(options.Temperature) || math.IsInf(options.Temperature, 0) || options.Temperature < 0 || options.Temperature > 2 {
+			return errors.New("invalid transformed model options")
+		}
+		switch input.Request.Think.(type) {
+		case nil, bool, string:
+		default:
+			return errors.New("hook thinking must be a boolean or string")
 		}
 		text = append(text, input.Request.Model)
 		if think, ok := input.Request.Think.(string); ok {
