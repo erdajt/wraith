@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
 	"slices"
 	"strings"
 )
@@ -41,6 +44,8 @@ func (a *App) pluginSnapshot(argument, event string, data any) map[string]any {
 	if a.plugins != nil {
 		snapshot["surfaces"] = a.plugins.Surfaces().Index()
 	}
+	target, _ := json.Marshal([]any{fmt.Sprintf("%p", a.plugins), a.keyOwner(), sha256.Sum256([]byte(a.Prompt.String())), a.pluginTarget()})
+	snapshot["target"] = fmt.Sprintf("%x", sha256.Sum256(target))
 	snapshot["prompt_truncated"] = len(a.Prompt.String()) > 32<<10
 	snapshot["argument_truncated"] = len(argument) > 8<<10
 	snapshot["data"] = data
