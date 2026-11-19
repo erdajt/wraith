@@ -13,6 +13,8 @@ import (
 )
 
 type Client struct {
+	Adapter   Adapter
+	Transform func(context.Context, string, PromptData) (PromptData, error)
 	Variables variables.Snapshot
 	*ollama.Client
 	Profile config.Provider
@@ -39,6 +41,12 @@ func (c *Client) Models(ctx context.Context) ([]ollama.Model, error) {
 		return nil, err
 	}
 	c = private
+	if c.Profile.Kind == "plugin" {
+		if c.Adapter == nil {
+			return nil, fmt.Errorf("plugin provider %s is unavailable", c.Name)
+		}
+		return c.Adapter.Models(ctx)
+	}
 
 	if c.Profile.Kind == "ollama" {
 		return c.Client.Models(ctx)
@@ -80,6 +88,12 @@ func (c *Client) Show(ctx context.Context, model string) (ollama.Info, error) {
 		return ollama.Info{}, privacyErr
 	}
 	c = private
+	if c.Profile.Kind == "plugin" {
+		if c.Adapter == nil {
+			return ollama.Info{}, fmt.Errorf("plugin provider %s is unavailable", c.Name)
+		}
+		return c.Adapter.Show(ctx, model)
+	}
 
 	if c.Profile.Kind == "ollama" {
 		return c.Client.Show(ctx, model)
@@ -140,18 +154,31 @@ func (c *Client) Load(ctx context.Context, model, keepAlive string, options olla
 
 // Chat redacts the request, checks its budget and streams it through the selected provider.
 func (c *Client) Chat(ctx context.Context, request ollama.Request, emit func(ollama.Response)) (ollama.Response, error) {
+	request, err := c.transformRequest(ctx, request)
+	if err != nil {
+		return ollama.Response{}, err
+	}
 	private, sanitized, err := c.privateRequest(request)
 	if err != nil {
 		return ollama.Response{}, err
 	}
 	c, request = private, sanitized
 
-	if !requestFits(request) {
-		return ollama.Response{}, fmt.Errorf("redacted request exceeds context budget; compact, shorten private metadata or increase context")
+	input, err := requestTokens(request)
+	if err != nil {
+		return ollama.Response{}, err
+	}
+	if err := CheckContext(input, request.Options.Predict, request.Options.Context); err != nil {
+		return ollama.Response{}, err
 	}
 
 	var result ollama.Response
 	switch c.Profile.Kind {
+	case "plugin":
+		if c.Adapter == nil {
+			return ollama.Response{}, fmt.Errorf("plugin provider %s is unavailable", c.Name)
+		}
+		result, err = c.Adapter.Chat(ctx, request, emit)
 	case "ollama":
 		result, err = c.Client.Chat(ctx, request, emit)
 	case "openai":

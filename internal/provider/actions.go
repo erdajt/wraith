@@ -19,9 +19,9 @@ func (c *Client) nativeActions(request ollama.Request) (bool, error) {
 	case "text":
 		return false, nil
 	case "", "auto":
-		return c.Profile.Kind == "ollama" && slices.Contains(request.Capabilities, "tools"), nil
+		return (c.Profile.Kind == "ollama" || c.Profile.Kind == "plugin") && slices.Contains(request.Capabilities, "tools"), nil
 	case "native":
-		if c.Profile.Kind == "ollama" || c.Profile.Kind == "openai" || c.Profile.Kind == "anthropic" {
+		if c.Profile.Kind == "ollama" || c.Profile.Kind == "openai" || c.Profile.Kind == "anthropic" || c.Profile.Kind == "plugin" {
 			return true, nil
 		}
 	}

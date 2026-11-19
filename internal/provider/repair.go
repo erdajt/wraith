@@ -21,6 +21,13 @@ type StreamUpdate struct {
 
 // ChatWithRepair streams validated responses with up to three corrective retries for invalid references or actions.
 func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emit func(StreamUpdate)) (ollama.Response, error) {
+	request, err := c.transformRequest(ctx, request)
+	if err != nil {
+		return ollama.Response{}, err
+	}
+	frozen := *c
+	frozen.Transform = nil
+	c = &frozen
 	original := request
 	ids := session.EvidenceIDs(request.Messages)
 	for id, known := range request.RunIDs {

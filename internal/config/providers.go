@@ -59,7 +59,7 @@ func (c Config) ValidateProviders() error {
 		if strings.TrimSpace(name) == "" {
 			return fmt.Errorf("provider names cannot be empty")
 		}
-		if !slices.Contains([]string{"ollama", "openai", "anthropic", "codex-cli", "claude-cli"}, p.Kind) {
+		if !slices.Contains([]string{"ollama", "openai", "anthropic", "codex-cli", "claude-cli", "plugin"}, p.Kind) {
 			return fmt.Errorf("provider %s has an unsupported kind", name)
 		}
 
@@ -67,7 +67,7 @@ func (c Config) ValidateProviders() error {
 			if len(p.Command) == 0 || strings.TrimSpace(p.Command[0]) == "" {
 				return fmt.Errorf("provider %s needs a command", name)
 			}
-		} else if p.BaseURL != "" || p.Kind != "ollama" {
+		} else if p.Kind != "plugin" && (p.BaseURL != "" || p.Kind != "ollama") {
 			u, err := url.Parse(p.BaseURL)
 			if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
 				return fmt.Errorf("provider %s needs an http base_url without credentials or query parameters", name)
