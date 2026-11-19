@@ -104,6 +104,9 @@ func (op fileOperation) run(ctx context.Context) (result map[string]any, err err
 			mode := entry.Type()
 			if mode == 0 {
 				info, err := entry.Info()
+				if errors.Is(err, os.ErrNotExist) {
+					continue
+				}
 				if err != nil {
 					return nil, err
 				}

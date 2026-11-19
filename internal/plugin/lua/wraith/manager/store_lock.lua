@@ -39,27 +39,34 @@ end
 
 function M.read(path)
   assert(type(path) == "string" and path:sub(1, 1) == "/", "package lock path must be absolute")
-  local ok, stat = pcall(wraith.fs.stat, path)
-  if not ok then
+  local failure
+  for _ = 1, 3 do
+    local ok, stat = pcall(wraith.fs.stat, path)
+    if ok then
+      assert(stat.type == "file", "package lock must be a regular file")
+      local file = wraith.fs.read(path, { max_bytes = 1048576 })
+      assert(not file.truncated, "package lock exceeds 1 mib")
+      return M.decode(file.data), file.data
+    end
+    failure = stat
+
     local parent, name = path:match("^(.*)/([^/]+)$")
     assert(parent, "package lock path must be absolute")
     if parent == "" then parent = "/" end
-    local offset = 0
+    local offset, found = 0, false
     for _ = 1, 4 do
       local listed, page = pcall(wraith.fs.list, parent, { offset = offset, limit = 1024 })
       assert(listed, "package lock parent must exist and be readable: " .. parent .. "; " .. tostring(page))
       for _, entry in ipairs(page.entries) do
-        assert(entry.name ~= name, "cannot inspect package lock: " .. tostring(stat))
+        if entry.name == name then found = true; break end
       end
+      if found then break end
       if not page.truncated then return M.empty(), nil end
       offset = page.next_offset
     end
-    error("cannot establish missing lock in a directory exceeding 4096 entries")
+    assert(found, "cannot establish missing lock in a directory exceeding 4096 entries")
   end
-  assert(stat.type == "file", "package lock must be a regular file")
-  local file = wraith.fs.read(path, { max_bytes = 1048576 })
-  assert(not file.truncated, "package lock exceeds 1 mib")
-  return M.decode(file.data), file.data
+  error("cannot inspect package lock: " .. tostring(failure))
 end
 
 return M

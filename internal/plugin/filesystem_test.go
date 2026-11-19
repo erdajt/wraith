@@ -113,3 +113,54 @@ func TestDirectoryPagingAndRenameDoNotLoseEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+type directoryMutationContext struct {
+	context.Context
+	checks int
+	mutate func()
+}
+
+// Err schedules removal after directory enumeration and before the first entry inspection.
+func (c *directoryMutationContext) Err() error {
+	c.checks++
+	if c.checks == 2 {
+		c.mutate()
+	}
+	return c.Context.Err()
+}
+
+// TestDirectoryListToleratesConcurrentChildRemoval preserves surviving entries and the scanned offset.
+func TestDirectoryListToleratesConcurrentChildRemoval(t *testing.T) {
+	directory := t.TempDir()
+	removed := filepath.Join(directory, "a-candidate")
+	for _, name := range []string{removed, filepath.Join(directory, "b-lock")} {
+		if err := os.WriteFile(name, nil, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ctx := &directoryMutationContext{Context: t.Context(), mutate: func() {
+		if err := os.Remove(removed); err != nil {
+			t.Fatal(err)
+		}
+	}}
+
+	op := fileOperation{kind: "list", path: directory, limit: 2}
+	got, err := op.run(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries := got["entries"].([]any)
+	if len(entries) != 1 || entries[0].(map[string]any)["name"] != "b-lock" {
+		t.Fatalf("surviving entries: %v", entries)
+	}
+	if got["next_offset"] != int64(2) || got["truncated"] != false {
+		t.Fatalf("scanned offset changed after removal: %v", got)
+	}
+
+	if err := os.RemoveAll(directory); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := op.run(t.Context()); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("missing parent was not rejected: %v", err)
+	}
+}

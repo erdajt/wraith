@@ -107,7 +107,7 @@ writes create a private temporary file in the destination directory, write and s
 
 modes are decimal permission bits: `384` is `0600`, `420` is `0644`, `448` is `0700` and `493` is `0755`. values above `511` are rejected. parent directories created by `mkdir` use the requested mode, subject to the process umask.
 
-listing entries contain `name` and `type`; types are `file`, `directory`, `symlink` or `other`. `limit` accepts 1 through 1,024. each returned page is sorted by name. offsets refer to the underlying directory enumeration, not a globally sorted snapshot. directory changes between pages can duplicate or skip entries.
+listing entries contain `name` and `type`; types are `file`, `directory`, `symlink` or `other`. `limit` accepts 1 through 1,024. each returned page is sorted by name. children removed before their metadata is read are skipped. `next_offset` counts scanned entries, including skipped children. offsets refer to the underlying directory enumeration, not a globally sorted snapshot. directory changes between pages can duplicate or skip entries.
 
 `stat` inspects the symlink itself unless `follow=true`. recursive removal does not follow symlinks to their targets. rename uses an atomic no-replace operation by default; unsupported filesystems return an error. cross-filesystem moves are not copied automatically.
 
