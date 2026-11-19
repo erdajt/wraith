@@ -74,6 +74,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	e.installRegistration(api)
 	e.installHooks(api)
 	e.installExtensions(api)
+	e.installInvocations(api)
 	e.installWorkspace(api)
 	e.installWorkspaceQueries(api)
 	e.installPlugins(api)
@@ -125,6 +126,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	if err := e.disposeHooks(hooks); err != nil {
 		return nil, err
 	}
+	e.acceptExtensions()
 	e.setup, ok = false, true
 	return e, nil
 }

@@ -95,6 +95,11 @@ func (r *Runtime) discardScheduled(e *engine) {
 	ids := r.discarded
 	r.discarded = map[string]bool{}
 	r.mu.Unlock()
+	for id, callback := range e.scheduled {
+		if callback.invocation != "" && !e.invocations.valid(callback.invocation) {
+			ids[id] = true
+		}
+	}
 	for id := range ids {
 		delete(e.scheduled, id)
 		if e.rollback != nil {

@@ -38,6 +38,11 @@ func (e *engine) reserveResource(L *lua.LState, kind string, callback *lua.LFunc
 	if err != nil {
 		L.RaiseError("%v", err)
 	}
+	if e.invocationID != "" {
+		if err := e.invocations.attach(e.invocationID, id); err != nil {
+			L.RaiseError("%v", err)
+		}
+	}
 	e.resources[id] = resourceCallback{function: callback, owner: e.owner, invocation: e.invocationID}
 	if e.setup {
 		e.manifest.Resources = append(e.manifest.Resources, id)

@@ -155,8 +155,10 @@ func (r *Runtime) publish(e *engine, revision uint64) bool {
 		e.released = nil
 		for _, owner := range e.surfaceReleased {
 			e.surfaces.RevokeOwner(owner)
+			e.invocations.revokeOwner(owner)
 		}
 		e.surfaceReleased = nil
+		e.acceptExtensions()
 		r.mu.Lock()
 		r.manifest, r.revision = cloneManifest(e.manifest), revision
 		r.mu.Unlock()
@@ -200,11 +202,15 @@ func (e *engine) pruneCallbacks() {
 	for _, effect := range e.effects {
 		retained[effect.Name] = true
 	}
+	private := e.invocations.references()
+	for id := range e.acceptedExtensions {
+		private[id] = true
+	}
 	e.manifest.Callbacks = nil
 	for id := range e.functions {
 		if retained[id] {
 			e.manifest.Callbacks = append(e.manifest.Callbacks, id)
-		} else {
+		} else if !private[id] {
 			delete(e.functions, id)
 			delete(e.callbackOwners, id)
 		}

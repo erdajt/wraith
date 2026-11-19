@@ -279,8 +279,8 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 				delete(r.pending, req.event)
 			}
 			scheduled := strings.HasPrefix(req.callback, "lua.schedule.")
-			stale := req.event == "" && req.resource == nil && !scheduled && req.revision != r.revision
-			if req.event != "" || scheduled || req.resource != nil {
+			stale := req.event == "" && req.resource == nil && req.invocation == nil && !scheduled && req.revision != r.revision
+			if req.event != "" || scheduled || req.resource != nil || req.invocation != nil {
 				req.config.Keymaps = slices.Clone(r.manifest.Config.Keymaps)
 			}
 			r.mu.Unlock()
@@ -313,6 +313,8 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 // invoke stages command or isolated observer changes for host publication.
 func (e *engine) invoke(parent context.Context, req request) (result Result) {
 	e.observerErrors = nil
+	e.invocationID = ""
+	defer func() { result.Invocation = e.invocationID; e.invocationID = "" }()
 	e.surfacePreview = nil
 	e.surfaceReserved = e.surfaces.pendingReservations(e.surfaceReserved)
 	e.pruneResources()
@@ -324,6 +326,7 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 			return Result{}
 		}
 		delete(e.scheduled, req.callback)
+		e.invocationID = deferred.invocation
 	}
 	var resource resourceCallback
 	if req.resource != nil {
@@ -333,14 +336,24 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 			return Result{}
 		}
 		e.delivered[req.resource.ID] = req.resource.Sequence
+		e.invocationID = resource.invocation
 		if resource.function == nil {
 			return Result{}
 		}
+	}
+	if req.invocation != nil {
+		e.invocationID = req.invocation.ID
+	}
+	if e.invocationID != "" && !e.invocations.valid(e.invocationID) {
+		return Result{Err: errors.New("invocation is no longer active")}
 	}
 	before := e.captureRegistry()
 	e.dirty = false
 	defer func() {
 		if result.Err != nil {
+			if e.invocationID != "" {
+				e.invocations.finish(e.invocationID, nil, result.Err)
+			}
 			hooks := e.restoreRegistry(before)
 			if req.resource != nil {
 				callback := e.resources[req.resource.ID]
@@ -379,6 +392,9 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 		e.L.SetContext(ctx)
 		e.owner = owner
 		argument, err := e.callbackContext(req.resource)
+		if err == nil {
+			argument, err = e.invocationContext(argument, req.invocation)
+		}
 		if err != nil {
 			return Result{Err: err}
 		}
