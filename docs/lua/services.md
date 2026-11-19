@@ -1,0 +1,167 @@
+# lua services
+
+[configuration and plugins](../plugins.md) explains loading, mappings, commands and trust. these services use the same runtime and package ownership.
+
+## resource lifecycle
+
+asynchronous calls return an opaque resource id. setup reserves work; the host activates it after installing the configuration. callback-created work starts after preceding host actions succeed. rejected setup, rejected registration changes and abandoned action chains discard their reservations.
+
+resource callbacks receive the current workspace snapshot plus:
+
+| field | value |
+| --- | --- |
+| `ctx.resource.id` | resource handle |
+| `ctx.resource.kind` | resource kind or progress event name |
+| `ctx.resource.sequence` | increasing event sequence |
+| `ctx.resource.revision` | resource revision |
+| `ctx.resource.final` | whether this is a terminal event |
+| `ctx.data` | detached event data |
+
+terminal data contains `state`, `done`, `result` and optional `error`. successful worker output is under `ctx.data.result`. progress data uses `ctx.data` directly. `done` reports whether the worker has returned; cancellation can be reported before a blocking operating-system call returns.
+
+| API | behavior |
+| --- | --- |
+| `wraith.resource.status(id)` | inspect retained state, result, error and dropped progress count |
+| `wraith.resource.cancel(id)` | request cancellation; repeated cancellation is harmless |
+| `wraith.resource.release(id)` | discard the handle after preceding callback effects; cancel outstanding work |
+
+handles belong to the runtime and package that created them. callbacks run under that owner. another package cannot use the handle through these APIs. unload and reload cancel owned resources. completed handles remain queryable until released; release handles you no longer need.
+
+Lua exceptions in a resource callback cancel its remaining work. all Lua callbacks run on the VM owner, never on worker goroutines. terminal events remain deliverable when progress notifications fill their queue. progress may coalesce; a sequence gap does not imply a missing terminal result.
+
+managed lifecycle is not a sandbox. plugins have the user's account authority through trusted Lua libraries. synchronous filesystem calls run immediately and are not rolled back. cancellation checks prevent queued work from starting, but cannot undo a completed rename or interrupt every kernel call.
+
+## json
+
+```lua
+local json = wraith.json
+local value = json.decode('{"items":[],"selection":null}')
+assert(value.selection == json.null)
+
+local encoded = json.encode({
+  items = json.array(),
+  metadata = json.object(),
+  selection = json.null,
+})
+```
+
+| API | behavior |
+| --- | --- |
+| `json.encode(value)` | return a JSON string |
+| `json.decode(text)` | return a Lua value, preserving nulls and container kinds |
+| `json.null` | explicit null singleton; use it instead of `nil` |
+| `json.array(table)` | mark a table as an array; omitted table creates an empty array |
+| `json.object(table)` | mark a table as an object; omitted table creates an empty object |
+
+decoded arrays retain null elements. unmarked empty tables encode as objects. nonempty consecutive integer-keyed tables encode as arrays; string-keyed tables encode as objects. constructors mark the supplied table in place.
+
+encoding rejects cyclic, mixed or sparse tables, functions, unsupported userdata, nonfinite numbers and invalid utf-8 strings or keys. decoding rejects invalid utf-8, unmatched surrogate escapes, malformed JSON and trailing values. strings preserve embedded nul, newline and valid Unicode characters. repeated object keys use the last value.
+
+numbers use Lua's floating-point representation. integers beyond its exact range can lose precision; store identifiers and large counters as strings. JSON is text, not a binary transport. filesystem, HTTP and process payloads carry exact byte strings separately.
+
+limits: 1 mib input and encoded output, depth 32 and 16,384 traversal items. object keys count toward the item and string-byte budgets. decoding or encoding errors raise Lua errors and can be caught with `pcall`.
+
+## filesystem
+
+```lua
+local fs = wraith.fs
+local root = wraith.paths.stdpath("data") .. "/packages"
+fs.mkdir(root, { parents = true })
+fs.write(root .. "/lock.json", wraith.json.encode({}), {
+  overwrite = true,
+  mode = 384,
+})
+
+fs.read_async(root .. "/lock.json", function(ctx)
+  if ctx.data.state == "completed" then
+    local lock = wraith.json.decode(ctx.data.result.data)
+    wraith.notify("lock loaded")
+  else
+    wraith.notify(ctx.data.error or ctx.data.state)
+  end
+  wraith.resource.release(ctx.resource.id)
+end)
+```
+
+synchronous methods return a result table or raise an error. every method also has an `_async` variant with the same arguments followed by a callback; it returns a resource id. options may be omitted or `nil`. async operation failures arrive in terminal event data.
+
+| method | options | result |
+| --- | --- | --- |
+| `fs.read(path, opts)` | `offset=0`, `max_bytes=1048576` | `path`, exact `data`, `offset`, `next_offset`, `truncated` |
+| `fs.write(path, data, opts)` | `overwrite=false`, `mode=384` | `path`, bytes written |
+| `fs.stat(path, opts)` | `follow=false` | `path`, `size`, `mode`, `type`, `modified_ms` |
+| `fs.list(path, opts)` | `offset=0`, `limit=1024` | `path`, `entries`, `next_offset`, `truncated` |
+| `fs.mkdir(path, opts)` | `parents=false`, `mode=448` | `path` |
+| `fs.remove(path, opts)` | `recursive=false` | `path` |
+| `fs.rename(source, destination, opts)` | `overwrite=false` | source `path` |
+
+paths resolve against the process working directory when the call is made. paths must be nonempty, contain no nul and fit within 4,096 bytes. `~` and environment substitutions are not expanded. use `paths.stdpath` for application directories.
+
+reads require regular files and follow file symlinks. `max_bytes` accepts 1 through 4,194,304. read offsets are byte offsets, including positions inside a utf-8 sequence. read data preserves every byte. writes accept at most 4 mib.
+
+writes create a private temporary file in the destination directory, write and sync its contents, then install it atomically. `overwrite=false` never replaces an existing entry, including a symlink. `overwrite=true` replaces the destination entry rather than following a destination symlink. failures before installation preserve the old destination and remove the temporary file. replacement uses the requested mode, not the old file's permissions. the directory is not synced, so this API does not promise crash durability.
+
+modes are decimal permission bits: `384` is `0600`, `420` is `0644`, `448` is `0700` and `493` is `0755`. values above `511` are rejected. parent directories created by `mkdir` use the requested mode, subject to the process umask.
+
+listing entries contain `name` and `type`; types are `file`, `directory`, `symlink` or `other`. `limit` accepts 1 through 1,024. each returned page is sorted by name. offsets refer to the underlying directory enumeration, not a globally sorted snapshot. directory changes between pages can duplicate or skip entries.
+
+`stat` inspects the symlink itself unless `follow=true`. recursive removal does not follow symlinks to their targets. rename uses an atomic no-replace operation by default; unsupported filesystems return an error. cross-filesystem moves are not copied automatically.
+
+errors include the operation and path. sync calls can block the VM on slow filesystems. async calls check cancellation around reads and before atomic installation; filesystem operations already inside the kernel may finish after cancellation.
+
+## http
+
+```lua
+wraith.http.request({
+  url = "https://example.com/status",
+  method = "GET",
+  headers = { Accept = "application/json" },
+  timeout_ms = 5000,
+  max_bytes = 65536,
+}, function(ctx)
+  local response = ctx.data.result
+  if response and response.status then
+    wraith.notify("status " .. response.status)
+  end
+  if ctx.data.error then
+    wraith.notify(ctx.data.error)
+  end
+  wraith.resource.release(ctx.resource.id)
+end)
+```
+
+`wraith.http.request(options, callback)` reserves an asynchronous request and returns its resource id.
+
+| option | default and limits |
+| --- | --- |
+| `url` | required absolute http or https URL; at most 8 kib |
+| `method` | `GET`; valid HTTP token, at most 32 bytes |
+| `headers` | string-to-string table; at most 128 entries and 64 kib combined |
+| `body` | empty exact byte string; at most 4 mib |
+| `timeout_ms` | `30000`; integer from 1 through 300000 |
+| `max_bytes` | `1048576`; integer from 1 through 4194304 |
+| `redirects` | `0`; integer from 0 through 10 |
+
+request headers reject control characters and malformed names. the host header comes from the URL. ordinary TLS certificate verification stays enabled. redirects are disabled by default; when enabled, HTTPS-to-HTTP redirects and non-HTTP schemes are rejected. proxy environment variables follow Go's default HTTP transport.
+
+the result contains `status`, final `url`, `headers`, exact byte `body`, `truncated` and `complete`. header values are arrays so repeated response headers survive. non-2xx statuses are HTTP results, not transport errors.
+
+responses stop at `max_bytes`; `truncated=true` and `complete=false` identify a bounded prefix. transport failures after response headers retain the available status and partial body under `result`, with the cause in `ctx.data.error`. redirect-policy failures may contain headers without a body. explicit cancellation can report immediately before the worker has a partial response to retain. response headers are capped at 64 kib.
+
+## timers
+
+```lua
+wraith.timer.start(1000, function(ctx)
+  if ctx.resource.final then
+    wraith.resource.release(ctx.resource.id)
+    return
+  end
+  wraith.notify("tick " .. ctx.data.tick)
+end, { repeat_ms = 1000 })
+```
+
+`wraith.timer.start(delay_ms, callback, options)` returns a resource id. omit `repeat_ms` for a one-shot timer. delay and repeat interval must be integer milliseconds from 1 through 86,400,000. zero-delay busy loops are rejected.
+
+a one-shot timer reports one terminal completion, with `tick=1` and `elapsed_ms` under `ctx.data.result`. a repeating timer emits progress events with `ctx.resource.kind="tick"` and `tick`, `elapsed_ms` directly under `ctx.data`. elapsed time starts at activation.
+
+ticks coalesce when the host falls behind. the counter records emitted ticks, so callbacks may observe gaps. repeats schedule the next interval after emitting the current tick; this is not a wall-clock scheduler. cancel through `wraith.resource.cancel(id)`, then release when no longer needed. callback errors cancel repeating timers; unload and reload cancel them as well.

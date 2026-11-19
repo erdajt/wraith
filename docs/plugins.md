@@ -2,6 +2,8 @@
 
 wraith embeds gopher-lua and exposes API version 2. `init.lua` is real lua 5.1-style code, with functions, loops, tables, closures and local modules. luaJIT and neovim's `vim` module are not included.
 
+[service APIs](lua/services.md) cover JSON, filesystem operations, HTTP, timers and managed resource lifetimes.
+
 ## start
 
 configuration loads in this order:
