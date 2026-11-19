@@ -55,6 +55,7 @@ type Invocation struct {
 }
 
 type invocationRecord struct {
+	context  context.Context
 	binding  InvocationBinding
 	cancel   context.CancelFunc
 	stop     func() bool
