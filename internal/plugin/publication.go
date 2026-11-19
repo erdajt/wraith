@@ -18,6 +18,7 @@ type publicationDecision struct {
 type registryState struct {
 	ownershipLayers
 	schedulerState
+	resourceState
 	manifest        Manifest
 	functions       map[string]*lua.LFunction
 	events          map[string][]string
@@ -44,7 +45,7 @@ func (e *engine) captureRegistry() registryState {
 		events[name] = slices.Clone(ids)
 	}
 	return registryState{
-		ownershipLayers: e.cloneOwnership(), schedulerState: e.cloneScheduler(),
+		ownershipLayers: e.cloneOwnership(), schedulerState: e.cloneScheduler(), resourceState: e.cloneResources(),
 		manifest: cloneManifest(e.manifest), functions: maps.Clone(e.functions), events: events,
 		actions: maps.Clone(e.actions), loaded: maps.Clone(e.loaded), packages: e.clonePackages(),
 		cleanup: slices.Clone(e.cleanup), disposing: slices.Clone(e.disposing),
@@ -64,6 +65,19 @@ func (e *engine) restoreRegistry(s registryState) []cleanupHook {
 			discarded = append(discarded, hook)
 		}
 	}
+	var abandoned []string
+	for id := range e.resources {
+		if _, kept := s.resources[id]; !kept {
+			abandoned = append(abandoned, id)
+		}
+	}
+	for _, id := range e.released {
+		if _, kept := s.resources[id]; !kept && !slices.Contains(s.released, id) {
+			abandoned = append(abandoned, id)
+		}
+	}
+	e.services.discard(abandoned)
+	e.resourceState = s.resourceState
 	e.schedulerState = s.schedulerState
 	e.packages = s.packages
 	e.ownershipLayers = s.ownershipLayers
@@ -132,6 +146,8 @@ func (r *Runtime) publish(e *engine, revision uint64) bool {
 			return true
 		}
 		e.rollback = nil
+		e.services.discard(e.released)
+		e.released = nil
 		r.mu.Lock()
 		r.manifest, r.revision = cloneManifest(e.manifest), revision
 		r.mu.Unlock()

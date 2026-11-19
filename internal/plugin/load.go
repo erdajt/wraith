@@ -17,13 +17,18 @@ import (
 )
 
 // load initializes trusted user code without sourcing project files or environment module paths.
-func load(parent context.Context, directory string, c config.Config, actions []string) (out *engine, err error) {
+func load(parent context.Context, directory string, c config.Config, actions []string, managers ...*resourceManager) (out *engine, err error) {
 	directory, err = filepath.Abs(directory)
 	if err != nil {
 		return nil, err
 	}
 	L := lua.NewState(lua.Options{SkipOpenLibs: true})
 	e := &engine{L: L, manifest: Manifest{Config: c}, functions: map[string]*lua.LFunction{}, events: map[string][]string{}, actions: map[string]bool{}, builtins: map[string]bool{}, setup: true}
+	if len(managers) > 0 {
+		e.services = managers[0]
+	} else {
+		e.services = newResourceManager(parent)
+	}
 	e.initOwnership()
 	for _, name := range actions {
 		e.actions[name] = true
@@ -32,6 +37,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	ok := false
 	defer func() {
 		if !ok {
+			e.services.close()
 			err = errors.Join(err, e.teardown(0))
 			L.Close()
 		}
@@ -56,6 +62,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	e.installWorkspace(api)
 	e.installPlugins(api)
 	e.installSchedule(api)
+	e.installResources(api)
 	e.installCoroutines()
 	e.installDiagnostics(api)
 	if err := e.installPaths(api, directory); err != nil {
@@ -84,6 +91,8 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 		}
 	}
 	slices.Sort(e.manifest.Events)
+	e.services.discard(e.released)
+	e.released = nil
 	hooks := e.disposing
 	e.disposing = nil
 	if err := e.disposeHooks(hooks); err != nil {

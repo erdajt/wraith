@@ -43,6 +43,17 @@ func (e *engine) unloadPlugin(name string) error {
 			delete(e.scheduled, id)
 		}
 	}
+	for id, callback := range e.resources {
+		if callback.owner == record.owner {
+			e.released = append(e.released, id)
+			delete(e.resources, id)
+			delete(e.delivered, id)
+		}
+	}
+	e.manifest.Resources = slices.DeleteFunc(e.manifest.Resources, func(id string) bool { return slices.Contains(e.released, id) })
+	e.effects = slices.DeleteFunc(e.effects, func(effect Effect) bool {
+		return effect.Name == "resource.activate" && slices.Contains(e.released, effect.Argument)
+	})
 	e.removeOwnerRegistrations(record.owner)
 	for key, layers := range e.bindingLayers {
 		e.bindingLayers[key] = slices.DeleteFunc(layers, func(layer ownedBinding) bool {

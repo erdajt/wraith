@@ -111,6 +111,11 @@ func (m *resourceManager) activate(id string) error {
 	if record.activated {
 		return nil
 	}
+	if record.state == "cancelled" {
+		record.activated = true
+		m.terminal(record)
+		return nil
+	}
 	if record.state != "reserved" {
 		return fmt.Errorf("resource cannot start in state %s", record.state)
 	}

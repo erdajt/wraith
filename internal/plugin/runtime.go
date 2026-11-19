@@ -18,7 +18,10 @@ type Command struct {
 	NeedsArgument               bool
 }
 
+var ErrQueueFull = errors.New("plugin callback queue is full")
+
 type Manifest struct {
+	Resources   []string
 	Config      config.Config
 	Events      []string
 	Commands    []Command
@@ -46,6 +49,7 @@ type request struct {
 	config          config.Config
 	reply           *completion
 	revision        uint64
+	resource        *ResourceEvent
 }
 
 type completion struct {
@@ -59,6 +63,7 @@ func (c *completion) resolve(result Result) {
 }
 
 type Runtime struct {
+	services                                *resourceManager
 	discarded                               map[string]bool
 	diagnostics                             []string
 	notices                                 chan string
@@ -77,6 +82,8 @@ type Runtime struct {
 type engine struct {
 	ownershipLayers
 	schedulerState
+	resourceState
+	services       *resourceManager
 	L              *lua.LState
 	manifest       Manifest
 	functions      map[string]*lua.LFunction
@@ -114,10 +121,12 @@ func Open(parent context.Context, directory string, c config.Config, actions []s
 		notices: make(chan string, 64), discarded: map[string]bool{},
 		pending: map[string]request{}, waiting: map[*completion]struct{}{},
 	}
+	r.services = newResourceManager(ctx)
 	ready := make(chan error, 1)
 	go r.serve(directory, detached, actions, ready)
 	go func() {
 		<-ctx.Done()
+		r.services.close()
 		r.cancelWaiters()
 	}()
 	select {
@@ -142,6 +151,11 @@ func (r *Runtime) Manifest() Manifest {
 
 // Submit queues a callback or coalesced event without blocking the ui or retaining mutable state.
 func (r *Runtime) Submit(callback, event string, snapshot any, c config.Config) (<-chan Result, error) {
+	return r.submit(callback, event, snapshot, c, nil)
+}
+
+// submit queues detached state while preserving an optional managed resource identity.
+func (r *Runtime) submit(callback, event string, snapshot any, c config.Config, resource *ResourceEvent) (<-chan Result, error) {
 	data, err := json.Marshal(snapshot)
 	if err != nil || len(data) > 1<<20 {
 		return nil, errors.New("plugin snapshot exceeds value limits")
@@ -160,7 +174,7 @@ func (r *Runtime) Submit(callback, event string, snapshot any, c config.Config) 
 		return nil, err
 	}
 	reply := &completion{channel: make(chan Result, 1)}
-	req := request{callback: callback, event: event, data: data, config: copy, reply: reply, revision: r.revision}
+	req := request{callback: callback, event: event, data: data, config: copy, reply: reply, revision: r.revision, resource: resource}
 	if previous, ok := r.pending[event]; (event == "window_changed" || event == "session_changed") && ok {
 		previous.reply.resolve(Result{})
 		delete(r.waiting, previous.reply)
@@ -176,13 +190,14 @@ func (r *Runtime) Submit(callback, event string, snapshot any, c config.Config) 
 		}
 		return reply.channel, nil
 	default:
-		return nil, errors.New("plugin callback queue is full")
+		return nil, ErrQueueFull
 	}
 }
 
 // Close cancels queued and running callbacks; teardown continues on the VM owner.
 func (r *Runtime) Close() {
 	r.cancel()
+	r.services.close()
 	r.cancelWaiters()
 }
 
@@ -195,7 +210,7 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 	defer close(r.notices)
 	defer r.cancel()
 	defer r.cancelWaiters()
-	e, err := load(r.ctx, directory, c, actions)
+	e, err := load(r.ctx, directory, c, actions, r.services)
 	if err != nil {
 		ready <- err
 		return
@@ -220,8 +235,8 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 				delete(r.pending, req.event)
 			}
 			scheduled := strings.HasPrefix(req.callback, "lua.schedule.")
-			stale := req.event == "" && !scheduled && req.revision != r.revision
-			if req.event != "" || scheduled {
+			stale := req.event == "" && req.resource == nil && !scheduled && req.revision != r.revision
+			if req.event != "" || scheduled || req.resource != nil {
 				req.config.Keymaps = slices.Clone(r.manifest.Config.Keymaps)
 			}
 			r.mu.Unlock()
@@ -254,6 +269,7 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 // invoke stages command or isolated observer changes for host publication.
 func (e *engine) invoke(parent context.Context, req request) (result Result) {
 	e.observerErrors = nil
+	e.pruneResources()
 	var deferred scheduledCall
 	if strings.HasPrefix(req.callback, "lua.schedule.") {
 		var exists bool
@@ -263,12 +279,27 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 		}
 		delete(e.scheduled, req.callback)
 	}
+	var resource resourceCallback
+	if req.resource != nil {
+		var exists bool
+		resource, exists = e.resources[req.resource.ID]
+		if !exists || !e.services.valid(*req.resource) || e.delivered[req.resource.ID] >= req.resource.Sequence {
+			return Result{}
+		}
+		e.delivered[req.resource.ID] = req.resource.Sequence
+		if resource.function == nil {
+			return Result{}
+		}
+	}
 	before := e.captureRegistry()
 	e.dirty = false
 	defer func() {
 		if result.Err != nil {
 			hooks := e.restoreRegistry(before)
 			result.Err = errors.Join(result.Err, e.disposeHooks(hooks))
+			if req.resource != nil {
+				result.Err = errors.Join(result.Err, e.services.Cancel(req.resource.ID, resource.owner))
+			}
 		}
 	}()
 	e.L.SetContext(parent)
@@ -288,6 +319,9 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 		if deferred.function != nil {
 			fn, owner = deferred.function, deferred.owner
 		}
+		if req.resource != nil {
+			fn, owner = resource.function, resource.owner
+		}
 		if fn == nil {
 			return Result{Err: errors.New("plugin callback no longer exists")}
 		}
@@ -295,7 +329,11 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 		defer cancel()
 		e.L.SetContext(ctx)
 		e.owner = owner
-		if err := e.L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true}, encodeValue(e.L, e.snapshot)); err != nil {
+		argument, err := e.callbackContext(req.resource)
+		if err != nil {
+			return Result{Err: err}
+		}
+		if err := e.L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true}, argument); err != nil {
 			return Result{Err: err}
 		}
 	}
