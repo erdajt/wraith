@@ -11,7 +11,7 @@ func (e *engine) installWindows(api *lua.LTable) {
 		bufferID := L.CheckString(1)
 		window := SurfaceWindow{Kind: "split", Position: "right"}
 		if L.Get(2) != lua.LNil {
-			decodeSurface(L, L.CheckTable(2), &window)
+			decodeTypedValue(L, L.CheckTable(2), &window)
 		}
 		window.BufferID = bufferID
 		id := e.reserveSurface("window")
@@ -56,7 +56,7 @@ func (e *engine) installWindows(api *lua.LTable) {
 			}
 			mutation := SurfaceMutation{Operation: "window." + kind, ID: id, Expected: window.Revision}
 			if kind == "configure" {
-				decodeSurface(L, L.CheckTable(2), &window)
+				decodeTypedValue(L, L.CheckTable(2), &window)
 				mutation.Window = &window
 				mutation.Expected = surfaceRevision(L, 3, mutation.Expected)
 			} else {

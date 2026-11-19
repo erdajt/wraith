@@ -13,7 +13,7 @@ func (e *engine) installRegions(api *lua.LTable) {
 	methods := L.NewTable()
 	methods.RawSetString("create", L.NewFunction(func(L *lua.LState) int {
 		var region SurfaceRegion
-		decodeSurface(L, L.CheckTable(1), &region)
+		decodeTypedValue(L, L.CheckTable(1), &region)
 		id := e.reserveSurface("region")
 		e.stageSurface(SurfaceMutation{Operation: "region.create", ID: id, Region: &region})
 		L.Push(lua.LString(id))
@@ -34,7 +34,7 @@ func (e *engine) installRegions(api *lua.LTable) {
 			}
 			mutation := SurfaceMutation{Operation: "region." + kind, ID: id, Expected: region.Revision}
 			if kind == "set" {
-				decodeSurface(L, L.CheckTable(2), &region)
+				decodeTypedValue(L, L.CheckTable(2), &region)
 				mutation.Region = &region
 				mutation.Expected = surfaceRevision(L, 3, mutation.Expected)
 			} else {

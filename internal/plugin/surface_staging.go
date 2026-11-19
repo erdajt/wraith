@@ -81,7 +81,7 @@ func surfaceRevision(L *lua.LState, index int, observed uint64) uint64 {
 		return observed
 	}
 	var revision uint64
-	decodeSurface(L, L.Get(index), &revision)
+	decodeTypedValue(L, L.Get(index), &revision)
 	if revision == 0 || revision > 1<<53 {
 		L.RaiseError("surface revision must be a positive exact integer")
 	}

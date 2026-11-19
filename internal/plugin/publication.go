@@ -179,6 +179,9 @@ func (e *engine) pruneCallbacks() {
 		}
 	}
 	e.retainOwnerCallbacks(retained)
+	for _, hook := range e.manifest.Hooks {
+		retained[hook.Callback] = true
+	}
 	for _, command := range e.manifest.Commands {
 		retained[command.Callback] = true
 	}

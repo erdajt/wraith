@@ -10,11 +10,11 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// decodeSurface copies strict typed options and accepts empty Lua arrays at known sequence fields.
-func decodeSurface(L *lua.LState, value lua.LValue, destination any) {
+// decodeTypedValue copies strict typed options and accepts empty Lua arrays at known sequence fields.
+func decodeTypedValue(L *lua.LState, value lua.LValue, destination any) {
 	copied, err := decodeValue(value)
 	if err != nil {
-		L.RaiseError("surface options: %v", err)
+		L.RaiseError("typed options: %v", err)
 	}
 	size := 0
 	var validate func(any)
@@ -23,10 +23,10 @@ func decodeSurface(L *lua.LState, value lua.LValue, destination any) {
 		case string:
 			size += len(value)
 			if size > 1<<20 {
-				L.RaiseError("surface options exceed 1 mib")
+				L.RaiseError("typed options exceed 1 mib")
 			}
 			if !utf8.ValidString(value) {
-				L.RaiseError("surface options require valid utf-8; use ui.decode for binary input")
+				L.RaiseError("typed options require valid utf-8; use ui.decode for binary input")
 			}
 		case []any:
 			for _, item := range value {
@@ -53,12 +53,12 @@ func decodeSurface(L *lua.LState, value lua.LValue, destination any) {
 	}
 	data, err := json.Marshal(copied)
 	if err != nil {
-		L.RaiseError("surface options: %v", err)
+		L.RaiseError("typed options: %v", err)
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(destination); err != nil {
-		L.RaiseError("surface options: %v", err)
+		L.RaiseError("typed options: %v", err)
 	}
 }
 
@@ -98,7 +98,7 @@ func surfaceInteger(L *lua.LState, index, fallback int) int {
 		return fallback
 	}
 	var value int
-	decodeSurface(L, L.Get(index), &value)
+	decodeTypedValue(L, L.Get(index), &value)
 	if value > 1<<53 || value < -(1<<53) {
 		L.RaiseError("surface index exceeds exact integer range")
 	}

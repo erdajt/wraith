@@ -21,6 +21,7 @@ type Command struct {
 var ErrQueueFull = errors.New("plugin callback queue is full")
 
 type Manifest struct {
+	Hooks       []HookDefinition
 	Surface     []SurfaceMutation
 	Resources   []string
 	Config      config.Config

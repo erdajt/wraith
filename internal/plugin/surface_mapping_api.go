@@ -37,7 +37,7 @@ func (e *engine) installBufferMappings(api *lua.LTable) {
 				var native struct {
 					Keys string `json:"keys"`
 				}
-				decodeSurface(L, target, &native)
+				decodeTypedValue(L, target, &native)
 				binding.Input = native.Keys
 			default:
 				L.RaiseError("buffer mapping requires an action, native keys or callback")

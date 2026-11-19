@@ -69,6 +69,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	e.installTimers(api)
 	e.installHTTP(api)
 	e.installRegistration(api)
+	e.installHooks(api)
 	e.installWorkspace(api)
 	e.installPlugins(api)
 	e.installSchedule(api)

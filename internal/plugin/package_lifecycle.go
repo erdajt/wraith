@@ -74,6 +74,7 @@ func (e *engine) unloadPlugin(name string) error {
 	if encoded, err := json.Marshal(e.manifest.Surface); err == nil {
 		e.surfaceStartupBytes = len(encoded)
 	}
+	e.manifest.Hooks = slices.DeleteFunc(e.manifest.Hooks, func(hook HookDefinition) bool { return hook.Owner == record.owner })
 	e.removeOwnerRegistrations(record.owner)
 	for key, layers := range e.bindingLayers {
 		e.bindingLayers[key] = slices.DeleteFunc(layers, func(layer ownedBinding) bool {

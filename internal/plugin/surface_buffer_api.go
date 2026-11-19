@@ -8,7 +8,7 @@ func (e *engine) installBuffers(api *lua.LTable) {
 	methods := L.NewTable()
 	methods.RawSetString("create", L.NewFunction(func(L *lua.LState) int {
 		var buffer SurfaceBuffer
-		decodeSurface(L, L.CheckTable(1), &buffer)
+		decodeTypedValue(L, L.CheckTable(1), &buffer)
 		id := e.reserveSurface("buffer")
 		e.stageSurface(SurfaceMutation{Operation: "buffer.create", ID: id, Buffer: &buffer})
 		L.Push(lua.LString(id))
@@ -56,10 +56,10 @@ func (e *engine) installBuffers(api *lua.LTable) {
 				if mutation.End == -1 {
 					mutation.End = len(buffer.Lines)
 				}
-				decodeSurface(L, L.CheckTable(4), &mutation.Lines)
+				decodeTypedValue(L, L.CheckTable(4), &mutation.Lines)
 				mutation.Expected = surfaceRevision(L, 5, buffer.Revision)
 			case "set_spans":
-				decodeSurface(L, L.CheckTable(2), &mutation.Spans)
+				decodeTypedValue(L, L.CheckTable(2), &mutation.Spans)
 				mutation.Expected = surfaceRevision(L, 3, buffer.Revision)
 			case "delete":
 				mutation.Expected = surfaceRevision(L, 2, buffer.Revision)
