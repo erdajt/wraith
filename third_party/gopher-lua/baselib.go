@@ -523,6 +523,12 @@ func loModule(L *LState) int {
 
 var loopdetection = &LUserData{}
 
+// IsModuleLoading reports whether native require has installed its marker for name.
+func (ls *LState) IsModuleLoading(name string) bool {
+	loaded, ok := ls.G.Registry.RawGetString("_LOADED").(*LTable)
+	return ok && loaded.RawGetString(name) == loopdetection
+}
+
 func loRequire(L *LState) int {
 	name := L.CheckString(1)
 	loaded := L.GetField(L.Get(RegistryIndex), "_LOADED")
@@ -559,6 +565,14 @@ func loRequire(L *LState) int {
 	}
 loopbreak:
 	L.SetField(loaded, name, loopdetection)
+	defer func() {
+		if failure := recover(); failure != nil {
+			if cache, ok := loaded.(*LTable); ok && cache.RawGetString(name) == loopdetection {
+				cache.RawSetString(name, LNil)
+			}
+			panic(failure)
+		}
+	}()
 	L.Push(modasfunc)
 	L.Push(LString(name))
 	L.Call(1, 1)
