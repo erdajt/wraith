@@ -73,3 +73,15 @@ func (c *Catalog) Validate(name string, arguments json.RawMessage) error {
 	}
 	return c.schemas[name].Validate(arguments)
 }
+
+// ValidateArguments checks an extension payload before its selected schema is available.
+func ValidateArguments(arguments json.RawMessage) error {
+	value, _, err := decode(arguments, 4096)
+	if err != nil {
+		return err
+	}
+	if _, ok := value.(map[string]any); !ok {
+		return errors.New("tool arguments must be an object")
+	}
+	return nil
+}

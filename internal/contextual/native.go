@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/erdajt/wraith/internal/modeltool"
 	"github.com/erdajt/wraith/internal/ollama"
 )
 
@@ -40,7 +41,7 @@ func ActionTools(mode string) []ollama.Tool {
 }
 
 // NormalizeAction converts one complete native request into the validated conversation format.
-func NormalizeAction(mode, content string, calls []ollama.Call) (string, error) {
+func NormalizeAction(mode, content string, calls []ollama.Call, catalogs ...*modeltool.Catalog) (string, error) {
 	if len(calls) != 1 {
 		return "", errors.New("request exactly one native action per response")
 	}
@@ -80,7 +81,15 @@ func NormalizeAction(mode, content string, calls []ollama.Call) (string, error) 
 		}
 		marker, value = "wraith-tool", request
 	default:
-		return "", errors.New("unknown native tool; use an advertised function")
+		var catalog *modeltool.Catalog
+		if len(catalogs) > 0 {
+			catalog = catalogs[0]
+		}
+		request := &ToolRequest{Tool: "extension", Name: call.Name, Arguments: call.Arguments}
+		if err := ValidateTool(request, mode, catalog); err != nil {
+			return "", err
+		}
+		marker, value = "wraith-tool", request
 	}
 
 	data, err := json.Marshal(value)

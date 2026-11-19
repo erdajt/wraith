@@ -92,5 +92,13 @@ func decodeObject(text string, out any) error {
 	if err = d.Decode(out); err != nil {
 		return errors.New("invalid action fields or value types")
 	}
+	if request, ok := out.(*ToolRequest); ok {
+		for field := range seen {
+			extensionField := field == "name" || field == "arguments"
+			if field != "tool" && ((request.Tool == "extension" && !extensionField) || (request.Tool != "extension" && extensionField)) {
+				return errors.New("extension and output tool fields cannot be mixed")
+			}
+		}
+	}
 	return nil
 }
