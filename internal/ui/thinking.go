@@ -36,7 +36,7 @@ func (a *App) toggleThinking(index int) {
 
 // mouse toggles a clicked thinking heading when no popup or terminal covers it.
 func (a *App) mouse(m tea.MouseMsg) tea.Cmd {
-	if !a.Config.Appearance.Mouse || a.popup != nil || m.X < 0 || m.X >= a.mainWidth() || m.Y < 3 || m.Y >= 3+a.bodyHeight() {
+	if !a.Config.Appearance.Mouse || a.popup != nil || a.pluginDialog != nil || m.X < 0 || m.X >= a.mainWidth() || m.Y < 3 || m.Y >= 3+a.bodyHeight() {
 		return nil
 	}
 	if p := a.panes[0]; p != nil && p.Visible {
@@ -51,11 +51,17 @@ func (a *App) mouse(m tea.MouseMsg) tea.Cmd {
 		return nil
 	}
 
-	for _, place := range a.windowPlaces() {
+	places := a.windowPlaces()
+	for i := len(places) - 1; i >= 0; i-- {
+		place := places[i]
 		if m.X < place.x || m.X >= place.x+place.width || m.Y < place.y || m.Y >= place.y+place.height {
 			continue
 		}
 		a.focusWindow(place.id)
+		if a.windows[place.id].surface != nil {
+			a.surfaceMouse(place, m.X, m.Y)
+			return nil
+		}
 		lines := a.transcript(a.chatWidth())
 		start := a.viewportStart(place.height)
 		index := start + m.Y - place.y
