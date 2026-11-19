@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"errors"
+	"io"
 	"slices"
 	"strings"
 	"sync"
@@ -37,6 +38,21 @@ func NewManager(history History, maxJobs int) *Manager {
 
 // Start persists a starting record and launches a background command with a timeout.
 func (m *Manager) Start(ctx context.Context, record Record, timeout time.Duration) error {
+	return m.start(ctx, record, timeout, m.history.execute)
+}
+
+// StartTask tracks a cooperative extension operation with the same output and cancellation lifecycle as shell jobs.
+func (m *Manager) StartTask(ctx context.Context, record Record, timeout time.Duration, task func(context.Context, io.Writer) error) error {
+	if task == nil {
+		return errors.New("job task is required")
+	}
+	return m.start(ctx, record, timeout, func(ctx context.Context, record Record, live *liveRun, emit func(string), started func()) (Record, error) {
+		return m.history.executeTask(ctx, record, live, emit, started, task)
+	})
+}
+
+// start reserves durable job identity before dispatching either shell or extension work.
+func (m *Manager) start(ctx context.Context, record Record, timeout time.Duration, execute func(context.Context, Record, *liveRun, func(string), func()) (Record, error)) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -81,7 +97,7 @@ func (m *Manager) Start(ctx context.Context, record Record, timeout time.Duratio
 		defer m.workers.Done()
 		defer cancel()
 
-		result, err := m.history.execute(child, record, live, func(output string) {
+		result, err := execute(child, record, live, func(output string) {
 			m.mu.Lock()
 			_, _ = job.capture.Write([]byte(output))
 			job.Record.Output = job.capture.text.String()

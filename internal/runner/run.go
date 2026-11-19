@@ -176,6 +176,15 @@ func (h History) execute(ctx context.Context, r Record, live *liveRun, emit func
 		err = fmt.Errorf("checkpoint output: %w", checkpointErr)
 	}
 
+	exitCode := -1
+	if cmd.ProcessState != nil {
+		exitCode = cmd.ProcessState.ExitCode()
+	}
+	return h.finish(ctx, r, live, output, exitCode, err)
+}
+
+// finish records bounded output and final status before removing the recovery journal.
+func (h History) finish(ctx context.Context, r Record, live *liveRun, output *capture, exitCode int, err error) (Record, error) {
 	r.Finished = time.Now().UTC()
 	r.Output = output.text.String()
 	r.Captured = len(r.Output)
@@ -183,9 +192,7 @@ func (h History) execute(ctx context.Context, r Record, live *liveRun, emit func
 	r.TailOffset, r.TailLine = output.observed-int64(len(output.tail)), output.tailLine+1
 	r.Truncated = output.truncated
 	r.Status = "completed"
-	if cmd.ProcessState != nil {
-		r.ExitCode = cmd.ProcessState.ExitCode()
-	}
+	r.ExitCode = exitCode
 	if err != nil {
 		r.Error = err.Error()
 		r.Status = "failed"
