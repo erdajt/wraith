@@ -65,6 +65,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	e.installPlugins(api)
 	e.installSchedule(api)
 	e.installResources(api)
+	e.installProcess(api)
 	e.installCoroutines()
 	e.installDiagnostics(api)
 	if err := e.installPaths(api, directory); err != nil {
