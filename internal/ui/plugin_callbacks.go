@@ -58,7 +58,7 @@ func (a *App) callPluginData(callback, event, argument string, data any) tea.Cmd
 		return nil
 	}
 	snapshot := a.pluginSnapshot(argument, event, data)
-	m := pluginResultMsg{Runtime: a.plugins, Owner: a.keyOwner(), Draft: a.Prompt.String(), Digest: configDigest(a.Config), Target: a.pluginTarget(), Depth: a.pluginDepth + 1}
+	m := pluginResultMsg{Runtime: a.plugins, Owner: a.keyOwner(), Draft: a.Prompt.String(), Digest: configDigest(a.Config), Target: a.pluginTarget(), Keys: keymapDigest(a.Config), Depth: a.pluginDepth + 1}
 	result, err := a.plugins.Submit(callback, event, snapshot, a.Config)
 	if err != nil {
 		a.notice = "lua: " + err.Error()
@@ -80,6 +80,10 @@ func (a *App) callPluginData(callback, event, argument string, data any) tea.Cmd
 func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 	transferred := false
 	m.Result.Effects = slices.Clone(m.Result.Effects)
+	for _, effect := range m.Result.Effects {
+		m.Explicit = m.Explicit || effect.Name == "surface.apply" || effect.Name == "dialog.open"
+	}
+	background := m.Explicit || m.Resource != nil || m.Lease != ""
 	defer func() {
 		if m.Result.Revision != 0 {
 			_ = m.Runtime.Acknowledge(m.Result.Revision, false)
@@ -87,6 +91,7 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 		if !transferred {
 			discardPluginSchedules(m)
 			discardPluginResources(m)
+			discardPluginSurfaces(m)
 			if next := remainingPluginSchedules(m); len(next.IDs) > 0 {
 				command = tea.Sequence(command, func() tea.Msg { return next })
 			}
@@ -95,7 +100,7 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 	if m.Runtime != a.plugins || m.Parent == nil && m.Result.Err == nil && len(m.Result.Effects) == 0 && len(m.Scheduled) == 0 && len(m.PendingSchedules) == 0 && m.Result.Manifest == nil {
 		return nil
 	}
-	if m.Resource == nil && !a.pluginOwns(m) || m.Resource != nil && !m.Runtime.ResourceValid(*m.Resource) {
+	if !background && !a.pluginOwns(m) || m.Resource != nil && !m.Runtime.ResourceValid(*m.Resource) || m.Lease != "" && !m.Runtime.Surfaces().OwnerValid(m.LeaseOwner, m.Lease) {
 		a.notice = "lua callback discarded after workspace changed"
 		return nil
 	}
@@ -103,8 +108,14 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 		a.notice = fmt.Sprintf("lua: %v", m.Result.Err)
 		return nil
 	}
+	for _, effect := range m.Result.Effects {
+		if effect.Lease != "" && !m.Runtime.Surfaces().OwnerValid(effect.Owner, effect.Lease) {
+			a.notice = "lua callback discarded after its plugin unloaded"
+			return nil
+		}
+	}
 	if m.Result.Manifest != nil {
-		if m.Resource != nil && m.Keys != keymapDigest(a.Config) {
+		if background && m.Keys != keymapDigest(a.Config) {
 			a.notice = "lua registrations discarded after keymaps changed"
 			return nil
 		}
@@ -121,13 +132,43 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 	}
 	for i, effect := range m.Result.Effects {
 		owned := a.pluginOwns(m)
-		if m.Resource != nil && !owned {
+		if background && !owned {
 			switch effect.Name {
-			case "notify", "event.emit", "schedule.callback", "resource.activate", "resource.release":
+			case "notify", "event.emit", "schedule.callback", "resource.activate", "resource.release", "surface.apply", "dialog.open":
 			default:
 				a.notice = "lua input effect discarded after workspace changed"
 				continue
 			}
+		}
+		if effect.Name == "surface.apply" {
+			mutation, ok := effect.Data.(plugin.SurfaceMutation)
+			if !ok {
+				a.notice = "lua surface: invalid mutation"
+				return nil
+			}
+			if err := a.applySurfaceMutation(m.Runtime, mutation); err != nil {
+				a.notice = "lua surface: " + err.Error()
+				return nil
+			}
+			m.Result.Effects[i].Name = ""
+			if owned {
+				m.Owner, m.Draft, m.Digest, m.Target = a.keyOwner(), a.Prompt.String(), configDigest(a.Config), a.pluginTarget()
+			}
+			continue
+		}
+		if effect.Name == "dialog.open" {
+			spec, ok := effect.Data.(plugin.Dialog)
+			if !ok {
+				a.notice = "lua dialog: invalid request"
+				return nil
+			}
+			cmd := a.openPluginDialog(m.Runtime, spec)
+			m.Result.Effects = m.Result.Effects[i+1:]
+			if owned {
+				m.Owner, m.Draft, m.Digest, m.Target = a.keyOwner(), a.Prompt.String(), configDigest(a.Config), a.pluginTarget()
+			}
+			transferred = true
+			return tea.Sequence(cmd, func() tea.Msg { return m })
 		}
 		if effect.Name == "resource.activate" {
 			if err := m.Runtime.Activate([]string{effect.Argument}); err != nil {
@@ -169,7 +210,7 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 		default:
 			cmd = a.runAction(effect.Name, effect.Argument)
 		}
-		if m.Resource != nil && owned {
+		if background && owned {
 			m.Owner, m.Draft, m.Digest, m.Target = a.keyOwner(), a.Prompt.String(), configDigest(a.Config), a.pluginTarget()
 		}
 		if effect.Name == "editor.open" && !a.editing {
@@ -191,6 +232,7 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 				result := cmd()
 				if child, ok := result.(pluginResultMsg); ok {
 					child.Parent = &m
+					child.Explicit, child.LeaseOwner, child.Lease = m.Explicit, m.LeaseOwner, m.Lease
 					if m.Resource != nil {
 						child.Resource, child.Keys = m.Resource, keys
 					}
@@ -198,6 +240,7 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 				}
 				discardPluginSchedules(m)
 				discardPluginResources(m)
+				discardPluginSurfaces(m)
 				if result == nil {
 					return remainingPluginSchedules(m)
 				}
@@ -207,7 +250,7 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 		if cmd != nil {
 			if i+1 < len(m.Result.Effects) || m.Parent != nil || len(m.Scheduled) > 0 || len(m.PendingSchedules) > 0 {
 				m.Result.Effects = m.Result.Effects[i+1:]
-				if m.Resource == nil || owned {
+				if !background || owned {
 					m.Owner, m.Draft, m.Digest, m.Target = a.keyOwner(), a.Prompt.String(), configDigest(a.Config), a.pluginTarget()
 				}
 				transferred = true
@@ -223,7 +266,7 @@ func (a *App) applyPluginResult(m pluginResultMsg) (command tea.Cmd) {
 	if m.Parent != nil {
 		next := *m.Parent
 		next.Scheduled = append(slices.Clone(next.Scheduled), m.Scheduled...)
-		if next.Resource == nil || next.ResumeOwned && a.pluginOwns(m) {
+		if !background || next.ResumeOwned && a.pluginOwns(m) {
 			next.Owner, next.Draft, next.Digest, next.Target = a.keyOwner(), a.Prompt.String(), configDigest(a.Config), a.pluginTarget()
 		}
 		transferred = true

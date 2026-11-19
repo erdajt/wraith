@@ -49,7 +49,7 @@ func discardPluginSchedules(m pluginResultMsg) {
 	for current := &m; current != nil; current = current.Parent {
 		ids := append([]string(nil), current.Scheduled...)
 		for _, effect := range current.Result.Effects {
-			if effect.Name == "schedule.callback" {
+			if effect.Name == "schedule.callback" || effect.Name == "dialog.open" {
 				ids = append(ids, effect.Argument)
 			}
 		}

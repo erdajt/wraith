@@ -157,6 +157,7 @@ func (e *engine) emit(L *lua.LState, effect Effect) {
 	if effect.Name == "input.set_mode" && !slices.Contains([]string{"normal", "insert", "visual", "visual-line", "search"}, effect.Argument) {
 		L.RaiseError("invalid input mode: %s", effect.Argument)
 	}
+	effect.Owner, effect.Lease = e.owner, e.surfaceLease()
 	e.effects = append(e.effects, effect)
 }
 

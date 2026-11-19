@@ -33,6 +33,7 @@ type Manifest struct {
 
 type Effect struct {
 	Name, Argument string
+	Owner, Lease   string
 	Config         *config.Config
 	Data           any
 }
@@ -276,6 +277,8 @@ func (r *Runtime) serve(directory string, c config.Config, actions []string, rea
 // invoke stages command or isolated observer changes for host publication.
 func (e *engine) invoke(parent context.Context, req request) (result Result) {
 	e.observerErrors = nil
+	e.surfacePreview = nil
+	e.surfaceReserved = e.surfaces.pendingReservations(e.surfaceReserved)
 	e.pruneResources()
 	var deferred scheduledCall
 	if strings.HasPrefix(req.callback, "lua.schedule.") {
