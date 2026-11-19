@@ -17,6 +17,26 @@ var commandName = regexp.MustCompile(`^[a-z][a-z0-9-]*(\.[a-z0-9-]+)*!?$`)
 func (e *engine) installRegistration(api *lua.LTable) {
 	L := e.L
 	api.RawSetString("keymap", L.SetFuncs(L.NewTable(), map[string]lua.LGFunction{
+		"parse": func(L *lua.LState) int {
+			keys, err := keymap.Parse(L.CheckString(1))
+			if err != nil {
+				L.RaiseError("keymap.parse: %v", err)
+			}
+			result := L.NewTable()
+			for _, key := range keys {
+				result.Append(lua.LString(key))
+			}
+			L.Push(result)
+			return 1
+		},
+		"validate": func(L *lua.LState) int {
+			binding := keymap.Binding{Mode: L.CheckString(1), Keys: L.CheckString(2), Action: "validate"}
+			if _, err := keymap.New([]keymap.Binding{binding}); err != nil {
+				L.RaiseError("keymap.validate: %v", err)
+			}
+			L.Push(lua.LTrue)
+			return 1
+		},
 		"set": func(L *lua.LState) int {
 			e.registration(L)
 			mode, keys := L.CheckString(1), L.CheckString(2)

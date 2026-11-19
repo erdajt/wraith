@@ -80,11 +80,11 @@ end
 function M.descriptor(value)
   fields(value, {name=true, source=true, selector=true, pin=true, dependencies=true}, "package descriptor")
   assert(value.pin == nil or type(value.pin) == "boolean", "pin must be boolean")
-  local result = {name=name(value.name), source=source(value.source), selector=selector(value.selector or {kind="head"}), pin=value.pin or false, dependencies={}}
+  local result = {name=name(value.name), source=source(value.source), selector=selector(value.selector == nil and {kind="head"} or value.selector), pin=value.pin or false, dependencies={}}
   if result.source.kind == "local" then
     assert(result.selector.kind == "head" and not result.pin, "local packages cannot select or pin git revisions")
   end
-  local dependencies, seen = value.dependencies or {}, {}
+  local dependencies, seen = value.dependencies == nil and {} or value.dependencies, {}
   assert(type(dependencies) == "table", "dependencies must be an array")
   local count = 0
   for key in pairs(dependencies) do
@@ -99,6 +99,10 @@ function M.descriptor(value)
     result.dependencies[#result.dependencies + 1] = dependency
   end
   return result
+end
+
+function M.normalize(value)
+  return require("wraith.manager.spec_graph").normalize(value, M.descriptor)
 end
 
 return M
