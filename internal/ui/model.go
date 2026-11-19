@@ -105,6 +105,8 @@ type App struct {
 	pluginDepth        int
 	policySerial       uint64
 	policyCancel       context.CancelFunc
+	pluginQueries      map[string]*workspaceQueryState
+	workspaceScans     *workspaceScanStore
 	surfaceReplay      bool
 	surfaceKeymaps     map[string]surfaceKeymapCache
 	surfaceBuffers     map[string]plugin.SurfaceBuffer
@@ -309,6 +311,7 @@ func (a *App) ticker() tea.Cmd {
 // Close cancels active work and closes owned shell panes once.
 func (a *App) Close() {
 	a.once.Do(func() {
+		a.reconcileWorkspaceQueries(true)
 		if a.pluginLoadCancel != nil {
 			a.pluginLoadCancel()
 		}
