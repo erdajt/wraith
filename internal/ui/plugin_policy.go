@@ -37,10 +37,17 @@ func commandTuple(p proposal) plugin.CommandData {
 
 // checkCommandPolicy validates on a worker while keeping the proposal cancellable in the ui.
 func (a *App) checkCommandPolicy(p proposal, phase string, execute bool) tea.Cmd {
+	hooks, _ := json.Marshal(a.pluginManifest.Hooks)
+	identity := sha256.Sum256(hooks)
+	if execute && p.policyChecked && (p.policyRuntime != a.plugins || p.policyHooks != identity) {
+		p.policyChanges = append(p.policyChanges, "policy registry")
+		return a.checkCommandPolicy(p, "preview", false)
+	}
 	if a.plugins == nil || !slices.ContainsFunc(a.pluginManifest.Hooks, func(hook plugin.HookDefinition) bool { return hook.Kind == "before_command" }) {
 		if execute {
 			return a.launchApproved(p)
 		}
+		p.policyRuntime, p.policyHooks, p.policyChecked = a.plugins, identity, true
 		return a.showApproval(p)
 	}
 	if a.policyCancel != nil {
@@ -49,8 +56,7 @@ func (a *App) checkCommandPolicy(p proposal, phase string, execute bool) tea.Cmd
 	ctx, cancel := context.WithCancel(context.Background())
 	a.policyCancel = cancel
 	a.policySerial++
-	hooks, _ := json.Marshal(a.pluginManifest.Hooks)
-	m := commandPolicyMsg{Runtime: a.plugins, Serial: a.policySerial, Hooks: sha256.Sum256(hooks), Phase: phase, Execute: execute, Before: commandTuple(p), Proposal: p}
+	m := commandPolicyMsg{Runtime: a.plugins, Serial: a.policySerial, Hooks: identity, Phase: phase, Execute: execute, Before: commandTuple(p), Proposal: p}
 	a.proposal = &p
 	a.popup = &menu{Kind: "command-policy", Title: "checking command policy", Hints: "esc rejects this command"}
 	input := plugin.HookRequest{Kind: "before_command", Phase: phase, ID: p.launch.ID, SessionID: p.launch.Session, Directory: a.Directory, Command: &m.Before}
@@ -69,7 +75,8 @@ func (a *App) finishCommandPolicy(m commandPolicyMsg) tea.Cmd {
 	a.policyCancel = nil
 	hooks, _ := json.Marshal(a.pluginManifest.Hooks)
 	if sha256.Sum256(hooks) != m.Hooks {
-		return a.checkCommandPolicy(m.Proposal, m.Phase, m.Execute)
+		m.Proposal.policyChanges = append(m.Proposal.policyChanges, "policy registry")
+		return a.checkCommandPolicy(m.Proposal, "preview", false)
 	}
 	if m.Err == nil && m.Result.Decision == "deny" {
 		m.Err = errors.New("denied: " + m.Result.Reason)
@@ -88,6 +95,7 @@ func (a *App) finishCommandPolicy(m commandPolicyMsg) tea.Cmd {
 	}
 
 	p, tuple := m.Proposal, *m.Result.Command
+	p.policyRuntime, p.policyHooks, p.policyChecked = m.Runtime, m.Hooks, true
 	changed := !reflect.DeepEqual(tuple, m.Before)
 	if changed {
 		for _, field := range []struct {

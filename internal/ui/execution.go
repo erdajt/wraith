@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/erdajt/wraith/internal/plugin"
 	"github.com/erdajt/wraith/internal/runner"
 	"github.com/erdajt/wraith/internal/session"
 	"github.com/erdajt/wraith/internal/variables"
@@ -26,6 +27,9 @@ type proposal struct {
 	prepared                                bool
 	policyEdited                            bool
 	policyChanges                           []string
+	policyRuntime                           *plugin.Runtime
+	policyHooks                             [32]byte
+	policyChecked                           bool
 }
 
 // history returns the command-history store within the application's data directory.
@@ -104,7 +108,7 @@ func (a *App) launchApproved(p proposal) tea.Cmd {
 
 	a.jobs.SetLimit(a.Config.Execution.MaxJobs)
 	if err := a.jobs.Start(context.Background(), record, p.timeout); err != nil {
-		a.approve(p)
+		a.showApproval(p)
 		a.notice = "command launch: " + err.Error()
 		return nil
 	}

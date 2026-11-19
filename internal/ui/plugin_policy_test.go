@@ -97,3 +97,41 @@ func TestCommandPolicyRejectsDenialCancellationAndInvalidTuple(t *testing.T) {
 		})
 	}
 }
+
+func TestPolicyRemovalInvalidatesBothOpenAndPendingApproval(t *testing.T) {
+	for _, pending := range []bool{false, true} {
+		t.Run(map[bool]string{false: "open", true: "pending"}[pending], func(t *testing.T) {
+			a := pluginFixture(t, `
+local hook = wraith.hooks.add("before_command", function(ctx) return {command=ctx.command} end)
+wraith.commands.create("removehook", function() wraith.hooks.remove(hook) end)`)
+			a.Update(a.approve(proposal{Command: "printf approved"})())
+			var result tea.Msg
+			if pending {
+				result = a.runApproved()()
+			}
+			applyPluginEvents(t, a, a.callPlugin(a.pluginManifest.Commands[0].Callback, "", ""))
+			if pending {
+				a.Update(result)
+			} else {
+				a.runApproved()
+			}
+			if len(a.jobs.Snapshot()) != 0 || a.popup == nil || a.popup.Kind != "approval" {
+				t.Fatalf("removing policy left jobs=%d popup=%+v hooks=%d notice=%s", len(a.jobs.Snapshot()), a.popup, len(a.pluginManifest.Hooks), a.notice)
+			}
+			a.runApproved()
+			if len(a.jobs.Snapshot()) != 1 {
+				t.Fatal("fresh approval did not permit execution under the new policy")
+			}
+		})
+	}
+}
+
+func TestPolicyLaunchFailureRestoresActionableApproval(t *testing.T) {
+	a := pluginFixture(t, `wraith.hooks.add("before_command", function(ctx) return {command=ctx.command} end)`)
+	a.Update(a.approve(proposal{Command: "printf approved"})())
+	a.jobs.Close()
+	a.Update(a.runApproved()())
+	if a.popup == nil || a.popup.Kind != "approval" || a.proposal == nil || !strings.Contains(a.notice, "command launch") {
+		t.Fatalf("launch failure stranded policy popup: %s", a.notice)
+	}
+}
