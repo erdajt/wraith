@@ -157,11 +157,12 @@ func (s *SurfaceStore) apply(m SurfaceMutation) (SurfaceDelta, error) {
 			return delta, errors.New("buffer store exceeds 16 mib")
 		}
 		if !slices.Equal(lines, current.Lines) {
+			previous := current.Lines
 			current.Lines, current.bytes = lines, size
 			current.TextRevision++
 			current.Spans, current.decorations = nil, nil
 			current.Revision++
-			delta.ChangedWindows = s.clampBufferWindows(current)
+			delta.ChangedWindows = s.rebaseBufferWindows(current, previous)
 		}
 	case "buffer.set_spans":
 		if err := validateSurfaceSpans(current.Lines, m.Spans); err != nil {

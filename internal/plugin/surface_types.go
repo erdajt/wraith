@@ -41,6 +41,7 @@ type SurfaceBuffer struct {
 
 // SurfaceWindow describes an owned view; cursor coordinates remain independent of other views.
 type SurfaceWindow struct {
+	Mode       string          `json:"mode"`
 	ID         string          `json:"id"`
 	Owner      string          `json:"owner"`
 	BufferID   string          `json:"buffer_id"`

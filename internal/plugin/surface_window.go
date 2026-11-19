@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/erdajt/wraith/internal/vim"
 )
 
 // applyWindow commits validated layout metadata; the UI checks available terminal space first.
@@ -52,6 +54,15 @@ func (s *SurfaceStore) applyWindow(m SurfaceMutation) (SurfaceDelta, error) {
 	if buffer == nil {
 		return delta, errors.New("window buffer is no longer available")
 	}
+	if window.Mode == "" {
+		window.Mode = "normal"
+	}
+	if !slices.Contains([]string{"normal", "insert"}, window.Mode) {
+		return delta, errors.New("window mode must be normal or insert")
+	}
+	if window.Mode == "insert" && !buffer.Editable {
+		return delta, errors.New("read-only buffer cannot enter insert mode")
+	}
 	if window.Kind == "" {
 		window.Kind = "split"
 	}
@@ -86,17 +97,45 @@ func (s *SurfaceStore) applyWindow(m SurfaceMutation) (SurfaceDelta, error) {
 	return delta, nil
 }
 
-// clampBufferWindows keeps cursor metadata valid before richer UI rebasing is applied.
-func (s *SurfaceStore) clampBufferWindows(buffer *surfaceBufferRecord) []SurfaceWindow {
-	var changed []SurfaceWindow
-	for id, window := range s.windows {
-		if window.BufferID != buffer.ID {
-			continue
+// rebaseBufferWindows applies the same rune replacement as native editor views.
+func (s *SurfaceStore) rebaseBufferWindows(buffer *surfaceBufferRecord, previous []string) []SurfaceWindow {
+	var views []SurfaceWindow
+	for _, window := range s.windows {
+		if window.BufferID == buffer.ID {
+			views = append(views, window)
 		}
-		cursor := window.Cursor
-		cursor.Line = min(cursor.Line, len(buffer.Lines)-1)
-		cursor.Column = min(cursor.Column, utf8.RuneCountInString(buffer.Lines[cursor.Line]))
-		if cursor != window.Cursor {
+	}
+	if len(views) == 0 {
+		return nil
+	}
+	before, after := []rune(strings.Join(previous, "\n")), []rune(strings.Join(buffer.Lines, "\n"))
+	change := vim.ChangedText(before, after)
+	var changed []SurfaceWindow
+	for _, window := range views {
+		id := window.ID
+		offset := window.Cursor.Column
+		for _, line := range previous[:min(window.Cursor.Line, len(previous))] {
+			offset += utf8.RuneCountInString(line) + 1
+		}
+		mode := window.Mode
+		if !buffer.Editable {
+			mode = "normal"
+		}
+		offset = max(0, min(change.Rebase(offset), len(after)))
+		if mode != "insert" && offset == len(after) && offset > 0 && after[offset-1] != '\n' {
+			offset--
+		}
+		cursor := SurfacePosition{}
+		for _, r := range after[:offset] {
+			if r == '\n' {
+				cursor.Line++
+				cursor.Column = 0
+			} else {
+				cursor.Column++
+			}
+		}
+		if cursor != window.Cursor || mode != window.Mode {
+			window.Mode = mode
 			window.Cursor = cursor
 			window.Revision++
 			s.windows[id] = window

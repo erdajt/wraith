@@ -36,6 +36,8 @@ func (s *SurfaceStore) HostUpsert(slot string, lines []string, truncated bool) (
 		current = &surfaceBufferRecord{SurfaceBuffer: SurfaceBuffer{ID: id, Owner: "core", Name: slot, Projection: slot}}
 		s.buffers[id] = current
 	}
+	previous := current.Lines
+	var changed []SurfaceWindow
 	if current.Revision == 0 || current.Truncated != truncated || !slices.Equal(current.Lines, lines) {
 		if current.Revision == 0 || !slices.Equal(current.Lines, lines) {
 			current.TextRevision++
@@ -44,7 +46,8 @@ func (s *SurfaceStore) HostUpsert(slot string, lines []string, truncated bool) (
 		current.Truncated, current.Editable = truncated, slot == "prompt" && !truncated
 		current.Spans, current.decorations = nil, nil
 		current.Revision++
+		changed = s.rebaseBufferWindows(current, previous)
 	}
 	copy := cloneSurfaceBuffer(current.SurfaceBuffer)
-	return SurfaceDelta{Operation: "buffer.native", Buffer: &copy, ChangedWindows: s.clampBufferWindows(current)}, nil
+	return SurfaceDelta{Operation: "buffer.native", Buffer: &copy, ChangedWindows: changed}, nil
 }

@@ -71,7 +71,42 @@ func TestSurfaceTextEditsClampIndependentWindowMetadata(t *testing.T) {
 		t.Fatalf("clamp: %+v, %v", delta, err)
 	}
 	window, _ := store.Window(windowID)
-	if window.Cursor != (SurfacePosition{0, 1}) || window.Revision != 2 {
+	if window.Cursor != (SurfacePosition{0, 0}) || window.Revision != 2 {
 		t.Fatalf("invalid cursor metadata after text update: %+v", window)
+	}
+}
+
+func TestSurfacePreviewAndCommitRebaseCursorBeforeLaterWindowEdit(t *testing.T) {
+	for _, mode := range []string{"normal", "insert"} {
+		t.Run(mode, func(t *testing.T) {
+			store := newSurfaceStore("rebase")
+			lease := store.OwnerLease("config")
+			bufferID, _ := store.Reserve("config", "buffer")
+			_, _ = store.Apply(SurfaceMutation{Operation: "buffer.create", ID: bufferID, Owner: "config", Lease: lease, Buffer: &SurfaceBuffer{Editable: true, Lines: []string{"one", "écho"}}})
+			windowID, _ := store.Reserve("config", "window")
+			_, _ = store.Apply(SurfaceMutation{Operation: "window.create", ID: windowID, Owner: "config", Lease: lease, Window: &SurfaceWindow{BufferID: bufferID, Mode: mode, Cursor: SurfacePosition{1, 2}}})
+			preview := store.snapshot()
+			edit := SurfaceMutation{Operation: "buffer.set_lines", ID: bufferID, Owner: "config", Lease: lease, Expected: 1, Start: 0, End: 0, Lines: []string{"prefix"}}
+			for _, target := range []*SurfaceStore{preview, store} {
+				if _, err := target.Apply(edit); err != nil {
+					t.Fatal(err)
+				}
+			}
+			window, _ := preview.Window(windowID)
+			if window.Cursor != (SurfacePosition{2, 2}) || window.Revision != 2 {
+				t.Fatalf("preview cursor not rebased: %+v", window)
+			}
+			window.Title = "updated"
+			next := SurfaceMutation{Operation: "window.configure", ID: windowID, Owner: "config", Lease: lease, Expected: window.Revision, Window: &window}
+			for _, target := range []*SurfaceStore{preview, store} {
+				if _, err := target.Apply(next); err != nil {
+					t.Fatal(err)
+				}
+			}
+			actual, _ := store.Window(windowID)
+			if actual.Title != "updated" || actual.Revision != 3 {
+				t.Fatalf("ordered window edit diverged: %+v", actual)
+			}
+		})
 	}
 }

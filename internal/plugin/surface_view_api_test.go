@@ -18,6 +18,8 @@ assert(wraith.windows.configure(right, {title="details", cursor={line=0,column=1
 assert(wraith.windows.get(left).cursor.line == 1)
 assert(wraith.windows.get(right).buffer_id == b)
 assert(not pcall(wraith.windows.configure, right, {width=-1}))
+assert(not pcall(wraith.windows.configure, right, {mode="insert"}))
+assert(not pcall(wraith.windows.configure, right, {mode="visual"}))
 assert(not pcall(wraith.windows.open, b, {kind="float"}))
 assert(#wraith.windows.list() == 2)
 wraith.windows.focus(left)
