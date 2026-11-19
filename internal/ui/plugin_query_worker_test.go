@@ -19,7 +19,7 @@ func TestWorkspaceMessagePages(t *testing.T) {
 	for index := range 90 {
 		current.Messages = append(current.Messages, session.Message{Role: "assistant", Content: "界 " + strings.Repeat("x", index)})
 	}
-	input := workspaceQueryInput{session: current, directory: current.Directory, query: plugin.WorkspaceQuery{
+	input := workspaceQueryInput{scans: &workspaceScanStore{}, session: current, directory: current.Directory, query: plugin.WorkspaceQuery{
 		Kind: "sessions.messages", Options: plugin.WorkspaceOptions{From: 65, Limit: 10},
 	}}
 	result, err := input.run(t.Context())
@@ -50,7 +50,7 @@ func TestWorkspaceMessagePages(t *testing.T) {
 func TestWorkspaceStoredQueries(t *testing.T) {
 	root, directory := t.TempDir(), t.TempDir()
 	input := workspaceQueryInput{
-		store: store.Store{Root: root}, history: runner.History{Root: filepath.Join(root, "commands")},
+		scans: &workspaceScanStore{}, store: store.Store{Root: root}, history: runner.History{Root: filepath.Join(root, "commands")},
 		session: session.Session{ID: "0123456789abcdef01234567", Directory: directory}, directory: directory,
 	}
 	other := session.Session{Version: 1, ID: "1123456789abcdef01234567", Directory: t.TempDir()}
@@ -96,5 +96,40 @@ func TestWorkspaceQueryResponseBounds(t *testing.T) {
 	result = workspaceQueryResult(query, nil, context.Canceled)
 	if result["error"].(map[string]any)["code"] != "cancelled" {
 		t.Fatalf("cancelled result = %#v", result)
+	}
+}
+
+// TestWorkspaceQueriesFollowSessionOwnershipAcrossCommandDirectories preserves approved working directories.
+func TestWorkspaceQueriesFollowSessionOwnershipAcrossCommandDirectories(t *testing.T) {
+	root, directory := t.TempDir(), t.TempDir()
+	input := workspaceQueryInput{
+		store: store.Store{Root: root}, history: runner.History{Root: filepath.Join(root, "commands")},
+		session: session.Session{ID: "0123456789abcdef01234567", Directory: directory}, directory: directory,
+		scans: &workspaceScanStore{},
+	}
+	t.Cleanup(func() { input.scans.reconcile(nil, true) })
+	record := runner.Record{ID: "1123456789abcdef01234567", Session: input.session.ID, Directory: t.TempDir(), Command: "printf ok", Output: "ok\n", Finished: time.Now()}
+	if err := input.history.Save(record); err != nil {
+		t.Fatal(err)
+	}
+	for _, kind := range []string{"jobs.get", "jobs.output"} {
+		input.query = plugin.WorkspaceQuery{Kind: kind, Options: plugin.WorkspaceOptions{ID: record.ID}}
+		if _, err := input.run(t.Context()); err != nil {
+			t.Fatalf("own-session %s rejected different command cwd: %v", kind, err)
+		}
+	}
+	input.query = plugin.WorkspaceQuery{Kind: "jobs.list"}
+	result, err := input.run(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := result.(map[string]any)["page"].(workspaceScanPage)
+	if len(page.Items) != 1 {
+		t.Fatalf("own-session job missing from catalog: %#v", page)
+	}
+	input.query.Options.Directory = directory
+	result, err = input.run(t.Context())
+	if err != nil || len(result.(map[string]any)["page"].(workspaceScanPage).Items) != 0 {
+		t.Fatalf("explicit directory scope ignored: %#v, %v", result, err)
 	}
 }

@@ -101,3 +101,21 @@ func TestWorkspaceScanCancellationCannotResurrectClosedIterator(t *testing.T) {
 		t.Fatal("closed iterator was restored")
 	}
 }
+
+// TestWorkspaceSourceBudgetCancelsWaitingReaders bounds concurrent decompression independently of query count.
+func TestWorkspaceSourceBudgetCancelsWaitingReaders(t *testing.T) {
+	store := &workspaceScanStore{reads: make(chan struct{}, 2)}
+	store.reads <- struct{}{}
+	store.reads <- struct{}{}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if err := store.readSource(ctx, func() error { t.Fatal("cancelled reader acquired a source slot"); return nil }); !errors.Is(err, context.Canceled) {
+		t.Fatalf("waiting source read = %v", err)
+	}
+	<-store.reads
+	<-store.reads
+	failure := errors.New("decode failed")
+	if err := store.readSource(t.Context(), func() error { return failure }); !errors.Is(err, failure) || len(store.reads) != 0 {
+		t.Fatalf("failed source read retained slot: %v", err)
+	}
+}

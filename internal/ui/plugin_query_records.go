@@ -58,5 +58,5 @@ func workspacePreview(text string, limit int) string {
 	for limit > 0 && !utf8.RuneStart(text[limit]) {
 		limit--
 	}
-	return strings.ToValidUTF8(text[:limit], "�")
+	return strings.Clone(strings.ToValidUTF8(text[:limit], "�"))
 }

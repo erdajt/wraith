@@ -64,11 +64,19 @@ func (s Store) Load(id string) (session.Session, error) {
 
 // LoadContext bounds and cancels query reads without changing the saved session format.
 func (s Store) LoadContext(ctx context.Context, id string) (session.Session, error) {
+	return s.LoadBounded(ctx, id, maxSession)
+}
+
+// LoadBounded applies a smaller source budget to catalog queries.
+func (s Store) LoadBounded(ctx context.Context, id string, limit int64) (session.Session, error) {
+	if limit < 1 || limit > maxSession {
+		return session.Session{}, errors.New("invalid session source limit")
+	}
 	if !validID.MatchString(id) {
 		return session.Session{}, errors.New("invalid session id")
 	}
 
-	v, err := readContext(ctx, filepath.Join(s.Root, "sessions", id+".json.gz"))
+	v, err := readContext(ctx, filepath.Join(s.Root, "sessions", id+".json.gz"), limit)
 	if err == nil && v.ID != id {
 		return v, errors.New("session id does not match file")
 	}
@@ -130,11 +138,11 @@ func compressed(path string, v session.Session) error {
 
 // read loads a session with a decompression limit and validates its format.
 func read(path string) (session.Session, error) {
-	return readContext(context.Background(), path)
+	return readContext(context.Background(), path, maxSession)
 }
 
 // readContext rejects special files and checks cancellation between decompression reads.
-func readContext(ctx context.Context, path string) (session.Session, error) {
+func readContext(ctx context.Context, path string, limit int64) (session.Session, error) {
 	var v session.Session
 	f, err := os.OpenFile(path, os.O_RDONLY|unix.O_NONBLOCK, 0)
 	if err != nil {
@@ -155,11 +163,11 @@ func readContext(ctx context.Context, path string) (session.Session, error) {
 	}
 	defer z.Close()
 
-	b, err := io.ReadAll(io.LimitReader(sessionReader{ctx, z}, maxSession+1))
+	b, err := io.ReadAll(io.LimitReader(sessionReader{ctx, z}, limit+1))
 	if err != nil {
 		return v, err
 	}
-	if len(b) > maxSession {
+	if int64(len(b)) > limit {
 		return v, errors.New("session exceeds decompression limit")
 	}
 

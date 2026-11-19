@@ -22,13 +22,18 @@ func canonicalDirectory(path string) string {
 	return filepath.Clean(path)
 }
 
+// SameDirectory compares recorded workspace paths using the native resume rules.
+func SameDirectory(left, right string) bool {
+	return left != "" && right != "" && canonicalDirectory(left) == canonicalDirectory(right)
+}
+
 // ListDirectory filters readable sessions by canonical directory while preserving listing errors.
 func (s Store) ListDirectory(directory string) ([]session.Session, error) {
 	all, err := s.List()
 
 	var found []session.Session
 	for _, chat := range all {
-		if chat.Directory != "" && canonicalDirectory(chat.Directory) == canonicalDirectory(directory) {
+		if SameDirectory(chat.Directory, directory) {
 			found = append(found, chat)
 		}
 	}
@@ -46,7 +51,7 @@ func (s Store) LoadDirectory(id, directory string) (session.Session, error) {
 		return session.Session{}, errors.New("session has no recorded original directory; export it to recover the conversation")
 	}
 
-	if canonicalDirectory(chat.Directory) != canonicalDirectory(directory) {
+	if !SameDirectory(chat.Directory, directory) {
 		path := chat.Directory
 		if home, err := os.UserHomeDir(); err == nil {
 			if path == home {

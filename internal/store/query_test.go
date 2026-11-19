@@ -39,3 +39,18 @@ func TestSessionQueryReads(t *testing.T) {
 		t.Fatalf("fifo session read = %v", err)
 	}
 }
+
+// TestSessionCatalogSourceBudget leaves direct reads available when catalog metadata is too large.
+func TestSessionCatalogSourceBudget(t *testing.T) {
+	store := Store{Root: t.TempDir()}
+	value := session.Session{Version: 1, ID: "0123456789abcdef01234567", Messages: []session.Message{{Role: "user", Content: strings.Repeat("x", 2048)}}}
+	if err := store.Save(value); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.LoadBounded(t.Context(), value.ID, 1024); err == nil || !strings.Contains(err.Error(), "limit") {
+		t.Fatalf("catalog source limit = %v", err)
+	}
+	if _, err := store.LoadContext(t.Context(), value.ID); err != nil {
+		t.Fatalf("direct session read failed after catalog limit: %v", err)
+	}
+}

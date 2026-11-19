@@ -27,8 +27,22 @@ type workspaceQueryInput struct {
 	data      any
 }
 
-// run reads detached state and bounded disk records without retaining the application or Lua VM.
+// run retains a source slot through decoding, matching and bounded projection.
 func (input workspaceQueryInput) run(ctx context.Context) (any, error) {
+	if input.data != nil {
+		return input.read(ctx)
+	}
+	var result any
+	err := input.scans.readSource(ctx, func() error {
+		var err error
+		result, err = input.read(ctx)
+		return err
+	})
+	return result, err
+}
+
+// read reads detached state and bounded disk records without retaining the application or Lua VM.
+func (input workspaceQueryInput) read(ctx context.Context) (any, error) {
 	query, options := input.query, input.query.Options
 	if err := query.Validate(); err != nil {
 		return nil, err
@@ -65,7 +79,7 @@ func (input workspaceQueryInput) run(ctx context.Context) (any, error) {
 			return nil, err
 		}
 	}
-	if value.Directory != directory {
+	if !store.SameDirectory(value.Directory, directory) {
 		return nil, fmt.Errorf("wrong_directory: original conversation occurred at %s", value.Directory)
 	}
 	revision := workspaceSessionRevision(value)
@@ -142,7 +156,7 @@ func (input workspaceQueryInput) job(ctx context.Context, directory string) (any
 			return nil, err
 		}
 	}
-	if record.Directory != directory {
+	if record.Session != input.session.ID && !store.SameDirectory(record.Directory, directory) {
 		return nil, fmt.Errorf("wrong_directory: command ran at %s", record.Directory)
 	}
 	metadata := workspaceJobMetadata(record)
@@ -165,7 +179,7 @@ func (input workspaceQueryInput) job(ctx context.Context, directory string) (any
 // list scans bounded source pages and keeps active state separate from persisted ordering.
 func (input workspaceQueryInput) list(ctx context.Context, directory string) (any, error) {
 	query := input.query
-	root, budget := filepath.Join(input.store.Root, "sessions"), 1
+	root, budget := filepath.Join(input.store.Root, "sessions"), 4
 	sessionID := query.Options.Session
 	if sessionID == "" && query.Options.Directory == "" {
 		sessionID = input.session.ID
@@ -176,14 +190,14 @@ func (input workspaceQueryInput) list(ctx context.Context, directory string) (an
 	filter := query.Kind + "\x00" + root + "\x00" + directory + "\x00" + sessionID
 	page, err := input.scans.page(ctx, input.runtime, query, root, filter, budget, func(id string) (any, error) {
 		if query.Kind == "sessions.list" {
-			value, err := input.store.LoadContext(ctx, id)
-			if err != nil || value.Directory != directory {
+			value, err := input.store.LoadBounded(ctx, id, 16<<20)
+			if err != nil || !store.SameDirectory(value.Directory, directory) {
 				return nil, err
 			}
 			return workspaceSessionMetadata(value), nil
 		}
 		value, err := input.history.Metadata(ctx, id)
-		if err != nil || value.Directory != directory || sessionID != "" && value.Session != sessionID {
+		if err != nil || sessionID != "" && value.Session != sessionID || sessionID == "" && !store.SameDirectory(value.Directory, directory) {
 			return nil, err
 		}
 		return workspaceJobMetadata(value), nil
@@ -200,12 +214,12 @@ func (input workspaceQueryInput) list(ctx context.Context, directory string) (an
 	})
 	active := []any{}
 	if query.Options.Cursor == "" {
-		if query.Kind == "sessions.list" && input.session.Directory == directory {
+		if query.Kind == "sessions.list" && store.SameDirectory(input.session.Directory, directory) {
 			active = append(active, workspaceSessionMetadata(input.session))
 		}
 		if query.Kind == "jobs.list" {
 			for _, job := range input.jobs {
-				if job.Record.Directory == directory && (sessionID == "" || job.Record.Session == sessionID) {
+				if sessionID != "" && job.Record.Session == sessionID || sessionID == "" && store.SameDirectory(job.Record.Directory, directory) {
 					active = append(active, workspaceJobMetadata(job.Record))
 				}
 			}

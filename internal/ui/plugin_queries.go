@@ -31,7 +31,7 @@ type workspaceQueryMsg struct {
 
 // startWorkspaceQuery captures immutable inputs and starts host reads outside the UI loop.
 func (a *App) startWorkspaceQuery(runtime *plugin.Runtime, query plugin.WorkspaceQuery) tea.Cmd {
-	if runtime != a.plugins || !runtime.Surfaces().OwnerValid(query.Owner, query.Lease) {
+	if runtime != a.plugins || !workspaceQueryLive(runtime, query) {
 		runtime.DiscardScheduled([]string{query.ID})
 		return nil
 	}
@@ -145,7 +145,7 @@ func (a *App) deliverWorkspaceQuery(message workspaceQueryMsg) tea.Cmd {
 	if state.cancelled {
 		message.data = workspaceQueryResult(state.query, nil, context.Canceled)
 	}
-	if state.runtime != a.plugins || !state.runtime.Surfaces().OwnerValid(state.query.Owner, state.query.Lease) {
+	if state.runtime != a.plugins || !workspaceQueryLive(state.runtime, state.query) {
 		state.cancel()
 		state.runtime.DiscardScheduled([]string{state.query.ID})
 		if a.pluginQueries[state.query.ID] == state {
@@ -189,7 +189,7 @@ func (a *App) cancelWorkspaceQuery(runtime *plugin.Runtime, owner, lease, id str
 // reconcileWorkspaceQueries discards dead owners without invoking Lua cleanup from workers.
 func (a *App) reconcileWorkspaceQueries(closeAll bool) {
 	for id, state := range a.pluginQueries {
-		if closeAll || state.runtime != a.plugins || !state.runtime.Surfaces().OwnerValid(state.query.Owner, state.query.Lease) {
+		if closeAll || state.runtime != a.plugins || !workspaceQueryLive(state.runtime, state.query) {
 			state.cancel()
 			state.runtime.DiscardScheduled([]string{id})
 			delete(a.pluginQueries, id)
@@ -198,4 +198,9 @@ func (a *App) reconcileWorkspaceQueries(closeAll bool) {
 	if a.workspaceScans != nil {
 		a.workspaceScans.reconcile(a.plugins, closeAll)
 	}
+}
+
+// workspaceQueryLive keeps provider-owned queries inside their invocation lifetime.
+func workspaceQueryLive(runtime *plugin.Runtime, query plugin.WorkspaceQuery) bool {
+	return runtime.Surfaces().OwnerValid(query.Owner, query.Lease) && (query.Invocation == "" || runtime.InvocationValid(query.Invocation))
 }

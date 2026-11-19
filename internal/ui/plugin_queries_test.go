@@ -89,3 +89,45 @@ end)`)
 		t.Fatalf("workspace event leaked private data: %s, %v", data, err)
 	}
 }
+
+// TestWorkspaceInvocationCancellation drops outstanding native reads with their provider call.
+func TestWorkspaceInvocationCancellation(t *testing.T) {
+	a := pluginFixture(t, `wraith.providers.register("queries", {
+ models=function() end, show=function() end,
+ chat=function()
+  wraith.sessions.get({}, function() error("cancelled invocation callback ran") end)
+ end,
+})`)
+	definition := a.plugins.Manifest().Providers[0]
+	call, err := a.plugins.BeginInvocation(t.Context(), plugin.InvocationRequest{Binding: plugin.InvocationBinding{
+		Kind: "provider", Name: definition.Name, Method: "chat", Owner: definition.Owner,
+		Lease: definition.Lease, Callback: definition.Chat, Revision: definition.Revision,
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(call.Close)
+	start := <-a.plugins.InvocationStarts()
+	pending, err := a.plugins.SubmitInvocation(start, nil, a.Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := <-pending
+	if result.Err != nil || len(result.Effects) != 1 {
+		t.Fatalf("provider query effects: %+v", result)
+	}
+	query := result.Effects[0].Data.(plugin.WorkspaceQuery)
+	if query.Invocation != call.ID {
+		t.Fatal("query lost provider invocation identity")
+	}
+	command := a.startWorkspaceQuery(a.plugins, query)
+	state := a.pluginQueries[query.ID]
+	call.Close()
+	a.reconcileWorkspaceQueries(false)
+	if state.context.Err() != context.Canceled || len(a.pluginQueries) != 0 {
+		t.Fatal("provider cancellation retained its query")
+	}
+	if a.deliverWorkspaceQuery(command().(workspaceQueryMsg)) != nil {
+		t.Fatal("cancelled provider query reentered Lua")
+	}
+}

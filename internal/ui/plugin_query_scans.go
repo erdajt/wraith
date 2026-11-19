@@ -20,6 +20,7 @@ type workspaceScan struct {
 	runtime    *plugin.Runtime
 	owner      string
 	lease      string
+	invocation string
 	filter     string
 	expires    time.Time
 	busy       bool
@@ -29,6 +30,7 @@ type workspaceScanStore struct {
 	mu      sync.Mutex
 	entries map[string]*workspaceScan
 	closed  bool
+	reads   chan struct{}
 }
 
 type workspaceScanPage struct {
@@ -59,7 +61,7 @@ func (s *workspaceScanStore) page(ctx context.Context, runtime *plugin.Runtime, 
 	token := query.Options.Cursor
 	scan := s.entries[token]
 	if token != "" {
-		if scan == nil || scan.runtime != runtime || scan.owner != query.Owner || scan.lease != query.Lease || scan.filter != filter || scan.busy {
+		if scan == nil || scan.runtime != runtime || scan.owner != query.Owner || scan.lease != query.Lease || scan.invocation != query.Invocation || scan.filter != filter || scan.busy {
 			s.mu.Unlock()
 			return page, errors.New("stale, busy or expired workspace scan cursor")
 		}
@@ -88,7 +90,7 @@ func (s *workspaceScanStore) page(ctx context.Context, runtime *plugin.Runtime, 
 			_ = file.Close()
 			return page, errors.New("workspace scan capacity reached or closed")
 		}
-		scan = &workspaceScan{file: file, generation: info, runtime: runtime, owner: query.Owner, lease: query.Lease, filter: filter}
+		scan = &workspaceScan{file: file, generation: info, runtime: runtime, owner: query.Owner, lease: query.Lease, invocation: query.Invocation, filter: filter}
 		token = session.ID()
 		s.entries[token] = scan
 	}
@@ -166,9 +168,29 @@ func (s *workspaceScanStore) reconcile(runtime *plugin.Runtime, closeAll bool) {
 		s.closed = true
 	}
 	for token, scan := range s.entries {
-		if closeAll || scan.runtime != runtime || !runtime.Surfaces().OwnerValid(scan.owner, scan.lease) || !scan.busy && time.Now().After(scan.expires) {
+		if closeAll || scan.runtime != runtime || !runtime.Surfaces().OwnerValid(scan.owner, scan.lease) || scan.invocation != "" && !runtime.InvocationValid(scan.invocation) || !scan.busy && time.Now().After(scan.expires) {
 			_ = scan.file.Close()
 			delete(s.entries, token)
 		}
+	}
+}
+
+// readSource bounds source lifetimes through projection and supports cancellation while waiting.
+func (s *workspaceScanStore) readSource(ctx context.Context, read func() error) error {
+	s.mu.Lock()
+	if s.reads == nil {
+		s.reads = make(chan struct{}, 2)
+	}
+	slots := s.reads
+	s.mu.Unlock()
+	select {
+	case slots <- struct{}{}:
+		defer func() { <-slots }()
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return read()
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
