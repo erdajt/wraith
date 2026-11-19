@@ -11,7 +11,7 @@ import (
 
 // applyPluginConfig validates live changes before updating session identity and runtime services.
 func (a *App) applyPluginConfig(c config.Config) (tea.Cmd, error) {
-	if a.busy || a.loading || a.editing || a.popup != nil || a.proposal != nil {
+	if a.busy || a.loading || a.editing || a.popup != nil || a.proposal != nil || a.pluginDialog != nil {
 		return nil, errors.New("finish the current operation before applying lua configuration")
 	}
 	if err := c.Validate(); err != nil {
