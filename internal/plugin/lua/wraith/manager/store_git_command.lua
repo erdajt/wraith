@@ -7,6 +7,8 @@ local policy = {
 
 function M.run(arguments, directory, options, completed)
   local argv = { "git", "--no-optional-locks" }
+  -- ref discovery must not read the conversation directory's repository configuration.
+  if not directory then argv[#argv + 1] = "--git-dir=/dev/null" end
   for _, setting in ipairs(policy) do
     argv[#argv + 1], argv[#argv + 2] = "-c", setting
   end

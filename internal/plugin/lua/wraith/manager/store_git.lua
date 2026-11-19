@@ -17,7 +17,8 @@ function M.prepare(item, directory, options, completed)
   end
 
   local function initialize()
-    run({ "init", "--quiet", "--template=", "--object-format=" .. format, "--", directory }, nil, function()
+    run({ "--git-dir=" .. directory .. "/.git", "--work-tree=" .. directory,
+      "init", "--quiet", "--template=", "--object-format=" .. format, "--", directory }, nil, function()
       run({ "remote", "add", "origin", item.source.url }, directory, function()
         run({ "fetch", "--quiet", "--no-tags", "--depth=1", "--", "origin", reference }, directory, function()
           run({ "rev-parse", "--verify", "--end-of-options", "FETCH_HEAD^{commit}" }, directory, function(output)
