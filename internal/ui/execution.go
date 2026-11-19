@@ -24,6 +24,8 @@ type proposal struct {
 	timeout                                 time.Duration
 	Variables                               variables.Snapshot
 	prepared                                bool
+	policyEdited                            bool
+	policyChanges                           []string
 }
 
 // history returns the command-history store within the application's data directory.
@@ -42,6 +44,11 @@ func (a *App) approve(p proposal) tea.Cmd {
 		a.notice = "command cannot run: " + err.Error()
 		return nil
 	}
+	return a.checkCommandPolicy(p, "preview", false)
+}
+
+// showApproval presents the exact frozen launch tuple after policy validation.
+func (a *App) showApproval(p proposal) tea.Cmd {
 	a.proposal = &p
 	a.popup = &menu{Kind: "approval", Title: "approve command · " + p.launch.Directory, Items: []item{{"run", "run", "execute and save output"}, {"run · hide output from agent", "run-hidden", "execute without sharing output"}, {"edit", "edit", "save to execute once"}, {"view full command", "view", "scroll before deciding"}, {"ask assistant to modify", "modify", "describe the change"}, {"reject", "cancel", "do not execute"}}}
 	if p.Background {
@@ -79,7 +86,15 @@ func (a *App) runApproved() tea.Cmd {
 		a.proposal = nil
 		return nil
 	}
+	if p.policyEdited {
+		p.policyEdited = false
+		return a.checkCommandPolicy(p, "preview", true)
+	}
+	return a.checkCommandPolicy(p, "execute", true)
+}
 
+// launchApproved starts a proposal only after the final policy check accepted its tuple.
+func (a *App) launchApproved(p proposal) tea.Cmd {
 	a.proposal = nil
 	record := p.launch
 	record.Command, record.Source = p.Resolved, p.Source

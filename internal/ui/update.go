@@ -10,6 +10,8 @@ import (
 // update dispatches ui, provider and terminal events to their state handlers.
 func (a *App) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m := msg.(type) {
+	case commandPolicyMsg:
+		return a, a.finishCommandPolicy(m)
 	case pluginDecisionMsg:
 		return a, a.submitPluginDecision(m)
 	case pluginResourceMsg:

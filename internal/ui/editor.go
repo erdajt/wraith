@@ -283,6 +283,7 @@ func (a *App) finishEdit(m editedMsg) tea.Cmd {
 		}
 		a.proposal.Command, a.proposal.Resolved, a.proposal.Text = text, command, text
 		a.proposal.Source += "-edited"
+		a.proposal.policyEdited = true
 		applied = true
 		return a.runApproved()
 	case "block", "staged":

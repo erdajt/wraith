@@ -21,6 +21,9 @@ func (a *App) approvalFrame() []string {
 		ink(p.FG, "not executed · "+mode),
 		ink(p.Muted, ansi.Truncate("cwd: "+clean(request.launch.Directory), inner, "…")),
 	}
+	if len(request.policyChanges) > 0 {
+		content = append(content, ink(p.Warn, ansi.Truncate("policy changed: "+strings.Join(request.policyChanges, ", ")+" · view full command", inner, "…")))
+	}
 	if roomy {
 		content = append(content, "")
 	}

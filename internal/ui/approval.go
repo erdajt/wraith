@@ -1,6 +1,10 @@
 package ui
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/erdajt/wraith/internal/session"
 )
@@ -21,7 +25,12 @@ func (a *App) approvalAction(action string) tea.Cmd {
 		return a.edit("run", "sh", a.proposal.Resolved, -1)
 	case "view":
 		reason, _ := a.proposal.Variables.Expand(a.proposal.Reason)
-		a.showText("command-preview", "full command", a.proposal.Resolved+"\n\nreason: "+reason)
+		var review strings.Builder
+		fmt.Fprintf(&review, "%s\n\nreason: %s\ndirectory: %s\nshell: %s\ntimeout: %s\nbackground: %t\n\nenvironment (frozen):\n", a.proposal.Resolved, reason, a.proposal.launch.Directory, a.proposal.launch.Shell, a.proposal.timeout, a.proposal.Background)
+		for _, entry := range a.proposal.launch.Environment {
+			review.WriteString(strconv.Quote(entry) + "\n")
+		}
+		a.showText("command-preview", "full command", review.String())
 		a.popup.Hints = "esc returns to approval"
 	case "modify":
 		a.openModification()
@@ -33,6 +42,10 @@ func (a *App) approvalAction(action string) tea.Cmd {
 
 // declineCommand records denial and stops the requesting agent turn when applicable.
 func (a *App) declineCommand() {
+	if a.policyCancel != nil {
+		a.policyCancel()
+		a.policyCancel = nil
+	}
 	if a.proposal != nil && a.proposal.Continue {
 		a.stopAgent()
 		a.Session.Messages = append(a.Session.Messages, session.Message{Role: "user", Content: "the requested command was declined and was not executed. do not repeat it unless asked."})
@@ -45,10 +58,14 @@ func (a *App) declineCommand() {
 
 // stopAgent clears pending actions and cancels background jobs requested by the current turn.
 func (a *App) stopAgent() {
+	if a.policyCancel != nil {
+		a.policyCancel()
+		a.policyCancel = nil
+	}
 	a.proposal = nil
 	if a.popup != nil {
 		switch a.popup.Kind {
-		case "approval", "command-preview", "modify-command":
+		case "approval", "command-preview", "modify-command", "command-policy":
 			a.popup = nil
 		}
 	}

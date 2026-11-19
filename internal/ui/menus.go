@@ -82,7 +82,7 @@ func (a *App) menuKey(k tea.KeyMsg) tea.Cmd {
 		if m.Kind == "command-preview" && a.proposal != nil {
 			return a.approve(*a.proposal)
 		}
-		if m.Kind == "approval" {
+		if m.Kind == "approval" || m.Kind == "command-policy" {
 			a.declineCommand()
 		}
 		if m.Kind == "overflow" {

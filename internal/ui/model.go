@@ -97,6 +97,8 @@ type App struct {
 	bufferEventPending bool
 	bufferEventRuntime *plugin.Runtime
 	pluginDepth        int
+	policySerial       uint64
+	policyCancel       context.CancelFunc
 	surfaceReplay      bool
 	surfaceKeymaps     map[string]surfaceKeymapCache
 	surfaceBuffers     map[string]plugin.SurfaceBuffer
@@ -312,6 +314,9 @@ func (a *App) Close() {
 		}
 		if a.cancel != nil {
 			a.cancel()
+		}
+		if a.policyCancel != nil {
+			a.policyCancel()
 		}
 		close(a.done)
 
