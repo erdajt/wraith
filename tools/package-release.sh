@@ -29,6 +29,9 @@ cp -R -- "$root/examples/plugins" "$package/examples/"
 cp -- "$root/third_party/README.md" "$package/third_party/"
 cp -- "$root/third_party/gopher-lua/LICENSE" "$package/third_party/gopher-lua/"
 cp -- "$root/third_party/gopher-lua/LICENSE" "$package/licenses/gopher-lua.txt"
+mkdir -p "$package/internal/distribution/assets/seeds"
+cp -- "$root/internal/distribution/assets/manifest.json" "$package/internal/distribution/assets/"
+cp -- "$root/internal/distribution/assets/seeds/"*.bundle "$package/internal/distribution/assets/seeds/"
 
 archive=$(mktemp "$output/.wraith-release-XXXXXX")
 tar -C "$staging" -czf "$archive" "$name"

@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/erdajt/wraith/internal/distribution"
 )
 
 // TestReleaseArchiveContainsExecutableExamples exercises the workflow's archive builder and extracted packages.
@@ -46,7 +48,7 @@ func TestReleaseArchiveContainsExecutableExamples(t *testing.T) {
 				t.Fatalf("binary lost executable mode: %v, %v", info, err)
 			}
 
-			for _, path := range []string{"README.md", "LICENSE", "NOTICE", "third_party/README.md", "third_party/gopher-lua/LICENSE", "docs", "examples/plugins"} {
+			for _, path := range []string{"README.md", "LICENSE", "NOTICE", "third_party/README.md", "third_party/gopher-lua/LICENSE", "docs", "examples/plugins", "internal/distribution/assets/manifest.json", "internal/distribution/assets/seeds"} {
 				err := filepath.WalkDir(filepath.Join(root, path), func(source string, entry fs.DirEntry, err error) error {
 					if err != nil || entry.IsDir() {
 						return err
@@ -63,7 +65,7 @@ func TestReleaseArchiveContainsExecutableExamples(t *testing.T) {
 				}
 			}
 			compareReleaseFile(t, filepath.Join(root, "third_party/gopher-lua/LICENSE"), filepath.Join(archive, "licenses/gopher-lua.txt"))
-			for _, guide := range []string{"docs/lua/examples.md", "third_party/README.md"} {
+			for _, guide := range []string{"docs/lua/examples.md", "docs/distribution.md", "third_party/README.md"} {
 				path := filepath.Join(archive, guide)
 				data, err := os.ReadFile(path)
 				if err != nil {
@@ -80,6 +82,21 @@ func TestReleaseArchiveContainsExecutableExamples(t *testing.T) {
 				}
 			}
 
+			assets := filepath.Join(archive, "internal/distribution/assets")
+			data, err := os.ReadFile(filepath.Join(assets, "manifest.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			manifest, err := distribution.Parse(data, 2)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, entry := range manifest.Packages {
+				if _, err := distribution.Install(t.Context(), os.DirFS(assets), entry, t.TempDir(), 2); err != nil {
+					t.Fatalf("install archived package %s: %v", entry.Name, err)
+				}
+			}
+
 			names := []string{
 				"TestTaskPackageTransformsRequestsAndUnloadsOwnedUI",
 				"TestHistoryPackagePagesNativeRecordsAndReadsHiddenLocalOutput",
@@ -88,7 +105,7 @@ func TestReleaseArchiveContainsExecutableExamples(t *testing.T) {
 			}
 			check := exec.CommandContext(t.Context(), testBinary, "-test.run=^("+strings.Join(names, "|")+")$", "-test.count=1", "-test.timeout=30s", "-test.v")
 			check.Env = append(os.Environ(), "WRAITH_TEST_EXAMPLES="+filepath.Join(archive, "examples", "plugins"))
-			data, err := check.CombinedOutput()
+			data, err = check.CombinedOutput()
 			if err != nil {
 				t.Fatalf("extracted packages: %s, %v", data, err)
 			}
