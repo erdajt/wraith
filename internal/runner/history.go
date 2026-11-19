@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"syscall"
 	"time"
 
 	"github.com/erdajt/wraith/internal/fsutil"
@@ -98,11 +99,18 @@ func (h History) LoadBounded(ctx context.Context, id string, limit int64) (Recor
 		return r, errors.New("invalid command id")
 	}
 
-	f, err := os.Open(filepath.Join(h.Root, id+".json.gz"))
+	f, err := os.OpenFile(filepath.Join(h.Root, id+".json.gz"), os.O_RDONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
 		return r, err
 	}
 	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return r, err
+	}
+	if !info.Mode().IsRegular() {
+		return r, errors.New("command history is not a regular file")
+	}
 
 	z, err := gzip.NewReader(contextReader{ctx, f})
 	if err != nil {
@@ -123,6 +131,9 @@ func (h History) LoadBounded(ctx context.Context, id string, limit int64) (Recor
 	}
 	if r.ID != id {
 		return r, errors.New("command id does not match file")
+	}
+	if err := ctx.Err(); err != nil {
+		return Record{}, err
 	}
 	return r, r.validateLimits()
 }

@@ -64,15 +64,22 @@ func (h History) Metadata(ctx context.Context, id string) (Record, error) {
 	if err != nil {
 		return Record{}, err
 	}
+	if !info.Mode().IsRegular() {
+		return Record{}, errors.New("command history is not a regular file")
+	}
 	signature := sourceSignature(info)
-	f, err := os.Open(filepath.Join(h.Root, "metadata", id+".json"))
+	f, err := os.OpenFile(filepath.Join(h.Root, "metadata", id+".json"), os.O_RDONLY|syscall.O_NONBLOCK, 0)
 	if err == nil {
-		data, readErr := io.ReadAll(io.LimitReader(f, 256<<10+1))
+		var data []byte
+		cacheInfo, readErr := f.Stat()
+		if readErr == nil && cacheInfo.Mode().IsRegular() {
+			data, readErr = io.ReadAll(io.LimitReader(f, 256<<10+1))
+		}
 		_ = f.Close()
 		var cached historyMetadata
 		decoder := json.NewDecoder(bytes.NewReader(data))
 		decoder.DisallowUnknownFields()
-		if readErr == nil && len(data) <= 256<<10 && decoder.Decode(&cached) == nil && decoder.Decode(new(any)) == io.EOF && cached.Version == 1 && cached.Source == signature && cached.Record.ID == id && cached.Record.Output == "" && cached.Record.Tail == "" && cached.Record.validateLimits() == nil {
+		if readErr == nil && len(data) <= 256<<10 && decoder.Decode(&cached) == nil && decoder.Decode(new(any)) == io.EOF && cached.Version == 1 && cached.Source == signature && cached.Record.ID == id && cached.Record.Output == "" && cached.Record.Tail == "" && len(cached.Record.Environment) == 0 && cached.Record.validateLimits() == nil {
 			current, err := os.Stat(path)
 			if err == nil && sourceSignature(current) == signature {
 				return cached.Record, ctx.Err()

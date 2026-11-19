@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -104,5 +105,35 @@ func TestLoadBounded(t *testing.T) {
 	cancel()
 	if _, err := history.LoadBounded(ctx, record.ID, 1024); !errors.Is(err, context.Canceled) {
 		t.Fatalf("cancelled load = %v", err)
+	}
+}
+
+// TestHistorySpecialFiles rejects blocking sources and repairs nonregular cache entries.
+func TestHistorySpecialFiles(t *testing.T) {
+	history := History{Root: t.TempDir()}
+	id := "0123456789abcdef01234567"
+	path := filepath.Join(history.Root, id+".json.gz")
+	if err := syscall.Mkfifo(path, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := history.LoadBounded(t.Context(), id, 1024); err == nil || !strings.Contains(err.Error(), "regular file") {
+		t.Fatalf("fifo source = %v", err)
+	}
+	if _, err := history.Metadata(t.Context(), id); err == nil || !strings.Contains(err.Error(), "regular file") {
+		t.Fatalf("fifo metadata source = %v", err)
+	}
+	if err := history.Save(Record{ID: id, Command: "printf safe"}); err != nil {
+		t.Fatal(err)
+	}
+	cache := filepath.Join(history.Root, "metadata", id+".json")
+	if err := os.Remove(cache); err != nil {
+		t.Fatal(err)
+	}
+	if err := syscall.Mkfifo(cache, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	record, err := history.Metadata(t.Context(), id)
+	if err != nil || record.Command != "printf safe" {
+		t.Fatalf("fifo cache fallback = %#v, %v", record, err)
 	}
 }
