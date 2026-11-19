@@ -25,8 +25,17 @@ function M.new(specs, settings)
     if not id then return end
     local ok, status = pcall(wraith.resource.status, id)
     if ok and not status.callback_error then return end
+    local confirmed = active.control.confirmed()
     pcall(active.control.abandon)
-    latest.state, latest.error = "failed", ok and tostring(status.callback_error) or "package operation was discarded; create a fresh plan"
+    local reason = ok and tostring(status.callback_error) or "package operation was discarded"
+    if confirmed then
+      latest.state, latest.generation = "installed", confirmed.generation
+      latest.restart_required = copy(confirmed.restart_required)
+      latest.message = confirmed.message or latest.message
+      latest.cleanup_warning = reason .. "; inspect manager.recover() for private leftovers"
+    else
+      latest.state, latest.error = "failed", reason .. "; create a fresh plan"
+    end
     local callback = active.completed
     active = nil
     notify(callback, latest)
@@ -80,7 +89,7 @@ function M.new(specs, settings)
       status.state, status.error, status.code = result.state, result.error, result.code
       status.message = result.message or status.message
       status.restart_required = result.restart_required or wraith.json.array()
-      status.generation = result.generation
+      status.generation, status.cleanup_warning = result.generation, result.cleanup_warning
       active = nil
       notify(observer, status)
       notify(completed, status)

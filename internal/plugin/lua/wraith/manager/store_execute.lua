@@ -6,15 +6,25 @@ local git = require("wraith.manager.store_git")
 local verify = require("wraith.manager.store_verify")
 local promote = require("wraith.manager.store_promote")
 local publish = require("wraith.manager.store_publish")
+local cleanup = require("wraith.manager.store_cleanup")
 local M = {}
 
 function M.start(plan, options, progress, completed)
-  local work, changed = nil, wraith.json.array()
+  local work, confirmed, changed = nil, nil, wraith.json.array()
   local control = flow.new(function(result)
+    if confirmed and result.state ~= "installed" then
+      local warning = result.error or "cleanup was interrupted"
+      result = wraith.json.decode(wraith.json.encode(confirmed))
+      result.cleanup_warning = warning .. "; inspect manager.recover() for private leftovers"
+    end
     result.workspace = work
     result.restart_required = result.state == "installed" and changed or wraith.json.array()
     completed(result)
   end)
+  function control.confirmed()
+    return confirmed
+  end
+
   local candidate = wraith.json.decode(wraith.json.encode(plan.baseline))
   for _, name in ipairs(plan.removed) do candidate.packages[name] = nil end
 
@@ -27,6 +37,16 @@ function M.start(plan, options, progress, completed)
     return result
   end
 
+  local function published(result)
+    if result.state ~= "installed" then finish(result); return end
+    confirmed = result
+    confirmed.restart_required = changed
+    progress("cleaning", nil, "remove this transaction's private files")
+    control.begin(function(callback) return cleanup.start(work, plan.action == "restore", callback) end, function(cleaned)
+      if cleaned.state == "completed" then finish(confirmed) else finish(cleaned) end
+    end)
+  end
+
   local function commit()
     if plan.action == "restore" then
       progress("verifying", nil, "confirm the selected lock is unchanged")
@@ -35,7 +55,7 @@ function M.start(plan, options, progress, completed)
         if result.state == "installed" then
           result.lock, result.generation = plan.baseline, plan.baseline.generation
         end
-        finish(result)
+        published(result)
       end, true)
       return
     end
@@ -45,7 +65,7 @@ function M.start(plan, options, progress, completed)
       check(written)
       control.begin(function(callback) return publish.commit(work, options, callback) end, function(result)
         if result.state == "installed" then result.lock = candidate end
-        finish(result)
+        published(result)
       end, true)
     end)
   end
