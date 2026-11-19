@@ -90,6 +90,15 @@ func (c *Client) privateRequest(request ollama.Request) (*Client, ollama.Request
 		policy = contextual.NativePolicy(request.ExecutionMode)
 	}
 
+	extensionPolicy, extensionTools, err := c.extensionPolicy(request, native)
+	if err != nil {
+		return nil, request, err
+	}
+	request.Tools = append(request.Tools, extensionTools...)
+	if extensionPolicy != "" {
+		policy += "\n\n" + extensionPolicy
+	}
+
 	compactPolicy := ""
 	switch request.CompactionTask {
 	case "extract":

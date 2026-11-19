@@ -8,11 +8,13 @@ import (
 
 	"github.com/erdajt/wraith/internal/config"
 	"github.com/erdajt/wraith/internal/contextual"
+	"github.com/erdajt/wraith/internal/modeltool"
 	"github.com/erdajt/wraith/internal/ollama"
 	"github.com/erdajt/wraith/internal/variables"
 )
 
 type Client struct {
+	Tools     *modeltool.Catalog
 	Adapter   Adapter
 	Transform func(context.Context, string, PromptData) (PromptData, error)
 	Variables variables.Snapshot
@@ -199,7 +201,7 @@ func (c *Client) Chat(ctx context.Context, request ollama.Request, emit func(oll
 	if !result.Done || result.Reason == "length" || len(request.Tools) == 0 {
 		return result, &ollama.ActionError{Problem: "native action was incomplete or unavailable"}
 	}
-	content, err := contextual.NormalizeAction(request.ExecutionMode, result.Message.Content, calls)
+	content, err := contextual.NormalizeAction(request.ExecutionMode, result.Message.Content, calls, c.extensionCatalog(request))
 	if err != nil {
 		return result, &ollama.ActionError{Problem: err.Error()}
 	}

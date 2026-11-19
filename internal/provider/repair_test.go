@@ -138,7 +138,7 @@ func TestRepairCorrectsOutputQueryChannelOnNextAttempt(t *testing.T) {
 		}
 		return response(string(data)), nil
 	})
-	result, err := client.ChatWithRepair(t.Context(), ollama.Request{RunIDs: map[string]bool{id: true}, Messages: []session.Message{{Role: "user", Content: "inspect private.example"}}}, func(update StreamUpdate) {
+	result, err := client.ChatWithRepair(t.Context(), ollama.Request{ExecutionMode: "agent", RunIDs: map[string]bool{id: true}, Messages: []session.Message{{Role: "user", Content: "inspect private.example"}}}, func(update StreamUpdate) {
 		if update.Retry > 0 {
 			retries++
 

@@ -91,13 +91,19 @@ func (c *Client) ChatWithRepair(ctx context.Context, request ollama.Request, emi
 					rejected = toolErr
 				}
 				if command != nil && tool != nil {
-					rejected = errors.New("request one command or output tool per response")
+					rejected = errors.New("request one command or tool per response")
 				}
 				if rejected == nil && command == nil && tool == nil && request.ExecutionMode == "agent" && request.CompactionTask == "" && request.Format == nil {
 					rejected = contextual.UnclearCommandIntent(result.Message.Content)
 				}
 				if tool != nil && rejected == nil {
-					_, rejected = c.Variables.Validate(tool.Pattern, true)
+					rejected = contextual.ValidateTool(tool, request.ExecutionMode, c.extensionCatalog(request))
+					if rejected == nil && tool.Tool == "extension" {
+						rejected = c.validateExtensionArguments(tool.Name, tool.Arguments, request)
+					}
+					if rejected == nil {
+						_, rejected = c.Variables.Validate(tool.Pattern, true)
+					}
 				}
 				if command != nil && rejected == nil {
 					_, rejected = c.Variables.Validate(command.Command+"\n"+command.Reason, true)

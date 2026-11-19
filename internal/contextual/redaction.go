@@ -2,6 +2,7 @@ package contextual
 
 import (
 	"encoding/json"
+	"github.com/erdajt/wraith/internal/modeltool"
 	"regexp"
 	"sort"
 	"strings"
@@ -45,6 +46,14 @@ func RedactActions(content string, redact func(string) string, ids map[string]bo
 				}
 				if !ids[request.ID] {
 					request.ID = redact(request.ID)
+				}
+				if request.Tool == "extension" {
+					arguments, err := modeltool.TransformArguments(request.Arguments, func(value string) (string, error) { return redact(value), nil })
+					if err != nil {
+						replacements = append(replacements, replacement{section.start, section.end, "[invalid private extension arguments]\n"})
+						continue
+					}
+					request.Arguments = arguments
 				}
 				request.Pattern = redact(request.Pattern)
 				data, _ = json.Marshal(request)
