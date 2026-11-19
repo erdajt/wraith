@@ -70,7 +70,7 @@ HTTP, remote helper protocols, embedded URL credentials, query strings, fragment
 | `optional` | `false`; keep this contribution only when a surviving nonoptional declaration names the same plugin |
 | `specs` | declarations owned by this fragment, without dependency edges or dependency-only loading defaults |
 | `priority` | `50`; higher values start first, with declaration order breaking ties; dependencies still load before their parent |
-| `lazy` | true for dependency-only declarations or command, event or key triggers; explicit booleans override the default |
+| `lazy` | true for dependency-only declarations, `defaults.lazy = true`, or command, event or key triggers; explicit booleans override inference |
 | `cmd` | one slash command name or a list of names that activate the package |
 | `event` | one lifecycle/custom event name or a list that activates the package |
 | `keys` | key specifications, described below |
@@ -107,6 +107,8 @@ ordinary source failures may retry with the same binding; setup failures reuse t
 key entries accept positional `{sequence, action}` or named `{keys = sequence, action = action}` fields. `mode` defaults to `chat.normal`; `description` and `desc` are aliases. the action is a registered action name or a function. canonical key aliases are checked for conflicts.
 
 command triggers activate the package and replay that command with its original argument. the package must register the promised command. key triggers run their declared action after activation; they do not replay a physical key recursively. event triggers deliver the original event only to the newly activated packages' listeners. existing listeners do not receive a duplicate event. a package activated after startup also receives `ready` through its newly registered ready listeners.
+
+manager `defaults.lazy` accepts a boolean and defaults to false. explicit package `lazy = false` requests startup even with global lazy loading, dependency status or triggers. `defaults.lazy = false` preserves ordinary dependency/trigger inference. gate callbacks see declared fields before this final inference.
 
 a separate top-level declaration removes the dependency-only default. completed import replays do not add declarations or change that default. eager startup order is independent of lazy plugins’ priorities.
 

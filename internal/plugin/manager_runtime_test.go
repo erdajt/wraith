@@ -1,6 +1,9 @@
 package plugin
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 const managerLocalStore = `package.preload["wraith.manager.store"]=function() return {new=function(specs)
  local rows={}; for _,spec in ipairs(specs) do rows[#rows+1]={name=spec.name,source=spec.source,path=spec.source.dir,state="local"} end
@@ -130,4 +133,25 @@ func TestManagerLazyEventsReplayOnlyNewListenersAfterPublication(t *testing.T) {
 	if result.Err != nil || len(result.Effects) != 1 || result.Effects[0].Argument != "new:original" {
 		t.Fatalf("first event was lost or existing listener repeated: %+v", result)
 	}
+}
+
+// TestManagerDefaultLazyPreservesExplicitLoading carries the setup default into runtime state.
+func TestManagerDefaultLazyPreservesExplicitLoading(t *testing.T) {
+	r := openManagerRuntime(t, fmt.Sprintf(`local calls=0
+package.preload.deferred=function() return {setup=function() calls=calls+1 end} end
+local manager=require("shroud")
+wraith.commands.create("configure",function()
+manager.setup({{name="deferred",main="deferred",dir=%q,opts={}}},{defaults={lazy=true}})
+local row=manager.status().packages[1]
+assert(row.lazy and row.managed and not row.loaded and calls==0)
+end)
+wraith.commands.create("load",function()
+manager.load("deferred")
+assert(manager.status().packages[1].loaded and calls==1)
+manager.load("deferred")
+assert(calls==1)
+end)`, t.TempDir()))
+
+	managerCommand(t, r, "configure", "")
+	managerCommand(t, r, "load", "")
 }

@@ -85,6 +85,7 @@
 ---@field position? 'left'|'right'|'above'|'below'
 ---@field keys? Wraith.PackageViewKeys
 ---@class Wraith.PackageDefaults
+---@field lazy? boolean default false; explicit package lazy takes precedence
 ---@field cond? boolean|fun(spec: Wraith.PackageSpec): boolean used when the package omits cond
 ---@class Wraith.PackageManagerOptions
 ---@field defaults? Wraith.PackageDefaults
