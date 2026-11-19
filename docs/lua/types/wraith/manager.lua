@@ -44,7 +44,7 @@
 ---@field commit? string full lowercase commit id
 ---@field pin? boolean
 ---@field import? Wraith.PackageImportSource collects specs after this explicit source declaration
----@field cond? boolean|fun(): boolean applies to the import only
+---@field cond? boolean|fun(spec: Wraith.PackageSpec): boolean excludes activation while retaining existing dependency pins
 ---@class Wraith.NormalizedPackage
 ---@field name string
 ---@field source Wraith.PackageSource
@@ -84,7 +84,10 @@
 ---@class Wraith.PackageViewOptions
 ---@field position? 'left'|'right'|'above'|'below'
 ---@field keys? Wraith.PackageViewKeys
+---@class Wraith.PackageDefaults
+---@field cond? boolean|fun(spec: Wraith.PackageSpec): boolean used when the package omits cond
 ---@class Wraith.PackageManagerOptions
+---@field defaults? Wraith.PackageDefaults
 ---@field storage? Wraith.PackageStorageOptions
 ---@field ui? Wraith.PackageViewOptions
 
@@ -108,7 +111,7 @@
 ---@field main_source_kind? 'file'|'preload' a preload's code is independent of the checkout commit
 ---@field main_source_path? string selected file path
 ---@field restart_required? boolean disk selection differs from this runtime's frozen source
----@field exclusion? 'disabled'|'optional'|'scope'
+---@field exclusion? 'disabled'|'conditional'|'optional'|'scope'
 ---@field retained_commit? string existing lock pin; does not imply an installed checkout
 ---@field origins? {index: integer, module?: string, path?: string}[] surviving declaration origins before exclusion
 ---@class Wraith.PackageOperation

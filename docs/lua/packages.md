@@ -66,6 +66,7 @@ HTTP, remote helper protocols, embedded URL credentials, query strings, fragment
 | `pin` | `false`; keep the locked revision during update, except when an explicit commit selector changes |
 | `dependencies` | package names or nested specifications; loaded before the dependent package |
 | `enabled` | `true`, or a function receiving a copied specification and returning a boolean |
+| `cond` | boolean or function receiving the initial merged specification; false skips activation and preserves existing dependency pins |
 | `optional` | `false`; keep this contribution only when a surviving nonoptional declaration names the same plugin |
 | `specs` | declarations owned by this fragment, without dependency edges or dependency-only loading defaults |
 | `priority` | `50`; higher values start first, with declaration order breaking ties; dependencies still load before their parent |
@@ -129,7 +130,7 @@ removing a parent removes its owned declarations and their contributions. an ind
 
 `optional = true` applies only while every surviving actual declaration is optional. a nonoptional source declaration, name-only override or full dependency declaration qualifies the plugin. a bare dependency reference does not. optional-only declarations can omit a source; surviving plugins must have one. declarations are collected before pruning, so trusted import code can run even when its parent is later excluded.
 
-source conflicts and malformed declarations fail before pruning. final dependency, main and trigger conflicts are checked among survivors. exclusions cannot be bypassed by manual loading or installation: change the configuration and reload. package status reports `disabled`, `optional` or `scope`, with a `retained pin` only when an eligible existing lock entry remains. that pin does not claim an installed checkout or loaded code.
+source conflicts and malformed declarations fail before pruning. final dependency, main and trigger conflicts are checked among survivors. exclusions cannot be bypassed by manual loading or installation: change the configuration and reload. package status reports `disabled`, `conditional`, `optional` or `scope`, with a `retained pin` only when an eligible existing lock entry remains. that pin does not claim an installed checkout or loaded code.
 
 ## imports
 
@@ -148,7 +149,21 @@ function imports require a name. string imports can use an alias. `cond` and `en
 
 imports load sources afresh and clear their own require-cache entries. conflicting names, recursive imports, ambiguous file/init sources and extra returns raise errors. each normalization allows 128 import identities and 256 source evaluations. arbitrary effects from trusted import code are not rolled back on failure.
 
-an explicit package source can include `import`; its fragment is collected first. `name` also names that import. `cond` gates the import only; a shared `enabled` callback runs separately as an import gate and as a final package predicate.
+an explicit package source can include `import`; its fragment is collected first. `name` also names that import. `cond` and `enabled` participate in both contexts. their import calls receive no arguments; their package calls receive a copied specification. manager defaults apply to packages, not import gates.
+
+## conditional activation
+
+```lua
+require("shroud").setup({
+  { "owner/review.wraith", cond = function()
+    return os.getenv("WRAITH_REVIEW") == "1"
+  end },
+}, { defaults = { cond = true } })
+```
+
+an explicit `cond` overrides `defaults.cond`. conditions run once in declaration order, before disabled/optional pruning, with detached initial merged fields and original dependency names. false prevents the package's `enabled` callback and activation. that decision remains fixed if later pruning changes the plugin's contributions. malformed defaults fail before import code runs; unknown defaults are rejected.
+
+false conditions preserve existing pins for the original declared dependency closure, including cycles later excluded from the active graph. scoped children are not dependencies unless explicitly referenced. unknown references never protect unrelated lock entries. a conditional child removed with its parent still preserves this closure, even when status labels the removal `scope`. independently active packages keep their normal source and revision rules. there is no installed-object garbage collector yet; conditional preservation does not claim a usable checkout.
 
 ## repeated declarations
 
@@ -164,7 +179,7 @@ require("shroud").setup({
 
 later scalar fields replace earlier values, including `false`; absent values remain inherited. dependencies, commands and events combine in first-seen order. key mappings replace the same normalized key and mode across fragments. aliases duplicated inside a single fragment remain invalid.
 
-nested option maps merge; lists replace unless their dotted path is in `opts_extend`. its value is inherited by later fragments, not applied retroactively. `wraith.json.null` removes a map field. callbacks run on activation with detached arguments; returning a table replaces the options, while returning `nil` retains mutations. `enabled` runs during normalization, once per effective contribution and dependency revision. pruning can change that revision; unchanged predicates do not run again. callbacks receive detached merged fields and effective dependency names, without recursive `specs` declarations. normalization stops after 1,024 predicate calls.
+nested option maps merge; lists replace unless their dotted path is in `opts_extend`. its value is inherited by later fragments, not applied retroactively. `wraith.json.null` removes a map field. callbacks run on activation with detached arguments; returning a table replaces the options, while returning `nil` retains mutations. `enabled` runs during normalization, once per effective contribution and dependency revision. pruning can change that revision; unchanged predicates do not run again. callbacks receive detached merged fields and effective dependency names, without recursive `specs` declarations. normalization stops after 1,024 combined `cond` and `enabled` predicate calls.
 
 the first surviving source stays selected. remote `.git` suffix variants match, but different transports or local directories conflict. choose one revision selector across the merged plugin; unlike lazy.nvim, a later branch does not silently coexist with an earlier commit. option recipes and callback results have a 4096-entry, depth-16 structural limit; declarations allow 256 fragments and 63 enabled plugins.
 
@@ -232,7 +247,7 @@ end)
 | update | resolve unpinned refs; preserve pinned commits unless an explicit commit selector changes |
 | restore | fetch exact locked commits; preserve the lock bytes, selector and pin metadata |
 
-install and update reconcile the lock against the enabled graph. removed, optional-only, scope-removed and newly local packages lose their git lock entries; their files remain. explicitly disabled nonoptional packages retain existing pins without installing or fetching them. retention never creates a missing lock entry. active unselected git entries remain. the plan lists every pruned name. restore does not prune or rewrite the lock. changing a git source under the same package name is rejected; use a separate identity or deliberately reconcile the old entry first.
+install and update reconcile the lock against the enabled graph. removed, optional-only and scope-removed packages lose their git lock entries unless a false condition protects them. newly local packages always lose previous git pins; their files remain. explicitly disabled nonoptional packages retain existing pins without installing or fetching them. false conditions also preserve the original declared dependency closure, including optional roots, without turning those packages into install targets. retention never creates a missing lock entry. active unselected git entries remain. the plan lists every pruned name. restore does not prune or rewrite the lock. changing a git source under the same package name is rejected; use a separate identity or deliberately reconcile the old entry first.
 
 ## storage and credentials
 
