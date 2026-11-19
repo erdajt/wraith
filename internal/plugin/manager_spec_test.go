@@ -16,14 +16,14 @@ func TestManagerDescriptorsDetachSourcesAndRejectUnsafeRefs(t *testing.T) {
  local result=spec.descriptor(input)
  input.source.url="https://changed.example/app"; input.dependencies[1]="changed"
  assert(result.source.url=="https://example.com/app" and result.dependencies[1]=="lib")
- for _,url in ipairs({"https://token@example.com/app","https://example.com/app?token=secret","ext::program","-remote","relative/path","ssh://user:password@example.com/app"}) do
+ for _,url in ipairs({"https://token@example.com/app","https://example.com/app?token=secret","http://example.com/app","git@-host:repo","ssh://-host/repo","git@host:-path","host:-path","ext::program","-remote","relative/path","ssh://user:password@example.com/app"}) do
   input.source.url=url; assert(not pcall(spec.descriptor,input),url)
  end
- for _,url in ipairs({"git@example.com:owner/app","ssh://git@example.com/owner/app","file:///tmp/repository","/tmp/local repository"}) do
+ for _,url in ipairs({"example.com:owner/app","git@example.com:owner/app","ssh://git@example.com/owner/app","file:///tmp/repository","/tmp/local repository"}) do
   input.source.url=url; assert(spec.descriptor(input).source.url==url)
  end
  input.source.url="https://example.com/app"
- for _,ref in ipairs({"-option","a..b","a@{b","a.lock","a/.hidden","a//b","a/b.","a\\b","a b","a?b"}) do
+ for _,ref in ipairs({"-option","a..b","a@{b","a.lock","a/.hidden","a//b","a/b.","a\\b","a b","a?b",string.rep("a",256)}) do
   input.selector.value=ref; assert(not pcall(spec.descriptor,input),ref)
  end
  input.selector={kind="commit",value=string.rep("A",40)}

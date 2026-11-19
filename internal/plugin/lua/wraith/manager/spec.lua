@@ -8,7 +8,7 @@ local function fields(value, allowed, label)
 end
 
 local function name(value)
-  assert(type(value) == "string" and #value <= 64 and value:match("^[a-z][a-z0-9_-]*$"), "invalid package name")
+  assert(type(value) == "string" and #value <= 64 and value:match("^[a-z0-9][a-z0-9._-]*$"), "invalid package name")
   return value
 end
 
@@ -32,17 +32,24 @@ local function source(value)
     assert(not url:find("%s"), "remote git source cannot contain whitespace")
     local protocol, authority = url:match("^([a-z]+)://([^/]+)")
     if protocol then
-      assert(protocol == "https" or protocol == "http" or protocol == "ssh" or protocol == "file", "unsupported git source protocol")
+      assert(protocol == "https" or protocol == "ssh" or protocol == "file", "unsupported git source protocol")
       if protocol == "ssh" then
         local user = authority:match("^(.-)@")
         assert(not user or user:match("^[A-Za-z0-9_.-]+$"), "git source cannot contain credentials")
+        local host = authority:match("@(.+)$") or authority
+        assert(host:sub(1, 1) ~= "-", "ssh host cannot begin with an option")
       else
         assert(not authority:find("@", 1, true), "git source cannot contain credentials")
       end
     elseif url:sub(1, 8) == "file:///" then
       assert(#url > 8, "git file source requires a path")
     else
-      assert(url:match("^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+:.+"), "git source requires a url or absolute path")
+      local host, path = url:match("^([^:]+):(.+)$")
+      local user = host and host:match("^(.-)@")
+      host = host and (host:match("@(.+)$") or host)
+      assert(host and host:match("^[A-Za-z0-9_.-]+$") and host:sub(1, 1) ~= "-", "git source requires a valid ssh host, url or absolute path")
+      assert(not user or user:match("^[A-Za-z0-9_.-]+$"), "git source cannot contain credentials")
+      assert(path:sub(1, 1) ~= "-" and path:sub(1, 1) ~= ":", "ssh repository path cannot begin with an option or protocol delimiter")
     end
   end
   return {kind="git", url=url}
@@ -61,6 +68,7 @@ local function selector(value)
     assert((#ref == 40 or #ref == 64) and ref:match("^[a-fA-F0-9]+$"), "commit must be a full git object id")
     return {kind=kind, value=ref:lower()}
   end
+  assert(#ref <= 255, "package ref exceeds 255 bytes")
   assert(ref ~= "@" and ref:sub(1, 1) ~= "-" and not ref:find("[%s~^:?*%[\\]") and not ref:find("..", 1, true) and not ref:find("@{", 1, true), "invalid package ref")
   assert(ref:sub(1, 1) ~= "/" and ref:sub(-1) ~= "/" and not ref:find("//", 1, true), "invalid package ref path")
   for part in ref:gmatch("[^/]+") do
