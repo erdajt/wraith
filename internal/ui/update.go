@@ -10,6 +10,14 @@ import (
 // update dispatches ui, provider and terminal events to their state handlers.
 func (a *App) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m := msg.(type) {
+	case pluginResourceMsg:
+		return a, a.callPluginResource(m)
+	case pluginResourceResultMsg:
+		cmd := a.applyPluginResult(m.Result)
+		if m.Result.Runtime != a.plugins {
+			return a, cmd
+		}
+		return a, tea.Batch(cmd, a.watchPluginResources(m.Result.Runtime))
 	case pluginScheduledMsg:
 		return a, a.runPluginSchedule(m)
 	case pluginNoticeMsg:
@@ -101,6 +109,7 @@ func (a *App) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					for _, queued := range pending {
 						if callback, ok := queued.(pluginResultMsg); ok {
 							discardPluginSchedules(callback)
+							discardPluginResources(callback)
 							if next := remainingPluginSchedules(callback); len(next.IDs) > 0 {
 								resumes = append(resumes, func() tea.Msg { return next })
 							}
@@ -118,6 +127,7 @@ func (a *App) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if effect, ok := message.(pluginResultMsg); ok {
 				if !a.editorSucceeded {
 					discardPluginSchedules(effect)
+					discardPluginResources(effect)
 					if next := remainingPluginSchedules(effect); len(next.IDs) > 0 {
 						cmds = append(cmds, func() tea.Msg { return next })
 					}

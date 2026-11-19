@@ -273,7 +273,7 @@ func (a *App) Init() tea.Cmd {
 	if a.demo {
 		return a.ticker()
 	}
-	return tea.Batch(a.ticker(), a.probe(), a.callPlugin("", "ready", ""), a.watchPluginNotices(a.plugins))
+	return tea.Batch(a.ticker(), a.probe(), a.callPlugin("", "ready", ""), a.watchPluginNotices(a.plugins), a.startPluginResources())
 }
 
 // ticker schedules the next animation and job-update tick.
