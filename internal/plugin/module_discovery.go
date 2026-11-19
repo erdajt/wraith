@@ -99,6 +99,7 @@ func (e *engine) moduleRecord(L *lua.LState, source moduleSource) *lua.LTable {
 	record.RawSetString("kind", lua.LString(kind))
 	record.RawSetString("identity", lua.LString(identity))
 	record.RawSetString("load", L.NewFunction(func(L *lua.LState) int {
+		e.guardModuleMetadata(L, "modules.load")
 		if e.pureHook {
 			e.hookViolation = errors.New("modules.load is unavailable during pure hooks")
 			L.RaiseError("%v", e.hookViolation)

@@ -66,6 +66,7 @@ func (e *engine) installDiagnostics(api *lua.LTable) {
 	capabilities.RawSetString("native_modules", lua.LFalse)
 	api.RawSetString("capabilities", capabilities)
 	L.SetGlobal("print", L.NewFunction(func(L *lua.LState) int {
+		e.guardModuleMetadata(L, "print")
 		parts := make([]string, L.GetTop())
 		for i := range parts {
 			if err := L.CallByParam(lua.P{Fn: L.GetGlobal("tostring"), NRet: 1, Protect: true}, L.Get(i+1)); err != nil {

@@ -1,0 +1,122 @@
+package plugin
+
+import (
+	"errors"
+	"fmt"
+	"slices"
+	"strings"
+
+	lua "github.com/yuin/gopher-lua"
+)
+
+type moduleResolution struct {
+	provider        moduleProvider
+	plugin          string
+	activate, check *lua.LFunction
+}
+
+// decodeModuleResolution detaches a strict continuation from mutable resolver output.
+func decodeModuleResolution(L *lua.LState, value lua.LValue, provider moduleProvider) (*moduleResolution, error) {
+	if value == lua.LNil {
+		return nil, nil
+	}
+	table, ok := value.(*lua.LTable)
+	if !ok || L.GetMetatable(table) != lua.LNil {
+		return nil, errors.New("module resolver requires a plain descriptor table or nil")
+	}
+	for key, _ := table.Next(lua.LNil); key != lua.LNil; key, _ = table.Next(key) {
+		if key != lua.LString("plugin") && key != lua.LString("activate") && key != lua.LString("check") {
+			return nil, errors.New("module descriptor contains an unknown field")
+		}
+	}
+	plugin, named := table.RawGetString("plugin").(lua.LString)
+	activate, activates := table.RawGetString("activate").(*lua.LFunction)
+	check, checks := table.RawGetString("check").(*lua.LFunction)
+	if !named || len(plugin) > 128 || !namespaceName.MatchString(string(plugin)) || !activates || !checks {
+		return nil, errors.New("module descriptor requires plugin, activate and check")
+	}
+	return &moduleResolution{provider: provider, plugin: string(plugin), activate: activate, check: check}, nil
+}
+
+// guardModuleMetadata rejects host effects even when a resolver catches the lua error.
+func (e *engine) guardModuleMetadata(L *lua.LState, operation string) {
+	if len(e.moduleResolving) == 0 {
+		return
+	}
+	allowed := strings.HasPrefix(operation, "wraith.json.") || slices.Contains([]string{
+		"wraith.modules.source", "wraith.modules.catalog", "wraith.modules.loading", "wraith.fs.stat", "wraith.plugins.list",
+	}, operation)
+	if operation == "wraith.fs.stat" {
+		if options, ok := L.Get(2).(*lua.LTable); ok && options.RawGetString("async") != lua.LNil || L.Get(2).Type() == lua.LTFunction {
+			allowed = false
+		}
+	}
+	if !allowed {
+		e.moduleViolation = fmt.Errorf("%s is unavailable during module metadata resolution", operation)
+		L.RaiseError("%v", e.moduleViolation)
+	}
+}
+
+// resolveModuleProvider evaluates ordered metadata without activating plugins or publishing effects.
+func (e *engine) resolveModuleProvider(L *lua.LState, name string) (result *moduleResolution, err error) {
+	depth := len(e.moduleResolving)
+	if len(name) > 128 || !namespaceName.MatchString(name) || depth >= 32 || slices.Contains(e.moduleResolving, name) {
+		err = fmt.Errorf("invalid or recursive module resolution: %s", name)
+		if depth > 0 {
+			e.moduleViolation = err
+		}
+		return nil, err
+	}
+	before := e.captureRegistry()
+	owner, calls, top := e.owner, len(e.packageCalls), L.GetTop()
+	previous := e.moduleViolation
+	if depth == 0 {
+		e.moduleViolation = nil
+	}
+	e.moduleResolving = append(e.moduleResolving, name)
+	e.packageCalls = append(e.packageCalls, owner)
+	defer func() {
+		if err == nil {
+			err = e.moduleViolation
+		} else if e.moduleViolation != nil && err != e.moduleViolation {
+			err = errors.Join(err, e.moduleViolation)
+		}
+		e.moduleResolving = e.moduleResolving[:depth]
+		e.packageCalls, e.owner = e.packageCalls[:calls], owner
+		L.SetTop(top)
+		if depth == 0 {
+			e.moduleViolation = previous
+		} else if e.moduleViolation == nil && err != nil {
+			e.moduleViolation = err
+		}
+		if err != nil {
+			result = nil
+			err = errors.Join(err, e.disposeRegistry(e.restoreRegistry(before)))
+		}
+	}()
+	for _, provider := range slices.Clone(e.moduleProviders) {
+		if !slices.Contains(e.moduleProviders, provider) {
+			return nil, errors.New("module resolver registration changed")
+		}
+		e.owner = provider.owner
+		e.packageCalls = append(e.packageCalls[:calls+1], provider.owner)
+		if err := L.CallByParam(lua.P{Fn: provider.resolve, NRet: 1, Protect: true}, lua.LString(name)); err != nil {
+			return nil, err
+		}
+		if ctx := L.Context(); ctx != nil && ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		if e.moduleViolation != nil {
+			return nil, e.moduleViolation
+		}
+		if !slices.Contains(e.moduleProviders, provider) {
+			return nil, errors.New("module resolver registration changed")
+		}
+		result, err = decodeModuleResolution(L, L.Get(-1), provider)
+		L.Pop(1)
+		if err != nil || result != nil {
+			return result, err
+		}
+	}
+	return nil, nil
+}

@@ -27,6 +27,7 @@ func (e *engine) guardHookAPIs(api *lua.LTable) {
 				}
 				function := value.GFunction
 				table.RawSet(key, e.L.NewFunction(func(L *lua.LState) int {
+					e.guardModuleMetadata(L, name)
 					if e.pureHook && !strings.HasPrefix(name, "wraith.json.") {
 						e.hookViolation = fmt.Errorf("%s is unavailable during pure hooks", name)
 						L.RaiseError("%v", e.hookViolation)
