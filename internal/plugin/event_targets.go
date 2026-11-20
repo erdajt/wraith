@@ -9,8 +9,9 @@ import (
 )
 
 type EventDelivery struct {
-	Listeners []string
-	Data      any
+	Listeners   []string
+	Data        any
+	replayReady bool
 }
 
 // validEventName admits native notifications and namespaced custom events.

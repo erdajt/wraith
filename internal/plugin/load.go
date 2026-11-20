@@ -79,6 +79,7 @@ func load(parent context.Context, directory string, c config.Config, actions []s
 	e.installHTTP(api)
 	e.installRegistration(api)
 	e.installEventTargets(api)
+	e.installReadyReplay(api)
 	e.installHooks(api)
 	e.installExtensions(api)
 	e.installInvocations(api)

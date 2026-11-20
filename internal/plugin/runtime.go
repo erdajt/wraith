@@ -135,6 +135,7 @@ type engine struct {
 	effects        []Effect
 	snapshot       any
 	setup          bool
+	readyStarted   bool
 	closing        bool
 	serial         uint64
 	dirty          bool
@@ -421,6 +422,9 @@ func (e *engine) invoke(parent context.Context, req request) (result Result) {
 		return Result{Err: err}
 	}
 	if req.event != "" {
+		if req.event == "ready" && req.listeners == nil {
+			e.readyStarted = true
+		}
 		if err := e.invokeObservers(parent, req.event, req.listeners); err != nil {
 			return Result{Err: err}
 		}
