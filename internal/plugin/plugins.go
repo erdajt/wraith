@@ -83,7 +83,7 @@ func (e *engine) installPlugins(api *lua.LTable) {
 			for i := range args {
 				args[i] = L.Get(i + 3)
 			}
-			value, err := e.callPackage(L.CheckString(1), L.CheckString(2), args)
+			value, err := e.callPackage(L, L.CheckString(1), L.CheckString(2), args)
 			if err != nil {
 				L.RaiseError("plugins.call: %v", err)
 			}
@@ -113,7 +113,7 @@ func (e *engine) installPlugins(api *lua.LTable) {
 					dependency = bool(flag)
 				})
 			}
-			if err := e.loadPlugin(name, L.OptTable(2, L.NewTable()), dependency); err != nil {
+			if err := e.loadPlugin(L, name, L.OptTable(2, L.NewTable()), dependency); err != nil {
 				L.RaiseError("plugin %s: %v", name, err)
 			}
 			return 0
@@ -122,7 +122,11 @@ func (e *engine) installPlugins(api *lua.LTable) {
 }
 
 // loadPlugin restores partial registrations and releases new resources even when Lua catches failure.
-func (e *engine) loadPlugin(name string, options *lua.LTable, dependency bool) (err error) {
+func (e *engine) loadPlugin(L *lua.LState, name string, options *lua.LTable, dependency bool) (err error) {
+	previous := e.L
+	e.L = L
+	defer func() { e.L = previous }()
+
 	before := e.captureRegistry()
 	parentOwner := e.owner
 	e.serial++
@@ -137,7 +141,6 @@ func (e *engine) loadPlugin(name string, options *lua.LTable, dependency bool) (
 			err = errors.Join(err, e.disposeRegistry(disposal))
 		}
 	}()
-	L := e.L
 	if err := L.CallByParam(lua.P{Fn: L.GetGlobal("require"), NRet: 1, Protect: true}, lua.LString(name)); err != nil {
 		return err
 	}

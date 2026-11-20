@@ -8,7 +8,11 @@ import (
 )
 
 // callPackage invokes a captured export with its owner and an independent registration savepoint.
-func (e *engine) callPackage(name, method string, args []lua.LValue) (value lua.LValue, err error) {
+func (e *engine) callPackage(L *lua.LState, name, method string, args []lua.LValue) (value lua.LValue, err error) {
+	previous := e.L
+	e.L = L
+	defer func() { e.L = previous }()
+
 	record, ok := e.packages[name]
 	if !ok || record.loading || record.module == nil {
 		return lua.LNil, fmt.Errorf("plugin is not fully loaded: %s", name)
@@ -25,11 +29,11 @@ func (e *engine) callPackage(name, method string, args []lua.LValue) (value lua.
 	}
 
 	before := e.captureRegistry()
-	owner, depth, top := e.owner, len(e.packageCalls), e.L.GetTop()
+	owner, depth, top := e.owner, len(e.packageCalls), L.GetTop()
 	e.packageCalls = append(e.packageCalls, owner, record.owner)
 	e.owner = record.owner
 	defer func() {
-		e.L.SetTop(top)
+		L.SetTop(top)
 		e.packageCalls = e.packageCalls[:depth]
 		e.owner = owner
 	}()
@@ -39,11 +43,11 @@ func (e *engine) callPackage(name, method string, args []lua.LValue) (value lua.
 			err = errors.Join(err, e.disposeRegistry(disposal))
 		}
 	}()
-	if err = e.L.CallByParam(lua.P{Fn: fn, NRet: 1, Protect: true}, args...); err != nil {
+	if err = L.CallByParam(lua.P{Fn: fn, NRet: 1, Protect: true}, args...); err != nil {
 		return lua.LNil, fmt.Errorf("plugin %s method %s: %w", name, method, err)
 	}
 	if err = e.validateRegistry(); err != nil {
 		return lua.LNil, err
 	}
-	return e.L.Get(-1), nil
+	return L.Get(-1), nil
 }

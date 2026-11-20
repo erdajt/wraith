@@ -171,6 +171,8 @@ group unload uses the same publication boundary as single unload. accepted chang
 
 `plugins.call(name, method, ...)` invokes a loaded module method under that plugin's owner, returning one Lua value. it accepts at most 16 arguments and does not introduce a method-style `self` argument. registrations and managed work created inside the call belong to the called plugin. calls restore the previous owner on success or error; unloaded plugins and nonfunction methods fail. calls share the current callback deadline and do not provide an asynchronous wait. nesting is limited to 16 calls; `setup` and `teardown` cannot be invoked as exports. a failed export restores its staged registry changes even when the caller catches its error. arbitrary Lua state and external effects remain outside rollback.
 
+`plugins.load` and `plugins.call` execute on the calling lua thread, including nested coroutines. immediate rollback cleanup uses that thread with the cleanup deadline. accepted unload and runtime shutdown use the normal host disposal lifecycle.
+
 these runtime edges describe loaded instances. the [package manager](lua/packages.md) handles installed revisions, dependency specifications and lazy activation through these same APIs.
 
 setup can register APIs and change candidate configuration. runtime workspace actions and snapshot inspection are unavailable during initial configuration setup. teardown runs with runtime actions and configuration changes disabled. cleanup errors do not prevent VM closure. asynchronous failures appear as notices, including errors from the previous configuration after reload. host registry publication does not wait for arbitrary teardown code.
