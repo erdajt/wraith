@@ -37,6 +37,12 @@ wraith.modules.remove_provider(1) -- expect: param-type-mismatch
 wraith.plugins.unload_many("plugins.review") -- expect: param-type-mismatch
 wraith.plugins.unload_many() -- expect: missing-parameter
 wraith.plugins.unload_many({ false }) -- expect: assign-type-mismatch
+wraith.events.replay_ready(false) -- expect: param-type-mismatch
+wraith.events.replay_ready({ false }) -- expect: assign-type-mismatch
+wraith.plugins.state(false) -- expect: param-type-mismatch
+---@type boolean
+local plugin_state = wraith.plugins.state("plugins.review") -- expect: assign-type-mismatch
+print(plugin_state)
 
 ---@type Wraith.ModuleCheckPhase
 local phase = "resolve" -- expect: assign-type-mismatch

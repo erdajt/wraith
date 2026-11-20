@@ -164,3 +164,10 @@ local provider_id = wraith.modules.provider(resolve_source)
 wraith.modules.remove_provider(provider_id)
 wraith.plugins.unload_many({ "plugins.review", "plugins.helper" })
 wraith.plugins.unload_many({})
+wraith.events.replay_ready(wraith.events.listeners("ready"))
+local plugin_state = wraith.plugins.state("plugins.review")
+if plugin_state == "loading" then
+  print("initializing")
+elseif plugin_state == "loaded" then
+  print("initialized")
+end

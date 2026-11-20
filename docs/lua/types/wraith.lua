@@ -47,6 +47,7 @@ wraith.capabilities = {
   trusted_lua = true, runtimepath = true, stdpath = true, modules = true, module_sources = true, module_loading = true,
   module_providers = true,
   live_registration = true, custom_events = true, plugin_lifecycle = true, plugins_unload_many = true,
+  plugins_state = true, ready_replay = true,
   scheduling = true, json = true, filesystem = true, http = true,
   timers = true, managed_resources = true, process = true,
   buffers = true, windows = true, regions = true, dialogs = true,
@@ -126,11 +127,18 @@ function wraith.events.listeners(name) end
 ---@param data Wraith.JSON
 ---@param options {listeners: string[]}
 function wraith.events.dispatch(name, data, options) end
+-- catches up ready subscribers once per effect batch after native ready starts.
+---@param listeners string[]
+function wraith.events.replay_ready(listeners) end
 
 ---@class Wraith.PluginsAPI
 wraith.plugins = wraith.plugins or {}
 ---@return string[] module_names
 function wraith.plugins.list() end
+-- snapshots the current host lifecycle; absent names return nil.
+---@param module string
+---@return 'loading'|'loaded'|nil state
+function wraith.plugins.state(module) end
 -- requires a module with setup(options); optional teardown and returned cleanup are owned.
 ---@param module string
 ---@param options? table
