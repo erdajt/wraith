@@ -47,13 +47,16 @@ func TestManagerRejectsChangedCachedSources(t *testing.T) {
 		t.Run(change, func(t *testing.T) {
 			openManagerRuntime(t, managerSourceFixture(t)+`
     manager.setup({spec}); manager.load("app")
-    assert(require("app").version=="a")
+    local original=require("app")
+    assert(original.version=="a")
     reset()
     `+change+`
     local initialized=false; spec.init=function() initialized=true end
     local ok,err=pcall(manager.setup,{spec})
     assert(not ok and tostring(err):find("/reload",1,true),tostring(err))
-    assert(not initialized and require("app").version=="a")
+    assert(not initialized and original.version=="a" and package.loaded.app==original)
+    local imported,import_err=pcall(require,"app")
+    assert(not imported and tostring(import_err):find("no resolver",1,true),tostring(import_err))
    `)
 		})
 	}
@@ -64,23 +67,43 @@ func TestManagerReconfigurationDistinguishesUnexposedAndCachedModules(t *testing
 	for _, mode := range []string{"unexposed", "cached", "failed"} {
 		t.Run(mode, func(t *testing.T) {
 			r := openManagerRuntime(t, managerSourceFixture(t)+fmt.Sprintf(`
-    local mode=%q
-    if mode=="failed" then spec.opts.fail=true end
-    manager.setup({spec})
-    if mode=="cached" then manager.load("app") end
-    if mode=="failed" then assert(not pcall(manager.load,"app")) end
-    reset()
-    spec.opts={value="second"}
-    if mode~="cached" then current_path=root_b; current_commit="second" end
-    if mode=="failed" then
-     local ok,err=pcall(manager.setup,{spec})
-     assert(not ok and tostring(err):find("/reload",1,true))
-     assert(require("app").version=="a")
-     return
-    end
-    manager.setup({spec}); manager.load("app")
-    assert(manager.status().packages[1].loaded_commit==(mode=="cached" and "first" or "second"))
-   `, mode))
+local mode = %q
+if mode == "failed" then
+ spec.opts.fail = true
+end
+manager.setup({spec})
+if mode == "cached" then
+ manager.load("app")
+elseif mode == "failed" then
+ assert(not pcall(manager.load, "app"))
+ assert(package.loaded.app == nil)
+end
+
+wraith.commands.create("reconfigure", function(ctx)
+ if ctx.argument == "retire" then
+  reset()
+  spec.opts = {value = "second"}
+  if mode ~= "cached" then
+   current_path, current_commit = root_b, "second"
+  end
+  return
+ end
+
+ assert(package.loaded.app == nil)
+ if mode == "failed" then
+  local ok, err = pcall(manager.setup, {spec})
+  assert(not ok and tostring(err):find("/reload", 1, true), tostring(err))
+  assert(package.loaded.app == nil)
+  return
+ end
+
+ manager.setup({spec})
+ manager.load("app")
+ assert(manager.status().packages[1].loaded_commit == (mode == "cached" and "first" or "second"))
+end, "reconfigure", {arguments = true})
+`, mode))
+			managerCommand(t, r, "reconfigure", "retire")
+			managerCommand(t, r, "reconfigure", "load")
 			if mode == "failed" {
 				return
 			}
@@ -106,7 +129,7 @@ func TestManagerReconfigurationDistinguishesUnexposedAndCachedModules(t *testing
 	}
 }
 
-// TestManagerRejectedActivationStillReservesItsModuleSource retains provenance when raw require state survives rollback.
+// TestManagerRejectedActivationStillReservesItsModuleSource retains provenance after verified cache rollback.
 func TestManagerRejectedActivationStillReservesItsModuleSource(t *testing.T) {
 	r := openManagerRuntime(t, managerSourceFixture(t)+`
   manager.setup({spec})
@@ -115,7 +138,7 @@ func TestManagerRejectedActivationStillReservesItsModuleSource(t *testing.T) {
    reset(); current_path=root_b; current_commit="second"
    local ok,err=pcall(manager.setup,{spec})
    assert(not ok and tostring(err):find("/reload",1,true))
-   assert(require("app").version=="a")
+   assert(package.loaded.app==nil)
   end,"operate",{arguments=true})
  `)
 	var callback string

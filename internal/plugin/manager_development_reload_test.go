@@ -23,7 +23,8 @@ local spec={"owner/app",main="app",opts={},lazy=true,dev=true}
 local options={dev={path=function() return current end}}
 manager.setup({spec},options)
 manager.load("app")
-assert(require("app").version==0)
+local original=require("app")
+assert(original.version==0)
 manager.unload_all()
 wraith.plugins.unload("wraith.manager.runtime")
 current=%q
@@ -31,7 +32,9 @@ local initialized=false
 spec.init=function() initialized=true end
 local ok,err=pcall(manager.setup,{spec},options)
 assert(not ok and tostring(err):find("/reload",1,true),tostring(err))
-assert(not initialized and require("app").version==0)`, roots[0], roots[1]))
+assert(not initialized and original.version==0 and package.loaded.app==original)
+local imported,import_err=pcall(require,"app")
+assert(not imported and tostring(import_err):find("no resolver",1,true),tostring(import_err))`, roots[0], roots[1]))
 }
 
 // TestManagerDevelopmentDeadlineDiscardsPublication keeps interrupted path callbacks outside the package lifecycle.
