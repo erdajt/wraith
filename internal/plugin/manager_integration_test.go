@@ -101,14 +101,14 @@ func TestManagerLoadsImportedLocalDependenciesRelativeToConfig(t *testing.T) {
 	}
 }
 
-// TestManagerPublicInstallAndUpdateKeepRunningCodeUntilFreshRuntime uses real git, lock files and Lua module loading.
-func TestManagerPublicInstallAndUpdateKeepRunningCodeUntilFreshRuntime(t *testing.T) {
+// TestManagerPublicInstallAdoptsMissingCodeAndPinsLoadedUpdates distinguishes first installation from source replacement.
+func TestManagerPublicInstallAdoptsMissingCodeAndPinsLoadedUpdates(t *testing.T) {
 	source, _ := managerGitFixture(t)
 	version := func(label string) string {
 		t.Helper()
-		text := fmt.Sprintf(`return {setup=function()
+		text := fmt.Sprintf(`return {label=%q,setup=function()
    wraith.commands.create("version",function() wraith.notify(%q) end)
-  end}`, label)
+  end}`, label, label)
 		if err := os.WriteFile(filepath.Join(source, "plugin.lua"), []byte(text), 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -116,6 +116,10 @@ func TestManagerPublicInstallAndUpdateKeepRunningCodeUntilFreshRuntime(t *testin
 		managerGit(t, source, "commit", "--quiet", "-m", label)
 		return managerGit(t, source, "rev-parse", "HEAD")
 	}
+	if err := os.WriteFile(filepath.Join(source, "plugin_extra.lua"), []byte(`return "extra"`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	managerGit(t, source, "add", "plugin_extra.lua")
 	first := version("first")
 	directory := t.TempDir()
 	root, lockfile := filepath.Join(directory, "packages"), filepath.Join(directory, "wraith-lock.json")
@@ -133,6 +137,10 @@ func TestManagerPublicInstallAndUpdateKeepRunningCodeUntilFreshRuntime(t *testin
    end
   end,{repeat_ms=5})
  end,"operation",{arguments=true})
+ wraith.commands.create("import",function()
+  assert(require("plugin_extra")=="extra")
+  wraith.notify(require("plugin").label)
+ end)
  wraith.commands.create("expect",function(ctx)
   local row=manager.status().packages[1]
   assert(row.commit==ctx.argument and row.installed)
@@ -152,12 +160,15 @@ func TestManagerPublicInstallAndUpdateKeepRunningCodeUntilFreshRuntime(t *testin
 	managerCommand(t, before, "operation", "install")
 	runManagerResources(t, before)
 	result := managerCommand(t, before, "expect", first)
-	if len(result.Effects) != 1 || result.Effects[0].Argument != "none:true" {
-		t.Fatalf("initial install changed frozen selection: %+v", result)
+	if len(result.Effects) != 1 || result.Effects[0].Argument != "none:false" {
+		t.Fatalf("initial install did not adopt its first available source: %+v", result)
 	}
-	before.Close()
+	result = managerCommand(t, before, "import", "")
+	if len(result.Effects) != 1 || result.Effects[0].Argument != "first" {
+		t.Fatalf("require did not discover the installed main and submodule: %+v", result)
+	}
 
-	running := openManagerRuntime(t, setup)
+	running := before
 	result = managerCommand(t, running, "version", "")
 	if len(result.Effects) != 1 || result.Effects[0].Argument != "first" {
 		t.Fatalf("locked initial code did not load: %+v", result)

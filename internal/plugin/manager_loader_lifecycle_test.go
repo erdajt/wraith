@@ -14,7 +14,8 @@ func TestManagerLazyKeysRunOnlyAfterAcceptedActivation(t *testing.T) {
    local graph=require("wraith.manager.spec").normalize({{name="app",dir="/tmp/app",keys={{"z",function(ctx)
     count=count+1; wraith.notify(count..":"..ctx.count)
    end}}}})
-   loader=require("wraith.manager.loader").new(graph,{app="/tmp/app"},"manager_test")
+   local installations=require("wraith.manager.loader_installations").new(graph,{{name="app",path="/tmp/app"}})
+   loader=require("wraith.manager.loader").new(graph,installations,"manager_test")
    loader.initialize()
   end,trigger=function(...) loader.trigger(...) end} end
  wraith.plugins.load("manager_test"); wraith.plugins.call("manager_test","configure")
@@ -85,7 +86,8 @@ func TestManagerReloadKeepsOldAndNewCleanupClosuresSeparate(t *testing.T) {
    local graph=require("wraith.manager.spec").normalize({{name="app",main="app",dir="/tmp/app",opts={},lazy=true,init=function()
     return function() trace[#trace+1]="init" end
    end}})
-   loader=require("wraith.manager.loader").new(graph,{app="/tmp/app"},"manager_test"); loader.initialize(); loader.load("app")
+   local installations=require("wraith.manager.loader_installations").new(graph,{{name="app",path="/tmp/app"}})
+   loader=require("wraith.manager.loader").new(graph,installations,"manager_test"); loader.initialize(); loader.load("app")
   end,reload=function() loader.unload("app"); loader.load("app") end,
   check=function() assert(table.concat(trace,",")=="cleanup1,teardown,init",table.concat(trace,",")) end,
   remove=function() loader.unload_all() end,
@@ -126,7 +128,8 @@ func TestManagerFailedAndRejectedSetupCleanEachActivationOnce(t *testing.T) {
  package.preload.manager_test=function() return {setup=function() end,
   configure=function()
    local graph=require("wraith.manager.spec").normalize({{name="app",main="app",dir="/tmp/app",opts={},lazy=true}})
-   loader=require("wraith.manager.loader").new(graph,{app="/tmp/app"},"manager_test"); loader.initialize()
+   local installations=require("wraith.manager.loader_installations").new(graph,{{name="app",path="/tmp/app"}})
+   loader=require("wraith.manager.loader").new(graph,installations,"manager_test"); loader.initialize()
   end,load=function() loader.load("app") end,remove=function() loader.unload_all() end,
   failed=function() assert(cleanup==0 and teardown==1) end,
   rejected=function() assert(cleanup==1 and teardown==2 and not loader.is_loaded("app")) end,

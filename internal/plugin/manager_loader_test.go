@@ -19,7 +19,8 @@ func TestManagerLoaderOwnsInitActivationAndDependencyCleanup(t *testing.T) {
  end,teardown=function() print("app teardown") end} end
  package.preload.manager_test=function() return {setup=function() end,
   configure=function()
-   loader=require("wraith.manager.loader").new(graph,{app="/tmp/app",dependency="/tmp/dependency"},"manager_test")
+   local installations=require("wraith.manager.loader_installations").new(graph,{{name="app",path="/tmp/app"},{name="dependency",path="/tmp/dependency"}})
+   loader=require("wraith.manager.loader").new(graph,installations,"manager_test")
    loader.initialize()
   end,trigger=function(...) loader.trigger(...) end,
   inspect=function()
@@ -87,7 +88,8 @@ func TestManagerLazyCommandRetriesAfterFailedAndRejectedActivation(t *testing.T)
  package.preload.manager_test=function() return {setup=function() end,
   configure=function()
    local graph=require("wraith.manager.spec").normalize({{name="app",main="app",dir="/tmp/app",opts={},cmd="app"}})
-   loader=require("wraith.manager.loader").new(graph,{app="/tmp/app"},"manager_test")
+   local installations=require("wraith.manager.loader_installations").new(graph,{{name="app",path="/tmp/app"}})
+   loader=require("wraith.manager.loader").new(graph,installations,"manager_test")
    loader.initialize()
   end,trigger=function(...) loader.trigger(...) end} end
  wraith.plugins.load("manager_test")

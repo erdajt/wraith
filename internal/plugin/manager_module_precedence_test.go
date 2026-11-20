@@ -73,8 +73,9 @@ func TestManagerModuleSelectionPreservesConfigPrecedence(t *testing.T) {
 			source := fmt.Sprintf(`
 local graph = require("wraith.manager.spec").normalize({{name="selection",dir=%q,lazy=true}})
 local root = graph.by_name.selection.source.dir
+local installations = require("wraith.manager.loader_installations").new(graph, {{name="selection",path=%q}})
 local choose = require("wraith.manager.loader_modules").new(graph,
-  {selection=%q}, {}, {selection={activation="selection.active"}}, wraith.paths.stdpath("config"))
+  installations, {selection={activation="selection.active"}}, wraith.paths.stdpath("config"))
 local seen, observed = 0, nil
 wraith.modules.provider(function(name)
   if name == "probe.child" then
