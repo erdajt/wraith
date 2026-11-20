@@ -46,6 +46,14 @@ func TestReadmeManagerExample(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(r.Close)
+	pending, err := r.Submit("", "ready", nil, r.Manifest().Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if notices := drainManagerEvents(t, r, receiveResult(t, pending)); len(notices) != 0 {
+		t.Fatalf("lazy README example loaded during startup: %v", notices)
+	}
+
 	invoke := func(name, argument string) Result {
 		t.Helper()
 		var callback string
