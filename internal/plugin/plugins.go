@@ -15,6 +15,22 @@ func (e *engine) installPlugins(api *lua.LTable) {
 	e.loaded = map[string]bool{}
 	e.packages = map[string]packageRecord{}
 	api.RawSetString("plugins", L.SetFuncs(L.NewTable(), map[string]lua.LGFunction{
+		"state": func(L *lua.LState) int {
+			name, ok := L.Get(1).(lua.LString)
+			if !ok {
+				L.RaiseError("plugins.state requires a string name")
+			}
+			if record, exists := e.packages[string(name)]; exists {
+				state := "loaded"
+				if record.loading {
+					state = "loading"
+				}
+				L.Push(lua.LString(state))
+			} else {
+				L.Push(lua.LNil)
+			}
+			return 1
+		},
 		"list": func(L *lua.LState) int {
 			names := L.NewTable()
 			for _, name := range slices.Sorted(maps.Keys(e.loaded)) {

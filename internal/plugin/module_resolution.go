@@ -50,7 +50,7 @@ func (e *engine) guardModuleMetadata(L *lua.LState, operation string) {
 		return
 	}
 	allowed := strings.HasPrefix(operation, "wraith.json.") || slices.Contains([]string{
-		"wraith.modules.source", "wraith.modules.catalog", "wraith.modules.loading", "wraith.fs.stat", "wraith.plugins.list",
+		"wraith.modules.source", "wraith.modules.catalog", "wraith.modules.loading", "wraith.fs.stat", "wraith.plugins.list", "wraith.plugins.state",
 	}, operation)
 	if operation == "wraith.fs.stat" {
 		if options, ok := L.Get(2).(*lua.LTable); ok && options.RawGetString("async") != lua.LNil || L.Get(2).Type() == lua.LTFunction {
