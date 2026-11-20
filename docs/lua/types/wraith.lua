@@ -46,6 +46,7 @@ wraith.api_version = 2
 wraith.capabilities = {
   trusted_lua = true, runtimepath = true, stdpath = true, modules = true, module_sources = true, module_loading = true,
   module_providers = true,
+  module_preparation = true,
   live_registration = true, custom_events = true, plugin_lifecycle = true, plugins_unload_many = true,
   plugins_state = true, ready_replay = true,
   scheduling = true, json = true, filesystem = true, http = true,
@@ -188,6 +189,7 @@ function wraith.runtimepath.remove(path) end
 ---@alias Wraith.ModuleCheck fun(name: string, phase: Wraith.ModuleCheckPhase, proof: any, executed: boolean): any
 ---@class Wraith.ModuleResolution
 ---@field plugin string selected lifecycle module
+---@field prepare? fun(name: string) establishes prerequisites before activation under the resolver owner
 ---@field activate fun(name: string) loads the selected plugin under the resolver owner
 ---@field check Wraith.ModuleCheck verifies source/cache ownership; before returns the token passed to after
 ---@alias Wraith.ModuleResolver fun(name: string): Wraith.ModuleResolution?

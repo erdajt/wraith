@@ -10,9 +10,9 @@ import (
 )
 
 type moduleResolution struct {
-	provider        moduleProvider
-	plugin          string
-	activate, check *lua.LFunction
+	provider                 moduleProvider
+	plugin                   string
+	prepare, activate, check *lua.LFunction
 }
 
 type moduleVerification struct {
@@ -31,17 +31,21 @@ func decodeModuleResolution(L *lua.LState, value lua.LValue, provider moduleProv
 		return nil, errors.New("module resolver requires a plain descriptor table or nil")
 	}
 	for key, _ := table.Next(lua.LNil); key != lua.LNil; key, _ = table.Next(key) {
-		if key != lua.LString("plugin") && key != lua.LString("activate") && key != lua.LString("check") {
+		if key != lua.LString("plugin") && key != lua.LString("prepare") && key != lua.LString("activate") && key != lua.LString("check") {
 			return nil, errors.New("module descriptor contains an unknown field")
 		}
 	}
 	plugin, named := table.RawGetString("plugin").(lua.LString)
 	activate, activates := table.RawGetString("activate").(*lua.LFunction)
 	check, checks := table.RawGetString("check").(*lua.LFunction)
+	prepare, prepares := table.RawGetString("prepare").(*lua.LFunction)
+	if table.RawGetString("prepare") != lua.LNil && !prepares {
+		return nil, errors.New("module descriptor prepare must be a function")
+	}
 	if !named || len(plugin) > 128 || !namespaceName.MatchString(string(plugin)) || !activates || !checks {
 		return nil, errors.New("module descriptor requires plugin, activate and check")
 	}
-	return &moduleResolution{provider: provider, plugin: string(plugin), activate: activate, check: check}, nil
+	return &moduleResolution{provider: provider, plugin: string(plugin), prepare: prepare, activate: activate, check: check}, nil
 }
 
 // guardModuleMetadata rejects host effects even when a resolver catches the lua error.

@@ -67,4 +67,5 @@ func (e *engine) installModuleProviders(api *lua.LTable) {
 		},
 	})
 	api.RawGetString("capabilities").(*lua.LTable).RawSetString("module_providers", lua.LTrue)
+	api.RawGetString("capabilities").(*lua.LTable).RawSetString("module_preparation", lua.LTrue)
 }

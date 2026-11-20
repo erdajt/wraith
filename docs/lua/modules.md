@@ -71,6 +71,7 @@ resolvers run in registration order. `resolve(name)` returns `nil` for a miss or
 | field | contract |
 | --- | --- |
 | `plugin` | lifecycle module name loaded through `wraith.plugins.load` |
+| `prepare` | optional `function(name)` establishes prerequisites before activation |
 | `activate` | `function(name)` loads the selected plugin; return values are ignored |
 | `check` | `function(name, phase, proof, executed)` verifies source and cache ownership |
 
@@ -89,6 +90,8 @@ false is not a miss. extra fields, metatables, invalid names and nonfunction cal
 errors reject the request. checks run as metadata callbacks. the host does not serialize or interpret proof tokens. a loader must bind each module to its selected source, reject foreign caches and distinguish a fresh execution from a cached return. a no-op check provides no source verification. a source that returns nil needs execution proof too: a different loader returning nil must not pass merely because its result looks familiar.
 
 validation runs before activation. when needed, `activate(name)` runs under the resolver owner and must leave the named plugin loaded. the host then requires the source under that plugin's owner. its registrations and managed work belong to the provider plugin. a plugin importing another managed module gains a dependency on its provider, including on cache hits. configuration imports do not create a synthetic dependent that prevents unloading.
+
+loaders that need prerequisite initialization can provide `prepare(name)` and check `wraith.capabilities.module_preparation`. preparation runs under the resolver owner only when the target is absent. nested requests for the same registration and target skip duplicate preparation, including requests for another submodule. a nested request can activate the target; the outer request then uses that ready generation without activating it again. after preparation, the host always reruns `validate` against the current cache and lifecycle. combined preparation and activation nesting is limited to 32. preparation shares the request transaction, deadline and failure cleanup; it does not persist an initialization flag.
 
 setup may require its own module while loading. incomplete imports through a different provider are rejected. nested imports keep each caller's owner; ordinary coroutine calls use the current coroutine state. callbacks share the current host deadline and cannot yield across protected native calls.
 

@@ -60,3 +60,7 @@ local invalid_check = function(name, current, proof, executed)
 end
 invalid_check("review", "before", nil, "yes") -- expect: param-type-mismatch
 print(phase, descriptor, invalid_resolver, invalid_activation, invalid_check)
+
+---@type Wraith.ModuleResolution
+local invalid_preparation = { plugin = "review", prepare = false, activate = function() end, check = function() end } -- expect: assign-type-mismatch
+print(invalid_preparation)

@@ -154,6 +154,10 @@ local resolve_source = function(name)
   end
   return {
     plugin = "plugins.review",
+    prepare = function(module_name)
+      assert(wraith.capabilities.module_preparation)
+      wraith.plugins.load("initializers." .. module_name)
+    end,
     activate = function(module_name)
       wraith.plugins.load("plugins." .. module_name)
     end,

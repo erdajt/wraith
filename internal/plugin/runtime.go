@@ -106,6 +106,7 @@ type engine struct {
 	moduleInvocations  int
 	moduleRequests     []*moduleRequest
 	moduleActivating   []string
+	modulePreparing    []modulePreparation
 	moduleResolving    []string
 	moduleViolation    error
 	moduleSources      map[string]moduleSource
