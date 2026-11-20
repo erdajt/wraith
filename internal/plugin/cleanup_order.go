@@ -1,7 +1,15 @@
 package plugin
 
+import (
+	"cmp"
+	"slices"
+)
+
 // orderCleanupHooks keeps dependents alive through their own teardown, including removed packages.
 func orderCleanupHooks(hooks []cleanupHook) []cleanupHook {
+	hooks = slices.Clone(hooks)
+	slices.SortStableFunc(hooks, func(a, b cleanupHook) int { return cmp.Compare(a.id, b.id) })
+
 	grouped := map[string][]cleanupHook{}
 	dependencies := map[string][]string{}
 	for _, hook := range hooks {
